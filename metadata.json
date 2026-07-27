@@ -1,0 +1,9 @@
+{
+  "name": "Minimalist nikosoko",
+  "description": "Secure, fast, and local. Your gateway to neighborhood services and verified assets.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
