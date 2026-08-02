@@ -52,9 +52,13 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                 {item.imageUrls.map((url, index) => (
                     <div key={index} className="flex-shrink-0 w-full h-72 snap-center">
                         <img 
-                            src={url || 'https://picsum.photos/seed/placeholder/800/600'} 
+                            src={url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'} 
                             alt={`${item.title} image ${index + 1}`} 
                             className="w-full h-full object-cover" 
+                            onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800';
+                            }}
                         />
                     </div>
                 ))}

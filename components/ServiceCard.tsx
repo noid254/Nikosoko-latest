@@ -11,6 +11,8 @@ const rateSuffix: Record<ServiceProvider['rateType'], string> = {
     'per hour': 'hr', 'per day': 'day', 'per task': 'task', 'per month': 'mo', 'per piece work': 'item', 'per km': 'km', 'per sqm': 'm²', 'per cbm': 'm³', 'per appearance': 'show'
 };
 
+const DEFAULT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=600';
+
 interface ServiceCardProps {
     provider: ServiceProvider;
     onClick: () => void;
@@ -19,7 +21,8 @@ interface ServiceCardProps {
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm, onViewSacco }) => {
-    const images = [provider.coverImageUrl, ...(provider.works || [])].filter(Boolean);
+    const rawImages = [provider.coverImageUrl, ...(provider.works || [])].filter(Boolean);
+    const images = rawImages.length > 0 ? rawImages : [DEFAULT_FALLBACK_IMAGE];
 
     const activeQuery = (searchTerm || '').toLowerCase().trim();
     const matchedSkill = provider.skills?.find(s => {
@@ -31,6 +34,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
         return title.includes(activeQuery) || cat.includes(activeQuery) || desc.includes(activeQuery) || cert.includes(activeQuery);
     }) || provider.skills?.[0];
 
+    const categoryName = matchedSkill?.category || provider.category || provider.service || 'Skilled Service';
     const displayTitle = matchedSkill?.skillTitle || matchedSkill?.name || provider.service;
     const displayDesc = matchedSkill?.description || provider.about || provider.service;
     const displayRate = matchedSkill?.hourlyRate || provider.hourlyRate;
@@ -40,13 +44,18 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
     const isSaccoConfirmed = provider.isSaccoVerified || provider.saccoMember?.status === 'Confirmed' || provider.saccoMember?.status === 'Approved';
     const saccoName = provider.saccoMember?.saccoName || 'Sacco Member';
 
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        e.currentTarget.onerror = null;
+        e.currentTarget.src = DEFAULT_FALLBACK_IMAGE;
+    };
+
     return (
         <div 
             onClick={onClick} 
-            className="bg-white cursor-pointer w-full group transition-all duration-150 flex flex-col border border-gray-200 hover:border-black rounded-none shadow-2xs hover:shadow-xs active:scale-[0.99]"
+            className="bg-white cursor-pointer w-full group transition-all duration-150 flex flex-col border border-gray-200 hover:border-black rounded-none shadow-2xs hover:shadow-xs active:scale-[0.99] overflow-hidden relative z-0"
         >
             {/* Image / Work Cover */}
-            <div className="relative h-28 bg-gray-100 flex-shrink-0 border-b border-gray-200">
+            <div className="relative h-28 bg-gray-100 flex-shrink-0 border-b border-gray-200 overflow-hidden z-0">
                 <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full">
                     {images.map((img, index) => (
                         <img 
@@ -54,6 +63,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                             className="w-full h-full object-cover flex-shrink-0 snap-center" 
                             src={img} 
                             alt={`${provider.service} ${index + 1}`} 
+                            onError={handleImageError}
                         />
                     ))}
                 </div>
@@ -64,7 +74,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                 </div>
 
                 {/* Online Indicator Badge */}
-                {provider.isOnline && (
+                {Boolean(provider.isOnline) && (
                     <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>ONLINE</span>
@@ -72,7 +82,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                 )}
 
                 {/* Top Left: Sacco Badge */}
-                {isSaccoConfirmed && (
+                {isSaccoConfirmed ? (
                     <div className="absolute top-1.5 left-1.5 z-10">
                         <button
                             onClick={(e) => {
@@ -86,6 +96,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                             <span className="truncate max-w-[90px]">{saccoName}</span>
                         </button>
                     </div>
+                ) : (
+                    /* Category Label Badge on Top Left if no Sacco */
+                    <div className="absolute top-1.5 left-1.5 z-10 bg-black/80 backdrop-blur-xs text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-white/20 max-w-[100px] truncate">
+                        {categoryName}
+                    </div>
                 )}
 
                 {/* Top Right: Verification Badge */}
@@ -97,10 +112,16 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
             </div>
             
             {/* Content Details */}
-            <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
+            <div className="p-2.5 space-y-1 flex-1 flex flex-col justify-between bg-white relative z-0">
                 <div>
+                    {/* Category Context Indicator */}
+                    <div className="text-[8.5px] font-extrabold uppercase tracking-widest text-gray-400 flex items-center gap-1 mb-0.5">
+                        <span className="w-1 h-1 rounded-full bg-gray-400 inline-block"></span>
+                        <span className="truncate">{categoryName}</span>
+                    </div>
+
                     <div className="flex justify-between items-start gap-1">
-                        <h3 className="font-bold text-xs text-black truncate leading-snug flex-1">
+                        <h3 className="font-bold text-xs text-black leading-snug line-clamp-2 break-words flex-1">
                             {displayTitle}
                         </h3>
                         <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
@@ -109,29 +130,29 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                         </div>
                     </div>
 
-                    <p className="text-[10px] text-gray-500 font-normal line-clamp-2 leading-tight mt-1">
+                    <p className="text-[10px] text-gray-500 font-normal line-clamp-2 break-words leading-tight mt-1">
                         {displayDesc}
                     </p>
                 </div>
 
                 <div className="pt-2 mt-auto flex flex-col gap-1 border-t border-dashed border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-black truncate flex items-center gap-1">
-                            <span>{provider.name}</span>
+                    <div className="flex items-center justify-between min-w-0">
+                        <span className="text-[10px] font-bold text-black truncate flex items-center gap-1 min-w-0 flex-1">
+                            <span className="truncate">{provider.name}</span>
                             {(provider.isVerified || matchedSkill) && (
                                 <svg className="w-3.5 h-3.5 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                                 </svg>
                             )}
-                            <span className="text-gray-600 font-mono text-[9px] font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                            <span className="text-gray-600 font-mono text-[9px] font-bold flex-shrink-0">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
                         </span>
                         {displayRate > 0 ? (
-                            <p className="text-[10px] font-bold text-black font-mono">
+                            <p className="text-[10px] font-bold text-black font-mono flex-shrink-0 ml-1">
                                 {displayCurrency} {displayRate.toLocaleString()}
                                 <span className="text-[8px] text-gray-500 font-normal ml-0.5">/{rateSuffix[provider.rateType] || 'hr'}</span>
                             </p>
                         ) : (
-                            <p className="text-[8.5px] font-bold text-black uppercase tracking-wider">On Request</p>
+                            <p className="text-[8.5px] font-bold text-black uppercase tracking-wider flex-shrink-0 ml-1">On Request</p>
                         )}
                     </div>
                     {isSaccoConfirmed && (

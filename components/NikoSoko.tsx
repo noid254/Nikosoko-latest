@@ -54,14 +54,16 @@ interface HighlightCategory {
 const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
     { id: 'boda', title: 'Boda', keyword: 'boda' },
     { id: 'taxi', title: 'Taxi', keyword: 'taxi' },
-    { id: 'electrician', title: 'Electrician', keyword: 'electrician' },
-    { id: 'plumber', title: 'Plumber', keyword: 'plumber' },
+    { id: 'electrician', title: 'Electrician', keyword: 'electric' },
+    { id: 'plumber', title: 'Plumber', keyword: 'plumb' },
     { id: 'refills', title: 'Gas & Water', keyword: 'refill' },
     { id: 'tv', title: 'TV Mounting', keyword: 'tv' },
     { id: 'braiding', title: 'Braiding', keyword: 'braid' },
     { id: 'cleaner', title: 'Cleaning', keyword: 'clean' },
-    { id: 'mechanic', title: 'Mechanic', keyword: 'mechanic' },
-    { id: 'courier', title: 'Delivery', keyword: 'delivery' }
+    { id: 'mechanic', title: 'Mechanic & Tech', keyword: 'repair' },
+    { id: 'courier', title: 'Delivery', keyword: 'deliver' },
+    { id: 'solar', title: 'Solar', keyword: 'solar' },
+    { id: 'tutoring', title: 'Tutoring', keyword: 'tutor' }
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
@@ -125,7 +127,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
     // Filtered service listings (catalogue items - strictly services offered by professionals)
     const filteredAndSortedServices = useMemo(() => {
-        let result = [...catalogueItems];
+        let result = catalogueItems.filter(item => item.category !== 'Product');
         const activeQuery = (searchTerm || localSearch).toLowerCase().trim();
 
         if (activeQuery) {
@@ -210,62 +212,85 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     )}
                 </div>
 
-                {/* QUICK FILTERS - MINIMAL MONOCHROME PILLS */}
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-2">
-                    {HIGHLIGHT_CATEGORIES.map(cat => {
-                        const isSelected = selectedCategory === cat.id;
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => handleCategoryClick(cat)}
-                                className={`px-2.5 py-1 border text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 active:scale-95 ${
-                                    isSelected 
-                                        ? 'bg-black text-white border-black' 
-                                        : 'bg-white text-gray-700 border-gray-200 hover:border-black'
-                                }`}
-                            >
-                                {cat.title}
-                            </button>
-                        );
-                    })}
+                {/* QUICK FILTERS - MINIMAL MONOCHROME PILLS WITH SCROLL AFFORDANCE */}
+                <div className="relative flex items-center pt-2">
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pr-8 py-0.5 w-full scroll-smooth">
+                        {HIGHLIGHT_CATEGORIES.map(cat => {
+                            const isSelected = selectedCategory === cat.id;
+                            return (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => handleCategoryClick(cat)}
+                                    className={`px-3 py-1 border text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer ${
+                                        isSelected 
+                                            ? 'bg-black text-white border-black' 
+                                            : 'bg-white text-gray-700 border-gray-200 hover:border-black'
+                                    }`}
+                                >
+                                    {cat.title}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {/* Right Fade Gradient Scroll Indicator */}
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none flex items-center justify-end pr-0.5 z-10">
+                        <span className="text-gray-400 font-bold text-[10px] animate-pulse">→</span>
+                    </div>
                 </div>
             </div>
 
-            {/* MAIN CONTENT HEADER WITH INLINE RECTANGULAR TOGGLE SWITCH */}
+            {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">
-                {/* SINGLE LINE: TITLE & RECTANGULAR SIMPLE BUTTON TOGGLE SWITCH */}
-                <div className="flex justify-between items-center pb-3 border-b border-dashed border-gray-200 mb-3">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-xs font-black uppercase tracking-wider text-black">
-                            {activeTab === 'pros' ? 'Nearby Professionals' : 'Service Listings'}
-                        </h2>
-                        <span className="text-[9px] font-mono text-gray-500 border border-gray-200 px-1.5 py-0.5">
-                            {activeTab === 'pros' ? filteredAndSortedProviders.length : filteredAndSortedServices.length}
-                        </span>
-                    </div>
-
-                    {/* SIMPLE RECTANGULAR TOGGLE BUTTONS ON SAME LINE */}
-                    <div className="inline-flex border border-black p-0.5 bg-white">
+                {/* HEADER TITLE, FULL-WIDTH TOGGLE SWITCH & SUBTITLE */}
+                <div className="pb-3 border-b border-dashed border-gray-200 mb-3 space-y-2">
+                    {/* FULL-WIDTH TOGGLE BUTTONS WITH ICONS & COUNTS */}
+                    <div className="flex w-full border border-black p-0.5 bg-white shadow-2xs">
                         <button
                             onClick={() => setActiveTab('pros')}
-                            className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all ${
+                            className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 activeTab === 'pros'
                                     ? 'bg-black text-white'
                                     : 'bg-white text-black hover:bg-gray-100'
                             }`}
+                            title="Browse verified local professionals"
                         >
-                            Pros
+                            <span>👤</span>
+                            <span>Pros</span>
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
+                                activeTab === 'pros' ? 'border-white/30 bg-white/20 text-white' : 'border-gray-200 bg-gray-50 text-black'
+                            }`}>
+                                {filteredAndSortedProviders.length}
+                            </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('services')}
-                            className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all ${
+                            className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 activeTab === 'services'
                                     ? 'bg-black text-white'
                                     : 'bg-white text-black hover:bg-gray-100'
                             }`}
+                            title="Browse fixed-price services & catalog items"
                         >
-                            Services
+                            <span>🛠️</span>
+                            <span>Services</span>
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
+                                activeTab === 'services' ? 'border-white/30 bg-white/20 text-white' : 'border-gray-200 bg-gray-50 text-black'
+                            }`}>
+                                {filteredAndSortedServices.length}
+                            </span>
                         </button>
+                    </div>
+
+                    {/* HELPER SUBTITLE */}
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-black uppercase tracking-wider text-black">
+                            {activeTab === 'pros' ? 'Nearby Professionals' : 'Service Listings'}
+                        </h2>
+                        <p className="text-[10px] text-gray-500 font-medium truncate">
+                            {activeTab === 'pros' 
+                                ? '👤 Profiles & skilled experts' 
+                                : '🛠️ Fixed-price packages'}
+                        </p>
                     </div>
                 </div>
 
@@ -306,15 +331,19 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                     <div 
                                         key={item.id}
                                         onClick={() => setSelectedCatalogueItem(item)}
-                                        className="bg-white border border-gray-200 hover:border-black cursor-pointer group transition-all flex flex-col justify-between"
+                                        className="bg-white border border-gray-200 hover:border-black cursor-pointer group transition-all flex flex-col justify-between overflow-hidden relative z-0"
                                     >
-                                        <div className="relative h-28 bg-gray-100 overflow-hidden border-b border-gray-200">
+                                        <div className="relative h-28 bg-gray-100 overflow-hidden border-b border-gray-200 flex-shrink-0 z-0">
                                             <img 
                                                 src={photo} 
                                                 alt={item.title} 
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                onError={(e) => {
+                                                    e.currentTarget.onerror = null;
+                                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
+                                                }}
                                             />
-                                            <div className="absolute top-1.5 left-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10">
+                                            <div className="absolute top-1.5 left-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10 max-w-[100px] truncate">
                                                 {item.category || 'Service'}
                                             </div>
 
@@ -326,7 +355,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                             )}
 
                                             {/* Online Indicator Badge on Thumbnail */}
-                                            {provider?.isOnline && (
+                                            {Boolean(provider?.isOnline) && (
                                                 <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                                     <span>ONLINE</span>
@@ -345,10 +374,15 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                             ) : null}
                                         </div>
 
-                                        <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
+                                        <div className="p-2.5 space-y-1 flex-1 flex flex-col justify-between bg-white relative z-0">
                                             <div>
+                                                <div className="text-[8.5px] font-extrabold uppercase tracking-widest text-gray-400 flex items-center gap-1 mb-0.5">
+                                                    <span className="w-1 h-1 rounded-full bg-gray-400 inline-block"></span>
+                                                    <span className="truncate">{item.category || 'Service Listing'}</span>
+                                                </div>
+
                                                 <div className="flex justify-between items-start gap-1">
-                                                    <h3 className="font-bold text-xs text-black leading-snug line-clamp-2 flex-1">{item.title}</h3>
+                                                    <h3 className="font-bold text-xs text-black leading-snug line-clamp-2 break-words flex-1">{item.title}</h3>
                                                     {provider && (
                                                         <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
                                                             <StarIcon />
@@ -356,27 +390,27 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                                         </div>
                                                     )}
                                                 </div>
-                                                <p className="text-[9.5px] text-gray-500 line-clamp-2 mt-1 leading-tight">{item.description}</p>
+                                                <p className="text-[9.5px] text-gray-500 line-clamp-2 break-words leading-tight mt-1">{item.description}</p>
                                             </div>
 
-                                            <div className="pt-2 mt-auto border-t border-dashed border-gray-200 flex items-center justify-between">
+                                            <div className="pt-2 mt-auto border-t border-dashed border-gray-200 flex items-center justify-between min-w-0">
                                                 {provider ? (
-                                                    <div className="min-w-0 pr-1">
-                                                        <span className="text-[9.5px] font-bold text-black truncate flex items-center gap-1">
-                                                            <span>{provider.name}</span>
+                                                    <div className="min-w-0 pr-1 flex-1">
+                                                        <span className="text-[9.5px] font-bold text-black truncate flex items-center gap-1 min-w-0">
+                                                            <span className="truncate">{provider.name}</span>
                                                             {(provider.isVerified || item.isVerified) && (
                                                                 <svg className="w-3.5 h-3.5 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                                                                 </svg>
                                                             )}
-                                                            <span className="text-gray-600 font-mono text-[8.5px] font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                                            <span className="text-gray-600 font-mono text-[8.5px] font-bold flex-shrink-0">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
                                                         </span>
                                                         <span className="text-[8.5px] text-gray-600 truncate block">{provider.location} • <span className="font-mono font-bold text-black">{provider.distanceKm}km away</span></span>
                                                     </div>
                                                 ) : (
                                                     <span className="text-[9px] text-gray-400">Professional Service</span>
                                                 )}
-                                                <span className="text-[10px] font-black text-black font-mono flex-shrink-0">
+                                                <span className="text-[10px] font-black text-black font-mono flex-shrink-0 ml-1">
                                                     {item.price}
                                                 </span>
                                             </div>

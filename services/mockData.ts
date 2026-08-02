@@ -452,8 +452,125 @@ export const mockCatalogueItems: CatalogueItem[] = [
         discountInfo: 'Pickup & dropoff available'
     },
     { 
-        id: 'cat-s24', providerId: 'p-gizmo', title: 'Samsung Galaxy S24 Ultra', category: 'Product', description: '512GB, AI Enhanced. Titanium Gray.', price: 'Ksh 165,000', imageUrls: ['https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=400'], isVerified: true },
-    { id: 'cat-mac', providerId: 'p-gizmo', title: 'MacBook Air M2', category: 'Product', description: '13-inch, 256GB SSD, 8GB RAM.', price: 'Ksh 120,000', imageUrls: ['https://images.unsplash.com/photo-1611186871348-b1ec696e5237?q=80&w=400'], isVerified: true }
+        id: 'cat-tech-1', 
+        providerId: 'p-gizmo', 
+        title: 'Smartphone Screen & Battery Replacement Service', 
+        category: 'Tech Repair', 
+        description: 'Expert doorstep screen replacement and high-health battery swap for iPhone, Samsung, and Android devices. Original parts with 90-day warranty.', 
+        price: 'Ksh 2,500', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1597740985671-2a8a3b80502e?q=80&w=800',
+            'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '30 mins',
+        discountInfo: 'Free screen protector included'
+    },
+    { 
+        id: 'cat-tech-2', 
+        providerId: 'p-gizmo', 
+        title: 'MacBook & Laptop Hardware Repair & OS Service', 
+        category: 'Tech Repair', 
+        description: 'Motherboard diagnostic repair, RAM/SSD upgrade, liquid damage restoration, keyboard replacement, and clean OS reinstallation.', 
+        price: 'Ksh 3,500', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800',
+            'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '2 hours',
+        discountInfo: 'Complimentary thermal paste refresh'
+    },
+    {
+        id: 'cat-boda-1',
+        providerId: 't1',
+        title: 'Express Boda Errand & Passenger Trip',
+        category: 'Boda',
+        description: 'Fast, safe, helmet-provided motorbike transport within Westlands, Kilimani, and CBD. Quick parcel delivery or passenger ride.',
+        price: 'Ksh 200 / trip',
+        imageUrls: [
+            'https://images.unsplash.com/photo-1558981403-c5f91cbba527?q=80&w=800',
+            'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=800'
+        ],
+        isVerified: true,
+        duration: '15 mins',
+        discountInfo: 'Standard rate per estate route'
+    },
+    {
+        id: 'cat-taxi-1',
+        providerId: 't2',
+        title: 'Airport Transfer & Executive Cab Service',
+        category: 'Taxi',
+        description: 'Clean, air-conditioned saloon car ride to JKIA Airport, SGR Train Station, or city business meetings with professional driver.',
+        price: 'Ksh 2,500 / trip',
+        imageUrls: [
+            'https://images.unsplash.com/photo-1549463223-35661e7e4088?q=80&w=800',
+            'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800'
+        ],
+        isVerified: true,
+        duration: '45 mins',
+        discountInfo: 'Bottled water included'
+    },
+    {
+        id: 'cat-clean-1',
+        providerId: 'h2',
+        title: 'Post-Construction & Move-In Deep House Cleaning',
+        category: 'Cleaning',
+        description: 'Complete home deep cleaning: window washing, tile scrubbing, kitchen grease removal, bathroom disinfection, and balcony washing.',
+        price: 'Ksh 4,500',
+        imageUrls: [
+            'https://images.unsplash.com/photo-1581578731117-104f2a863726?q=80&w=800',
+            'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?q=80&w=800'
+        ],
+        isVerified: true,
+        duration: '4 hours',
+        discountInfo: 'Eco-friendly non-toxic agents'
+    },
+    {
+        id: 'cat-mech-1',
+        providerId: 't3',
+        title: 'Mobile Car Engine & Brake Maintenance',
+        category: 'Mechanic',
+        description: 'On-site mobile mechanic service for car engine oil change, brake pad replacement, spark plug service, and computer diagnostic scanning.',
+        price: 'Ksh 2,500',
+        imageUrls: [
+            'https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=800',
+            'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=800'
+        ],
+        isVerified: true,
+        duration: '1 hour',
+        discountInfo: 'Free 20-point vehicle check'
+    },
+    {
+        id: 'cat-courier-1',
+        providerId: 't3',
+        title: 'Same-Day Document & Package Courier Runner',
+        category: 'Delivery',
+        description: 'Dedicated rider for urgent contract signing delivery, legal document filing, medical report pick-ups, and office parcel dispatches.',
+        price: 'Ksh 300 / delivery',
+        imageUrls: [
+            'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=800',
+            'https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800'
+        ],
+        isVerified: true,
+        duration: '30 mins express',
+        discountInfo: 'Real-time SMS tracking updates'
+    },
+    { 
+        id: 'cat-solar-1', 
+        providerId: 'h3', 
+        title: 'Solar Panel Maintenance & Inverter Sync', 
+        category: 'Solar', 
+        description: 'Complete inspection of rooftop solar panels, battery bank health, MPPT charge controller calibration, and backup inverter testing.', 
+        price: 'Ksh 3,500', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1508873696983-2df515122519?q=80&w=800',
+            'https://images.unsplash.com/photo-1509391365360-2e959784a276?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '1.5 hours',
+        discountInfo: 'Free diagnostic report provided'
+    }
 ];
 
 export const mockDocuments: Document[] = [
