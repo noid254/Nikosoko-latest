@@ -48,6 +48,7 @@ import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
 import SEOHead from './components/SEOHead';
 import SEOMapModal from './components/SEOMapModal';
+import DesktopBannerLayout from './components/DesktopBannerLayout';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(null);
@@ -961,7 +962,11 @@ function App() {
   const active6HourProvider = active6HourItem ? providers.find(p => p.id === active6HourItem.providerId) : null;
 
   return (
-    <>
+    <DesktopBannerLayout
+      currentUser={currentUser}
+      onOpenSignUp={handleOpenCompleteSignUp}
+      onOpenLogin={handleOpenLogin}
+    >
       {/* 6-Hour SMS / Push Notification Banner Popup */}
       {active6HourProvider && active6HourItem && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-md px-3 animate-bounce">
@@ -1045,7 +1050,7 @@ function App() {
         saccoOrg={saccoModalProvider ? providers.find(p => p.id === saccoModalProvider.saccoMember?.saccoId || p.name === saccoModalProvider.saccoMember?.saccoName) || null : null} 
       />
       {renderContent()}
-    </>
+    </DesktopBannerLayout>
   );
 }
 
