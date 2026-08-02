@@ -58,7 +58,7 @@ interface ServiceMarketplaceProps {
     onNavigate: (page: CurrentPage) => void;
 }
 
-const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, specialBanners, onSelectProvider, onBack, onMessagesClick, hasNewMessages }) => {
+const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, specialBanners, onSelectProvider, onBack, onMessagesClick, hasNewMessages, onNavigate }) => {
     const [activeParent, setActiveParent] = useState<ParentCategory>('HOME');
     const [activeChild, setActiveChild] = useState<string>('All');
     const [isSearchActive, setIsSearchActive] = useState(false);
@@ -298,6 +298,18 @@ const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, spec
                     </div>
                 )}
             </main>
+
+            {/* FLOATING BUTTON PROMPTING USERS TO SELL A SERVICE */}
+            <div className="fixed bottom-6 right-4 z-40">
+                <button
+                    onClick={() => onNavigate('sellService')}
+                    className="bg-black hover:bg-gray-900 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-full shadow-2xl border border-gray-700 flex items-center gap-2 transition-all active:scale-95 cursor-pointer group"
+                    title="List & Sell a Service"
+                >
+                    <span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm leading-none group-hover:scale-110 transition-transform">+</span>
+                    <span>SELL A SERVICE</span>
+                </button>
+            </div>
         </div>
     );
 };

@@ -69,11 +69,11 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                 <p className="text-sm text-gray-500 font-mono">SN: {item.serialNumber}</p>
               )}
 
-              <div className={`p-3 rounded-lg text-sm ${item.isVerified ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-yellow-50 border border-yellow-200 text-yellow-800'}`}>
+              <div className={`p-3 rounded-lg text-sm ${item.isVerified ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-yellow-50 border border-yellow-200 text-yellow-800'}`}>
                 <p className="font-semibold">
                     {item.isVerified
-                        ? "Seller has confirmed they have proof of purchase."
-                        : "Unverified: Seller has not confirmed proof of purchase. Proceed with caution."
+                        ? "Verified Service Listing: Professional credentials & service verified."
+                        : "Unverified Service Listing: Contact service provider directly to confirm credentials."
                     }
                 </p>
               </div>
@@ -89,6 +89,29 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                 <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
                   <p className="font-bold text-green-800">{item.discountInfo}</p>
                 </div>
+              )}
+
+              {provider && (
+                  <div className="pt-4 border-t border-gray-200">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Listed By</p>
+                      <div className="flex items-center justify-between bg-gray-100 p-3 rounded-xl border border-gray-200">
+                          <div className="flex items-center gap-2">
+                              <img src={provider.avatarUrl} alt={provider.name} className="w-9 h-9 rounded-full object-cover border border-white" />
+                              <div>
+                                  <p className="text-sm font-bold text-black flex items-center gap-1">
+                                      <span>{provider.name}</span>
+                                      {(provider.isVerified || item.isVerified) && (
+                                          <svg className="w-4 h-4 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                                          </svg>
+                                      )}
+                                      <span className="text-gray-600 font-mono text-xs font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                  </p>
+                                  <p className="text-xs text-gray-500">{provider.service} • {provider.location}</p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
               )}
 
               <div className="pt-4 border-t border-gray-200">

@@ -38,8 +38,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
     );
 
     const baseNavItems: { label: string; page: CurrentPage | 'profile' | 'skill_id'; icon: string; description: string }[] = [
-        { label: 'NikoSoko', page: 'home', icon: '🏪', description: 'Find & connect with nearby skilled professionals' },
-        { label: 'Tukosoko', page: 'tukosoko', icon: '🛒', description: 'Services for sale e.g. TV mounting, water, gas, braiding' },
+        { label: 'NikoSoko', page: 'home', icon: '🏪', description: 'Find & connect with nearby skilled professionals & service listings' },
         { label: '$kill Hub', page: 'skill_id', icon: '⚡', description: 'Add skills, verify, view demand heatmaps & upgrade skills' },
     ];
 

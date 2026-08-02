@@ -619,20 +619,21 @@ function App() {
 
     switch (currentPage) {
       case 'home':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} onViewSacco={(p) => setSaccoModalProvider(p)} />;
       case 'tukosoko':
       case 'services':
         return (
-          <Tukosoko 
-            items={catalogueItems} 
+          <NikoSoko 
             providers={providers} 
-            currentUser={currentUser}
-            onAddCatalogueItem={(newItem) => setCatalogueItems(prev => [newItem, ...prev])}
+            catalogueItems={catalogueItems}
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
+            searchTerm={""} 
+            setSearchTerm={() => {}} 
             onBack={() => setIsSideMenuOpen(true)} 
             onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
             hasNewMessages={false} 
-            onNavigate={handleNavigate}
+            onNavigate={handleNavigate} 
+            currentUser={currentUser} 
+            onViewSacco={(p) => setSaccoModalProvider(p)}
             isAuthenticated={isAuthenticated}
             onAuthClick={() => setIsAuthModalOpen(true)}
             onInitiateContact={(p) => handleCtaInteraction(p)}
@@ -763,15 +764,15 @@ function App() {
       case 'brandKit':
       case 'documentDetail':
       case 'scanDocument':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'mycontacts':
         return <MyContactsView contacts={providers.filter(p => p.id !== currentUser?.id).slice(0, 5)} onSelectContact={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} />;
       case 'mycatalogue':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'assetRegistry':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'registerAsset':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'pendingRatings': {
         const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
         const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
@@ -821,7 +822,7 @@ function App() {
           onDeleteCatalogueItem={handleDeleteCatalogueItem}
         />;
       default:
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
     }
   };
 

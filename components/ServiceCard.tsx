@@ -1,12 +1,10 @@
 import React from 'react';
 import type { ServiceProvider } from '../types';
 
-const VerifiedIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
-    <svg className={className} fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
-);
-
 const StarIcon: React.FC<{ className?: string }> = ({ className = "w-3 h-3" }) => (
-    <svg className={className} fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+    <svg className={className} fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+    </svg>
 );
 
 const rateSuffix: Record<ServiceProvider['rateType'], string> = {
@@ -23,7 +21,6 @@ interface ServiceCardProps {
 const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm, onViewSacco }) => {
     const images = [provider.coverImageUrl, ...(provider.works || [])].filter(Boolean);
 
-    // Check if any specific skill matches the search query, or pick the primary verified skill
     const activeQuery = (searchTerm || '').toLowerCase().trim();
     const matchedSkill = provider.skills?.find(s => {
         if (!activeQuery) return false;
@@ -34,20 +31,22 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
         return title.includes(activeQuery) || cat.includes(activeQuery) || desc.includes(activeQuery) || cert.includes(activeQuery);
     }) || provider.skills?.[0];
 
-    // Skill title, skill description, and rate override if matched
     const displayTitle = matchedSkill?.skillTitle || matchedSkill?.name || provider.service;
     const displayDesc = matchedSkill?.description || provider.about || provider.service;
     const displayRate = matchedSkill?.hourlyRate || provider.hourlyRate;
     const displayCurrency = matchedSkill?.currency || provider.currency || 'KES';
 
+    // BADGE PRIORITY RULE: Sacco member is preferred over certified. Never show both.
     const isSaccoConfirmed = provider.isSaccoVerified || provider.saccoMember?.status === 'Confirmed' || provider.saccoMember?.status === 'Approved';
+    const saccoName = provider.saccoMember?.saccoName || 'Sacco Member';
 
     return (
         <div 
             onClick={onClick} 
-            className="bg-white overflow-hidden cursor-pointer w-full group transition-all duration-200 flex flex-col border border-gray-100 hover:border-gray-300 rounded-2xl shadow-2xs hover:shadow-sm active:scale-[0.98]"
+            className="bg-white cursor-pointer w-full group transition-all duration-150 flex flex-col border border-gray-200 hover:border-black rounded-none shadow-2xs hover:shadow-xs active:scale-[0.99]"
         >
-            <div className="relative h-24 bg-gray-100 flex-shrink-0">
+            {/* Image / Work Cover */}
+            <div className="relative h-28 bg-gray-100 flex-shrink-0 border-b border-gray-200">
                 <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-full">
                     {images.map((img, index) => (
                         <img 
@@ -59,91 +58,98 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                     ))}
                 </div>
 
-                <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-10">
-                    {provider.isVerified && (
-                        <div className="bg-emerald-500 text-white rounded-full p-0.5 shadow-xs flex items-center justify-center" title="Verified Provider">
-                            <VerifiedIcon className="w-3 h-3 text-white" />
-                        </div>
-                    )}
-                </div>
-                
-                <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold tracking-wider uppercase z-10">
-                    {provider.distanceKm}km
+                {/* Distance/Proximity Badge: Black background with green text e.g. '0.1km away' */}
+                <div className="absolute bottom-1.5 left-1.5 bg-black text-emerald-400 font-mono text-[8.5px] px-1.5 py-0.5 font-bold uppercase tracking-wider z-10 border border-emerald-500/30">
+                    {provider.distanceKm}km away
                 </div>
 
-                <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10 items-start">
-                    {matchedSkill && (
-                        <div className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow-xs flex items-center gap-0.5">
-                            <span>⚡ CERTIFIED</span>
-                        </div>
-                    )}
-                    {isSaccoConfirmed && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (onViewSacco) {
-                                    onViewSacco(provider);
-                                } else {
-                                    alert(`Member of ${provider.saccoMember?.saccoName || 'Utumishi Sacco'}`);
-                                }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow-md flex items-center gap-1 border border-blue-400/30 active:scale-95 transition-transform cursor-pointer"
-                            title="Click to view Sacco & Organization Profile"
-                        >
-                            <span className="flex-shrink-0 text-[8.5px]">💙</span>
-                            <span>a member of {provider.saccoMember?.saccoName || 'Utumishi Sacco'}</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-            
-            <div className="p-2 space-y-1 flex-1 flex flex-col">
-                <div className="flex justify-between items-start gap-1">
-                    <h3 className="font-bold text-xs text-gray-900 truncate leading-snug flex-1">
-                        {displayTitle}
-                    </h3>
-                    <div className={`flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-md font-extrabold border flex-shrink-0 ${
-                        isSaccoConfirmed ? 'bg-blue-50 text-blue-900 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200/60'
-                    }`}>
-                        <StarIcon className={isSaccoConfirmed ? 'text-blue-600 fill-blue-600' : 'text-amber-500 fill-amber-500'} />
-                        <span>{provider.rating.toFixed(1)}</span>
-                        {isSaccoConfirmed && <span className="text-[7.5px] font-black text-blue-600">Sacco</span>}
+                {/* Online Indicator Badge */}
+                {provider.isOnline && (
+                    <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>ONLINE</span>
                     </div>
-                </div>
-
-                {/* Sacco member blue tag */}
-                {isSaccoConfirmed && (
-                    <p className="text-[9.5px] text-blue-600 font-semibold truncate leading-none">
-                        a member of{' '}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (onViewSacco) {
-                                    onViewSacco(provider);
-                                }
-                            }}
-                            className="font-black underline text-blue-700 hover:text-blue-900 cursor-pointer"
-                            title="Click to view Sacco & Organization Profile"
-                        >
-                            {provider.saccoMember?.saccoName || 'Utumishi Sacco'}
-                        </button>
-                    </p>
                 )}
 
-                {/* Specific Skill Description / Bio snippet */}
-                <p className="text-[9px] text-gray-500 font-normal line-clamp-2 leading-tight">
-                    {displayDesc}
-                </p>
+                {/* Top Left: Sacco Badge */}
+                {isSaccoConfirmed && (
+                    <div className="absolute top-1.5 left-1.5 z-10">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewSacco) onViewSacco(provider);
+                            }}
+                            className="bg-black text-white text-[8px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1 border border-white/20 active:scale-95 transition-transform cursor-pointer"
+                            title={`Member of ${saccoName}`}
+                        >
+                            <span>●</span>
+                            <span className="truncate max-w-[90px]">{saccoName}</span>
+                        </button>
+                    </div>
+                )}
 
-                <div className="pt-1 mt-auto flex items-center justify-between border-t border-gray-100/80">
-                    <span className="text-[9px] font-medium text-gray-400 truncate">{provider.name}</span>
-                    {displayRate > 0 ? (
-                        <p className="text-[10px] font-black text-gray-900">
-                            <span className="text-emerald-600 font-extrabold">{displayCurrency}</span> {displayRate.toLocaleString()}
-                            <span className="text-[8px] font-medium text-gray-400 ml-0.5">/{rateSuffix[provider.rateType] || 'hr'}</span>
+                {/* Top Right: Verification Badge */}
+                {(matchedSkill || provider.isVerified) && (
+                    <div className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center border border-white shadow-xs">
+                        ✓
+                    </div>
+                )}
+            </div>
+            
+            {/* Content Details */}
+            <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
+                <div>
+                    <div className="flex justify-between items-start gap-1">
+                        <h3 className="font-bold text-xs text-black truncate leading-snug flex-1">
+                            {displayTitle}
+                        </h3>
+                        <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
+                            <StarIcon className="text-black" />
+                            <span>{provider.rating.toFixed(1)}</span>
+                        </div>
+                    </div>
+
+                    <p className="text-[10px] text-gray-500 font-normal line-clamp-2 leading-tight mt-1">
+                        {displayDesc}
+                    </p>
+                </div>
+
+                <div className="pt-2 mt-auto flex flex-col gap-1 border-t border-dashed border-gray-200">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-black truncate flex items-center gap-1">
+                            <span>{provider.name}</span>
+                            {(provider.isVerified || matchedSkill) && (
+                                <svg className="w-3.5 h-3.5 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                                </svg>
+                            )}
+                            <span className="text-gray-600 font-mono text-[9px] font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                        </span>
+                        {displayRate > 0 ? (
+                            <p className="text-[10px] font-bold text-black font-mono">
+                                {displayCurrency} {displayRate.toLocaleString()}
+                                <span className="text-[8px] text-gray-500 font-normal ml-0.5">/{rateSuffix[provider.rateType] || 'hr'}</span>
+                            </p>
+                        ) : (
+                            <p className="text-[8.5px] font-bold text-black uppercase tracking-wider">On Request</p>
+                        )}
+                    </div>
+                    {isSaccoConfirmed && (
+                        <p className="text-[8.5px] text-gray-500 font-medium truncate">
+                            a member of{' '}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onViewSacco) onViewSacco(provider);
+                                }}
+                                className="font-bold text-black underline hover:bg-black hover:text-white px-0.5 transition-colors cursor-pointer"
+                                title={`View ${saccoName} profile`}
+                            >
+                                {saccoName}
+                            </button>
+                            {' '}sacco
                         </p>
-                    ) : (
-                        <p className="text-[8.5px] font-extrabold text-emerald-600 uppercase tracking-wider">On Request</p>
                     )}
                 </div>
             </div>

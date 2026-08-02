@@ -1,27 +1,35 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import type { ServiceProvider, CurrentPage } from '../types';
+import React, { useState, useMemo } from 'react';
+import type { ServiceProvider, CatalogueItem, CurrentPage } from '../types';
 import ServiceCard from './ServiceCard';
+import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 
 const MenuIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
   </svg>
 );
 
 const SearchIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
   </svg>
 );
 
 const BellIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-black fill-current" viewBox="0 0 20 20">
+    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
   </svg>
 );
 
 interface NikoSokoProps {
     providers: ServiceProvider[];
+    catalogueItems?: CatalogueItem[];
     onSelectProvider: (p: ServiceProvider) => void;
     searchTerm: string;
     setSearchTerm: (t: string) => void;
@@ -31,33 +39,39 @@ interface NikoSokoProps {
     onNavigate: (p: CurrentPage) => void;
     currentUser: ServiceProvider | null;
     onViewSacco?: (p: ServiceProvider) => void;
+    isAuthenticated?: boolean;
+    onAuthClick?: () => void;
+    onInitiateContact?: (provider: ServiceProvider) => boolean;
+    onBookProvider?: (provider: ServiceProvider) => void;
 }
 
 interface HighlightCategory {
     id: string;
     title: string;
-    icon: string;
     keyword: string;
-    activeBg: string;
-    badgeBg: string;
 }
 
 const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
-    { id: 'boda', title: '1. Boda', icon: '🏍️', keyword: 'boda', activeBg: 'bg-amber-500 text-white border-amber-500', badgeBg: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { id: 'taxi', title: '2. Taxi', icon: '🚕', keyword: 'taxi', activeBg: 'bg-blue-600 text-white border-blue-600', badgeBg: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { id: 'electrician', title: '3. Electrician', icon: '⚡', keyword: 'electrician', activeBg: 'bg-emerald-600 text-white border-emerald-600', badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { id: 'plumber', title: 'Plumber', icon: '🔧', keyword: 'plumber', activeBg: 'bg-cyan-600 text-white border-cyan-600', badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-    { id: 'cleaner', title: 'Cleaner', icon: '🧹', keyword: 'cleaning', activeBg: 'bg-purple-600 text-white border-purple-600', badgeBg: 'bg-purple-50 text-purple-700 border-purple-200' },
-    { id: 'mechanic', title: 'Mechanic', icon: '🛠️', keyword: 'mechanic', activeBg: 'bg-rose-600 text-white border-rose-600', badgeBg: 'bg-rose-50 text-rose-700 border-rose-200' },
-    { id: 'courier', title: 'Delivery', icon: '📦', keyword: 'delivery', activeBg: 'bg-indigo-600 text-white border-indigo-600', badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200' }
+    { id: 'boda', title: 'Boda', keyword: 'boda' },
+    { id: 'taxi', title: 'Taxi', keyword: 'taxi' },
+    { id: 'electrician', title: 'Electrician', keyword: 'electrician' },
+    { id: 'plumber', title: 'Plumber', keyword: 'plumber' },
+    { id: 'refills', title: 'Gas & Water', keyword: 'refill' },
+    { id: 'tv', title: 'TV Mounting', keyword: 'tv' },
+    { id: 'braiding', title: 'Braiding', keyword: 'braid' },
+    { id: 'cleaner', title: 'Cleaning', keyword: 'clean' },
+    { id: 'mechanic', title: 'Mechanic', keyword: 'mechanic' },
+    { id: 'courier', title: 'Delivery', keyword: 'delivery' }
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
-    hasNewMessages, onNavigate, currentUser, onViewSacco
+    providers, catalogueItems = [], onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
+    hasNewMessages, onNavigate, currentUser, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
+    const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
     const [localSearch, setLocalSearch] = useState(searchTerm || '');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedCatalogueItem, setSelectedCatalogueItem] = useState<CatalogueItem | null>(null);
 
     const handleCategoryClick = (cat: HighlightCategory) => {
         if (selectedCategory === cat.id) {
@@ -66,7 +80,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             setSearchTerm('');
         } else {
             setSelectedCategory(cat.id);
-            setLocalSearch(cat.title.replace(/^[0-9]+\.\s*/, ''));
+            setLocalSearch(cat.title);
             setSearchTerm(cat.keyword);
         }
     };
@@ -80,10 +94,9 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         }
     };
 
-    // Sorted nearby providers from closest distance
+    // Filtered nearby professionals
     const filteredAndSortedProviders = useMemo(() => {
         let result = [...providers].filter(p => p.category !== 'PERSONAL' && !p.premiseId);
-        
         const activeQuery = (searchTerm || localSearch).toLowerCase().trim();
 
         if (activeQuery) {
@@ -92,16 +105,16 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                 const serviceMatch = p.service.toLowerCase().includes(activeQuery);
                 const locationMatch = p.location.toLowerCase().includes(activeQuery);
                 const aboutMatch = (p.about || '').toLowerCase().includes(activeQuery);
+                const categoryMatch = (p.category || '').toLowerCase().includes(activeQuery);
                 const skillMatch = p.skills?.some(s => 
                     (s.skillTitle || s.name || '').toLowerCase().includes(activeQuery) ||
                     (s.category || '').toLowerCase().includes(activeQuery) ||
                     (s.description || '').toLowerCase().includes(activeQuery)
                 );
-                return nameMatch || serviceMatch || locationMatch || aboutMatch || skillMatch;
+                return nameMatch || serviceMatch || locationMatch || aboutMatch || categoryMatch || skillMatch;
             });
         }
         
-        // Sort with Sacco verified members boosted to the top, then by distance
         return result.sort((a, b) => {
             const aSacco = a.isSaccoVerified || a.saccoMember?.status === 'Confirmed' ? 1 : 0;
             const bSacco = b.isSaccoVerified || b.saccoMember?.status === 'Confirmed' ? 1 : 0;
@@ -110,69 +123,79 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         });
     }, [providers, searchTerm, localSearch]);
 
-    return (
-        <div className="w-full max-w-md mx-auto bg-gray-50/50 min-h-screen font-sans pb-20 relative overflow-x-hidden border-x border-gray-200/80">
-            {/* HERO BANNER - MATTE BLACK (Expanded like SideMenu Header) */}
-            <header className="relative bg-black text-white pt-8 pb-16 px-5 rounded-b-md shadow-2xl overflow-hidden border-b border-white/10">
-                {/* Subtle Ambient Background Lighting */}
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
-                <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    // Filtered service listings (catalogue items - strictly services offered by professionals)
+    const filteredAndSortedServices = useMemo(() => {
+        let result = [...catalogueItems];
+        const activeQuery = (searchTerm || localSearch).toLowerCase().trim();
 
-                {/* Top Nav: Burger Menu, Logo, Bell */}
-                <div className="flex justify-between items-center relative z-10">
-                    {/* Cornered Burger Menu Button */}
+        if (activeQuery) {
+            result = result.filter(item => {
+                const provider = providers.find(p => p.id === item.providerId);
+                const titleMatch = item.title.toLowerCase().includes(activeQuery);
+                const categoryMatch = (item.category || '').toLowerCase().includes(activeQuery);
+                const descMatch = (item.description || '').toLowerCase().includes(activeQuery);
+                const priceMatch = (item.price || '').toLowerCase().includes(activeQuery);
+                const providerMatch = provider ? (
+                    provider.name.toLowerCase().includes(activeQuery) ||
+                    provider.location.toLowerCase().includes(activeQuery) ||
+                    provider.service.toLowerCase().includes(activeQuery)
+                ) : false;
+
+                return titleMatch || categoryMatch || descMatch || priceMatch || providerMatch;
+            });
+        }
+
+        return result;
+    }, [catalogueItems, providers, searchTerm, localSearch]);
+
+    const activeItemProvider = selectedCatalogueItem 
+        ? providers.find(p => p.id === selectedCatalogueItem.providerId) || null 
+        : null;
+
+    return (
+        <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
+            {/* MINIMALIST HEADER - STRICT BLACK & WHITE */}
+            <header className="bg-black text-white pt-6 pb-6 px-4 border-b border-gray-800">
+                <div className="flex justify-between items-center">
                     <button 
                         onClick={onBack} 
                         aria-label="Open Menu"
-                        className="p-1.5 -ml-1.5 text-white/90 hover:text-white transition-all active:scale-90 flex items-center justify-center flex-shrink-0"
+                        className="p-1 -ml-1 text-white hover:text-gray-300 transition-colors flex items-center justify-center"
                     >
                         <MenuIcon />
                     </button>
 
-                    {/* Branding Logo & Subtext */}
-                    <div className="text-center cursor-pointer space-y-1 px-2" onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}>
-                        <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white leading-none italic">NIKOSOKO</h1>
-                        <p className="text-[8px] font-extrabold uppercase tracking-[0.3em] text-gray-300">Neighborhood Marketplace</p>
+                    <div className="text-center cursor-pointer" onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}>
+                        <h1 className="text-xl font-black uppercase tracking-[0.25em] text-white leading-none">NIKOSOKO</h1>
+                        <p className="text-[8px] font-bold uppercase tracking-[0.3em] text-gray-400 mt-1">Neighborhood Skilled Marketplace</p>
                     </div>
 
-                    {/* Cornered Bell Button */}
                     {(() => {
                         const isUnread = hasNewMessages || Boolean(currentUser && !currentUser.isProfileCompleted);
                         return (
                             <button 
                                 onClick={onMessagesClick} 
                                 aria-label="Notifications"
-                                className="p-1.5 -mr-1.5 text-white/90 hover:text-white transition-all active:scale-90 relative flex items-center justify-center flex-shrink-0"
+                                className="p-1 -mr-1 text-white hover:text-gray-300 transition-colors relative flex items-center justify-center"
                             >
                                 <BellIcon />
-                                {isUnread && <div className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-rose-500 border border-black rounded-full animate-ping"></div>}
-                                {isUnread && <div className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-rose-500 border border-black rounded-full"></div>}
+                                {isUnread && <div className="absolute top-0 right-0 w-2 h-2 bg-white rounded-full"></div>}
                             </button>
                         );
                     })()}
                 </div>
-
-                {/* Extended Tagline & Live Stats Bar in Hero */}
-                <div className="mt-5 text-center relative z-10 flex flex-col items-center justify-center gap-1.5">
-                    <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-400 border border-white/10">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Hyperlocal Skill & Service Hub
-                    </span>
-                </div>
             </header>
 
-            {/* FLOATING SEARCH BAR OVERLAPPING HALF HERO & HALF BODY */}
-            <div className="-mt-6 px-4 relative z-20">
-                <div className="bg-white rounded-2xl p-2 shadow-lg border border-gray-100 flex items-center transition-all">
-                    <div className="flex-1 flex items-center px-2.5 gap-2">
-                        <SearchIcon />
-                        <input 
-                            className="w-full bg-transparent outline-none text-xs text-black placeholder-gray-400 font-medium h-9" 
-                            placeholder="Search Boda, Taxi, Electrician, Plumber..."
-                            value={localSearch}
-                            onChange={handleSearchChange}
-                        />
-                    </div>
+            {/* MINIMALIST SEARCH BAR */}
+            <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-200">
+                <div className="bg-gray-50 border border-gray-300 flex items-center px-3 py-1.5 transition-colors focus-within:border-black">
+                    <SearchIcon />
+                    <input 
+                        className="w-full bg-transparent outline-none text-xs text-black placeholder-gray-500 font-medium ml-2 h-7" 
+                        placeholder="Search electrician, boda, TV mount, water, gas..."
+                        value={localSearch}
+                        onChange={handleSearchChange}
+                    />
                     {localSearch && (
                         <button 
                             onClick={() => {
@@ -180,92 +203,228 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                 setSearchTerm('');
                                 setSelectedCategory(null);
                             }}
-                            className="text-xs font-bold text-gray-400 hover:text-black px-2 py-1"
+                            className="text-xs font-bold text-gray-500 hover:text-black px-1"
                         >
                             ✕
                         </button>
                     )}
                 </div>
 
-                {/* Tukosoko Shortcut Banner */}
-                <div className="mt-2.5">
-                    <button
-                        onClick={() => onNavigate('tukosoko')}
-                        className="w-full bg-black text-white p-2.5 rounded-2xl flex items-center justify-between shadow-md hover:bg-gray-900 transition-all active:scale-98"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="text-base p-1 bg-white/20 rounded-xl">🛒</span>
-                            <div className="text-left">
-                                <span className="text-xs font-black uppercase tracking-wider block leading-tight">Tukosoko</span>
-                                <span className="text-[9px] text-amber-400 font-bold block">TV Mounting, Water, Gas, Braiding & Key Cutting</span>
-                            </div>
-                        </div>
-                        <span className="text-[10px] font-black uppercase bg-white text-black px-2.5 py-1.5 rounded-xl shadow-xs">Shop Services ➔</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* ON-DEMAND SERVICE HIGHLIGHTS - POPPING COLOR PILLS */}
-            <section className="px-3.5 mt-3">
-                <div className="flex justify-between items-center mb-2 px-0.5">
-                    <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-500">On-Demand Services</h3>
-                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Nearby</span>
-                </div>
-                
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {/* QUICK FILTERS - MINIMAL MONOCHROME PILLS */}
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-2">
                     {HIGHLIGHT_CATEGORIES.map(cat => {
                         const isSelected = selectedCategory === cat.id;
                         return (
                             <button
                                 key={cat.id}
                                 onClick={() => handleCategoryClick(cat)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all flex-shrink-0 active:scale-95 shadow-2xs ${
+                                className={`px-2.5 py-1 border text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 active:scale-95 ${
                                     isSelected 
-                                        ? cat.activeBg
-                                        : 'bg-white text-gray-800 border-gray-200/80 hover:bg-gray-100/80'
+                                        ? 'bg-black text-white border-black' 
+                                        : 'bg-white text-gray-700 border-gray-200 hover:border-black'
                                 }`}
                             >
-                                <span className="text-xs">{cat.icon}</span>
-                                <span className="whitespace-nowrap tracking-tight">{cat.title}</span>
+                                {cat.title}
                             </button>
                         );
                     })}
                 </div>
-            </section>
+            </div>
 
-            {/* DISCOVER NEARBY GRID - Listed from closest distance */}
-            <main className="px-3.5 mt-3">
-                <div className="flex justify-between items-center mb-2.5 px-0.5">
-                    <div>
+            {/* MAIN CONTENT HEADER WITH INLINE RECTANGULAR TOGGLE SWITCH */}
+            <main className="px-3 pt-4">
+                {/* SINGLE LINE: TITLE & RECTANGULAR SIMPLE BUTTON TOGGLE SWITCH */}
+                <div className="flex justify-between items-center pb-3 border-b border-dashed border-gray-200 mb-3">
+                    <div className="flex items-center gap-2">
                         <h2 className="text-xs font-black uppercase tracking-wider text-black">
-                            {localSearch ? `Results for "${localSearch}"` : 'Nearby Professionals'}
+                            {activeTab === 'pros' ? 'Nearby Professionals' : 'Service Listings'}
                         </h2>
+                        <span className="text-[9px] font-mono text-gray-500 border border-gray-200 px-1.5 py-0.5">
+                            {activeTab === 'pros' ? filteredAndSortedProviders.length : filteredAndSortedServices.length}
+                        </span>
                     </div>
-                    <span className="text-[9px] font-bold text-gray-500 bg-gray-200/60 px-2 py-0.5 rounded-full">
-                        {filteredAndSortedProviders.length} nearby
-                    </span>
+
+                    {/* SIMPLE RECTANGULAR TOGGLE BUTTONS ON SAME LINE */}
+                    <div className="inline-flex border border-black p-0.5 bg-white">
+                        <button
+                            onClick={() => setActiveTab('pros')}
+                            className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all ${
+                                activeTab === 'pros'
+                                    ? 'bg-black text-white'
+                                    : 'bg-white text-black hover:bg-gray-100'
+                            }`}
+                        >
+                            Pros
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('services')}
+                            className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all ${
+                                activeTab === 'services'
+                                    ? 'bg-black text-white'
+                                    : 'bg-white text-black hover:bg-gray-100'
+                            }`}
+                        >
+                            Services
+                        </button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                    {filteredAndSortedProviders.map(provider => (
-                        <ServiceCard 
-                            key={provider.id} 
-                            provider={provider} 
-                            searchTerm={localSearch || searchTerm}
-                            onClick={() => onSelectProvider(provider)} 
-                            onViewSacco={onViewSacco}
-                        />
-                    ))}
-                </div>
+                {/* TAB CONTENTS */}
+                {activeTab === 'pros' ? (
+                    /* NEARBY PROS GRID */
+                    <div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {filteredAndSortedProviders.map(provider => (
+                                <ServiceCard 
+                                    key={provider.id} 
+                                    provider={provider} 
+                                    searchTerm={localSearch || searchTerm}
+                                    onClick={() => onSelectProvider(provider)} 
+                                    onViewSacco={onViewSacco}
+                                />
+                            ))}
+                        </div>
 
-                {filteredAndSortedProviders.length === 0 && (
-                    <div className="py-12 text-center text-gray-400 bg-white rounded-2xl border border-gray-100 mt-2 p-4 shadow-2xs">
-                        <div className="text-3xl mb-2">🔍</div>
-                        <p className="font-bold text-xs text-black">No nearby professionals found</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">Try another search or clear your filter.</p>
+                        {filteredAndSortedProviders.length === 0 && (
+                            <div className="py-12 text-center text-gray-500 border border-dashed border-gray-300 p-4 mt-2">
+                                <p className="font-bold text-xs text-black uppercase tracking-wider">No professionals found</p>
+                                <p className="text-[10px] text-gray-500 mt-1">Try another search keyword or clear filters.</p>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* SERVICE LISTINGS GRID - LISTINGS MADE BY PROFESSIONALS */
+                    <div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {filteredAndSortedServices.map(item => {
+                                const provider = providers.find(p => p.id === item.providerId);
+                                const photo = item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
+                                const isSaccoMember = provider?.isSaccoVerified || provider?.saccoMember?.status === 'Confirmed' || provider?.saccoMember?.status === 'Approved';
+                                const saccoName = provider?.saccoMember?.saccoName || 'Sacco Member';
+
+                                return (
+                                    <div 
+                                        key={item.id}
+                                        onClick={() => setSelectedCatalogueItem(item)}
+                                        className="bg-white border border-gray-200 hover:border-black cursor-pointer group transition-all flex flex-col justify-between"
+                                    >
+                                        <div className="relative h-28 bg-gray-100 overflow-hidden border-b border-gray-200">
+                                            <img 
+                                                src={photo} 
+                                                alt={item.title} 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                            />
+                                            <div className="absolute top-1.5 left-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10">
+                                                {item.category || 'Service'}
+                                            </div>
+
+                                            {/* Distance/Proximity Badge in Black space and green text */}
+                                            {provider && (
+                                                <div className="absolute bottom-1.5 left-1.5 bg-black text-emerald-400 font-mono text-[8.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10 border border-emerald-500/30">
+                                                    {provider.distanceKm}km away
+                                                </div>
+                                            )}
+
+                                            {/* Online Indicator Badge on Thumbnail */}
+                                            {provider?.isOnline && (
+                                                <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                                    <span>ONLINE</span>
+                                                </div>
+                                            )}
+
+                                            {/* BADGE PRIORITY RULE: Sacco Preferred Over Verified */}
+                                            {isSaccoMember ? (
+                                                <div className="absolute top-1.5 right-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-white/20 z-10">
+                                                    ● {saccoName}
+                                                </div>
+                                            ) : item.isVerified ? (
+                                                <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white w-5 h-5 rounded-full font-bold text-xs flex items-center justify-center border border-white shadow-xs z-10">
+                                                    ✓
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex justify-between items-start gap-1">
+                                                    <h3 className="font-bold text-xs text-black leading-snug line-clamp-2 flex-1">{item.title}</h3>
+                                                    {provider && (
+                                                        <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
+                                                            <StarIcon />
+                                                            <span>{provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[9.5px] text-gray-500 line-clamp-2 mt-1 leading-tight">{item.description}</p>
+                                            </div>
+
+                                            <div className="pt-2 mt-auto border-t border-dashed border-gray-200 flex items-center justify-between">
+                                                {provider ? (
+                                                    <div className="min-w-0 pr-1">
+                                                        <span className="text-[9.5px] font-bold text-black truncate flex items-center gap-1">
+                                                            <span>{provider.name}</span>
+                                                            {(provider.isVerified || item.isVerified) && (
+                                                                <svg className="w-3.5 h-3.5 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                                                                </svg>
+                                                            )}
+                                                            <span className="text-gray-600 font-mono text-[8.5px] font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                                        </span>
+                                                        <span className="text-[8.5px] text-gray-600 truncate block">{provider.location} • <span className="font-mono font-bold text-black">{provider.distanceKm}km away</span></span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[9px] text-gray-400">Professional Service</span>
+                                                )}
+                                                <span className="text-[10px] font-black text-black font-mono flex-shrink-0">
+                                                    {item.price}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {filteredAndSortedServices.length === 0 && (
+                            <div className="py-12 text-center text-gray-500 border border-dashed border-gray-300 p-4 mt-2">
+                                <p className="font-bold text-xs text-black uppercase tracking-wider">No service listings found</p>
+                                <p className="text-[10px] text-gray-500 mt-1">Try another search keyword or switch to Pros tab.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
+
+            {/* FLOATING BUTTON PROMPTING USERS TO SELL A SERVICE */}
+            <div className="fixed bottom-6 right-4 z-40">
+                <button
+                    onClick={() => {
+                        if (!isAuthenticated) {
+                            if (onAuthClick) onAuthClick();
+                        } else {
+                            onNavigate('sellService');
+                        }
+                    }}
+                    className="bg-black hover:bg-gray-900 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-full shadow-2xl border border-gray-700 flex items-center gap-2 transition-all active:scale-95 cursor-pointer group"
+                    title="List & Sell a Service on NikoSoko"
+                >
+                    <span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm leading-none group-hover:scale-110 transition-transform">+</span>
+                    <span>SELL A SERVICE</span>
+                </button>
+            </div>
+
+            {/* SERVICE ITEM DETAIL MODAL */}
+            {selectedCatalogueItem && (
+                <CatalogueItemDetailModal
+                    item={selectedCatalogueItem}
+                    onClose={() => setSelectedCatalogueItem(null)}
+                    provider={activeItemProvider}
+                    isAuthenticated={isAuthenticated}
+                    onAuthClick={onAuthClick || (() => {})}
+                    onInitiateContact={onInitiateContact || (() => true)}
+                />
+            )}
         </div>
     );
 };

@@ -71,6 +71,43 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     const [flagCategory, setFlagCategory] = useState('Inappropriate content / service');
     const [flagReasonText, setFlagReasonText] = useState('');
 
+    // GPS Locating State for Online Status Toggle
+    const [isLocatingGps, setIsLocatingGps] = useState(false);
+
+    const handleToggleOnlineStatus = () => {
+        if (!profileData.isOnline) {
+            setIsLocatingGps(true);
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        setIsLocatingGps(false);
+                        onUpdate({
+                            ...profileData,
+                            isOnline: true,
+                            location: `${latitude.toFixed(3)}°N, ${longitude.toFixed(3)}°E`
+                        });
+                        alert(`GPS location updated: (${latitude.toFixed(4)}, ${longitude.toFixed(4)}). You are now ONLINE!`);
+                    },
+                    (error) => {
+                        setIsLocatingGps(false);
+                        onUpdate({
+                            ...profileData,
+                            isOnline: true
+                        });
+                        alert('Online status activated.');
+                    },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                );
+            } else {
+                setIsLocatingGps(false);
+                onUpdate({ ...profileData, isOnline: true });
+            }
+        } else {
+            onUpdate({ ...profileData, isOnline: false });
+        }
+    };
+
     // Editing Listing (Catalogue Item) State
     const [editingCatalogueItem, setEditingCatalogueItem] = useState<any | null>(null);
 
@@ -507,21 +544,35 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                             </div>
                         )}
                     </div>
-                    {/* Avatar with Camera/Pen Upload Badge */}
-                    <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white bg-gray-200 shadow-md overflow-hidden z-20 group">
-                        <img className="object-cover w-full h-full" src={isEditing ? editAvatarUrl : profileData.avatarUrl} alt={displayName} />
-                        {isOwner && (
-                            <button 
+                    {/* Avatar with Camera/Pen Upload Badge & Online Status Indicator Dot */}
+                    <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 z-20">
+                        <div className="w-20 h-20 rounded-full border-4 border-white bg-gray-200 shadow-md overflow-hidden relative group">
+                            <img className="object-cover w-full h-full" src={isEditing ? editAvatarUrl : profileData.avatarUrl} alt={displayName} />
+                            {isOwner && (
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setIsEditing(true);
+                                        avatarFileInputRef.current?.click();
+                                    }}
+                                    className="absolute inset-0 bg-black/50 hover:bg-black/70 text-white flex flex-col items-center justify-center text-[8px] font-black uppercase tracking-wider transition-all"
+                                    title="Change Profile Avatar"
+                                >
+                                    <CameraIcon />
+                                    <span>Avatar</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Avatar Thumbnail Online Indicator Dot */}
+                        {profileData.isOnline && (
+                            <button
                                 type="button"
-                                onClick={() => {
-                                    setIsEditing(true);
-                                    avatarFileInputRef.current?.click();
-                                }}
-                                className="absolute inset-0 bg-black/50 hover:bg-black/70 text-white flex flex-col items-center justify-center text-[8px] font-black uppercase tracking-wider transition-all"
-                                title="Change Profile Avatar"
+                                onClick={isOwner ? handleToggleOnlineStatus : undefined}
+                                className={`absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full z-30 shadow-xs flex items-center justify-center ${isOwner ? 'cursor-pointer hover:scale-110' : ''}`}
+                                title={isOwner ? "Online (Click to toggle)" : "Online Now"}
                             >
-                                <CameraIcon />
-                                <span>Avatar</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                             </button>
                         )}
                     </div>
@@ -560,7 +611,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                         <div className="space-y-1">
                             <div className="flex items-center justify-center gap-1.5">
                                 <h1 className="text-xl font-black text-black">{isOwner ? `$KILL ID: ${displayId}` : displayName}</h1>
-                                {profileData.isVerified && <VerifiedIcon className="w-5 h-5 text-emerald-600" />}
+                                {(() => {
+                                    const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
+                                    if (!isSaccoConfirmed && profileData.isVerified) {
+                                        return <VerifiedIcon className="w-5 h-5 text-blue-500" />;
+                                    }
+                                    return null;
+                                })()}
                                 {isOwner && (
                                     <button 
                                         onClick={() => setIsEditing(true)} 
@@ -572,15 +629,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                 )}
                             </div>
 
-                            {/* Sacco Badge & Verified Text */}
+                            {/* Sacco Badge or Green Certified Badge */}
                             {(() => {
                                 const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
-                                const saccoName = profileData.saccoMember?.saccoName || 'Utumishi Sacco';
+                                const saccoName = profileData.saccoMember?.saccoName || 'Sacco Member';
                                 return (
                                     <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
                                         {isSaccoConfirmed ? (
-                                            <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50/90 border border-blue-200/80 px-3.5 py-1 rounded-full shadow-2xs">
-                                                <span className="text-blue-600">💙</span>
+                                            <div className="flex items-center gap-1 text-[11px] font-bold text-black bg-white border border-black px-3 py-0.5 shadow-2xs">
                                                 <span>a member of</span>
                                                 <button 
                                                     onClick={() => {
@@ -590,21 +646,27 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                                             alert(`Member of ${saccoName}`);
                                                         }
                                                     }}
-                                                    className="font-black text-blue-700 underline hover:text-blue-900 cursor-pointer ml-0.5"
+                                                    className="font-black text-black underline hover:bg-black hover:text-white px-1 transition-colors cursor-pointer"
                                                     title="Click to view Sacco & Organization Profile"
                                                 >
                                                     {saccoName}
                                                 </button>
                                             </div>
+                                        ) : profileData.isVerified ? (
+                                            <span className="bg-emerald-600 text-white text-[9.5px] font-bold px-2.5 py-0.5 uppercase tracking-wider flex items-center gap-1 border border-emerald-500 shadow-2xs">
+                                                <span>✓</span>
+                                                <span>VERIFIED</span>
+                                            </span>
                                         ) : profileData.saccoMember?.status === 'Pending' ? (
-                                            <span className="bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                                                <span>⏳</span>
+                                            <span className="bg-white border border-gray-400 text-gray-800 text-[9.5px] font-bold px-2.5 py-0.5 uppercase tracking-wider flex items-center gap-1">
                                                 <span>Sacco Verification Pending</span>
                                             </span>
                                         ) : null}
                                     </div>
                                 );
                             })()}
+
+
 
                             <div className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-600 pt-1">
                                 <span>{profileData.service}</span>

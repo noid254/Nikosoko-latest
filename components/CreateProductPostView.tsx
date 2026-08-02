@@ -59,12 +59,12 @@ const CreateProductPostView: React.FC<CreateProductPostViewProps> = ({ onBack, o
                 <button onClick={onBack} className="text-gray-600">
                     <BackIcon />
                 </button>
-                <h1 className="text-xl font-bold text-gray-800">Post a New Product</h1>
+                <h1 className="text-xl font-bold text-gray-800">Post a Service Listing</h1>
             </header>
 
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
                 <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Product Images (up to {maxImages})</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Service Photos / Work Samples (up to {maxImages})</label>
                     <div className="grid grid-cols-3 gap-2">
                         {imagePreviews.map((src, index) => (
                             <div key={index} className="relative aspect-square">
@@ -81,28 +81,28 @@ const CreateProductPostView: React.FC<CreateProductPostViewProps> = ({ onBack, o
                     <input type="file" ref={fileInputRef} multiple accept="image/*" onChange={handleFileChange} className="hidden" />
                 </div>
                 
-                <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Product Title" className={inputClass} required/>
+                <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Service Title (e.g., Electrical Repair, TV Mount)" className={inputClass} required/>
                 
                 <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Ksh</span>
-                    <input value={price} onChange={e => setPrice(e.target.value)} type="number" placeholder="Price" className={`${inputClass} pl-10`} required/>
+                    <input value={price} onChange={e => setPrice(e.target.value)} type="number" placeholder="Service Rate / Fee" className={`${inputClass} pl-10`} required/>
                 </div>
                 
-                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Product Description" rows={5} className={inputClass} required/>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Service Description & What is included" rows={5} className={inputClass} required/>
 
                 <div className="p-3 bg-gray-100 rounded-lg">
-                    <h3 className="font-semibold text-gray-800 text-sm mb-2">Item Verification</h3>
-                    <input value={serialNumber} onChange={e => setSerialNumber(e.target.value)} type="text" placeholder="Serial Number / IMEI (Optional)" className={`${inputClass} bg-white`} />
+                    <h3 className="font-semibold text-gray-800 text-sm mb-2">Service Certification</h3>
+                    <input value={serialNumber} onChange={e => setSerialNumber(e.target.value)} type="text" placeholder="Certificate / Reg Number (Optional)" className={`${inputClass} bg-white`} />
                     <label className="flex items-center gap-3 mt-3 cursor-pointer">
                         <input type="checkbox" checked={hasReceipt} onChange={e => setHasReceipt(e.target.checked)} className="h-5 w-5 rounded text-brand-gold focus:ring-brand-gold" />
-                        <span className="text-sm text-gray-700">I have the original receipt for this item.</span>
+                        <span className="text-sm text-gray-700">I have relevant skill certifications or qualifications for this service.</span>
                     </label>
                 </div>
             </form>
             
             <footer className="p-4 bg-white border-t">
-                <button onClick={handleSubmit} className="w-full bg-brand-navy text-white font-bold py-4 px-4 rounded-xl hover:opacity-90 transition-colors shadow-lg active-scale">
-                    Save Product
+                <button onClick={handleSubmit} className="w-full bg-black text-white font-black uppercase tracking-wider py-4 px-4 rounded-xl hover:opacity-90 transition-colors shadow-lg active-scale">
+                    Save Service Listing
                 </button>
             </footer>
         </div>
