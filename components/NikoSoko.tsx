@@ -30,6 +30,7 @@ interface NikoSokoProps {
     hasNewMessages: boolean;
     onNavigate: (p: CurrentPage) => void;
     currentUser: ServiceProvider | null;
+    onViewSacco?: (p: ServiceProvider) => void;
 }
 
 interface HighlightCategory {
@@ -53,7 +54,7 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
     providers, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
-    hasNewMessages, onNavigate, currentUser 
+    hasNewMessages, onNavigate, currentUser, onViewSacco
 }) => {
     const [localSearch, setLocalSearch] = useState(searchTerm || '');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -100,8 +101,13 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             });
         }
         
-        // Always sort from closest distance
-        return result.sort((a, b) => a.distanceKm - b.distanceKm);
+        // Sort with Sacco verified members boosted to the top, then by distance
+        return result.sort((a, b) => {
+            const aSacco = a.isSaccoVerified || a.saccoMember?.status === 'Confirmed' ? 1 : 0;
+            const bSacco = b.isSaccoVerified || b.saccoMember?.status === 'Confirmed' ? 1 : 0;
+            if (bSacco !== aSacco) return bSacco - aSacco;
+            return a.distanceKm - b.distanceKm;
+        });
     }, [providers, searchTerm, localSearch]);
 
     return (
@@ -180,6 +186,23 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         </button>
                     )}
                 </div>
+
+                {/* Tukosoko Shortcut Banner */}
+                <div className="mt-2.5">
+                    <button
+                        onClick={() => onNavigate('tukosoko')}
+                        className="w-full bg-black text-white p-2.5 rounded-2xl flex items-center justify-between shadow-md hover:bg-gray-900 transition-all active:scale-98"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-base p-1 bg-white/20 rounded-xl">🛒</span>
+                            <div className="text-left">
+                                <span className="text-xs font-black uppercase tracking-wider block leading-tight">Tukosoko</span>
+                                <span className="text-[9px] text-amber-400 font-bold block">TV Mounting, Water, Gas, Braiding & Key Cutting</span>
+                            </div>
+                        </div>
+                        <span className="text-[10px] font-black uppercase bg-white text-black px-2.5 py-1.5 rounded-xl shadow-xs">Shop Services ➔</span>
+                    </button>
+                </div>
             </div>
 
             {/* ON-DEMAND SERVICE HIGHLIGHTS - POPPING COLOR PILLS */}
@@ -230,6 +253,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                             provider={provider} 
                             searchTerm={localSearch || searchTerm}
                             onClick={() => onSelectProvider(provider)} 
+                            onViewSacco={onViewSacco}
                         />
                     ))}
                 </div>

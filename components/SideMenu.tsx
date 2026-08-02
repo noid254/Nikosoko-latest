@@ -9,6 +9,7 @@ interface SideMenuProps {
   isSuperAdmin: boolean;
   onLogout: () => void;
   onOpenCompleteSignUp?: () => void;
+  onOpenSEOMap?: () => void;
 }
 
 const XIcon = () => (
@@ -17,20 +18,48 @@ const XIcon = () => (
   </svg>
 );
 
-const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, currentUser, isSuperAdmin, onLogout, onOpenCompleteSignUp }) => {
+const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, currentUser, isSuperAdmin, onLogout, onOpenCompleteSignUp, onOpenSEOMap }) => {
     const [isOnline, setIsOnline] = useState(currentUser?.isOnline ?? true);
+
+    const [showSaccoNotice, setShowSaccoNotice] = useState(false);
 
     if (!isOpen) return null;
 
     const hasCatalogueActive = Boolean(currentUser?.hasCatalogue || (currentUser?.catalogueItems && currentUser.catalogueItems.length > 0));
 
-    const navItems: { label: string; page: CurrentPage | 'profile' | 'skill_id'; icon: string; description: string }[] = [
-        { label: 'My Profile', page: 'profile', icon: '👤', description: 'Edit bio, profile photo, banner & CTA buttons' },
+    const isSaccoAuthorized = Boolean(
+        currentUser && (
+            currentUser.accountType === 'organization' ||
+            currentUser.saccoCode ||
+            currentUser.saccoMember ||
+            currentUser.phone === '+254700000000' ||
+            isSuperAdmin
+        )
+    );
+
+    const baseNavItems: { label: string; page: CurrentPage | 'profile' | 'skill_id'; icon: string; description: string }[] = [
+        { label: 'NikoSoko', page: 'home', icon: '🏪', description: 'Find & connect with nearby skilled professionals' },
+        { label: 'Tukosoko', page: 'tukosoko', icon: '🛒', description: 'Services for sale e.g. TV mounting, water, gas, braiding' },
         { label: '$kill Hub', page: 'skill_id', icon: '⚡', description: 'Add skills, verify, view demand heatmaps & upgrade skills' },
-        ...(hasCatalogueActive ? [{ label: 'My Catalogue', page: 'mycatalogue' as CurrentPage, icon: '📁', description: 'Product list & door landing page' }] : []),
-        ...(currentUser?.premiseId ? [{ label: 'Door Profile', page: 'doorProfile' as CurrentPage, icon: '🔑', description: 'QR Landing Page' }] : []),
-        { label: 'My Saved Contacts', page: 'mycontacts', icon: '👥', description: 'Saved professional network' },
     ];
+
+    if (isSaccoAuthorized) {
+        baseNavItems.push({ 
+            label: 'Sacco & Org Portal', 
+            page: 'sacco_dashboard' as const, 
+            icon: '🏢', 
+            description: 'Security vetting, member approvals, services & courses' 
+        });
+    }
+
+    baseNavItems.push({ 
+        label: 'Saved Contacts', 
+        page: 'mycontacts' as const, 
+        icon: '👥', 
+        description: 'Saved service contacts' 
+    });
+
+    const navItems = baseNavItems;
 
     return (
         <div className="fixed inset-0 z-[110] flex font-sans">
@@ -48,7 +77,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
                             </div>
                             <div>
                                 <h1 className="text-xl font-black uppercase tracking-widest text-white leading-none">NIKOSOKO</h1>
-                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">Borderless Skill Ecosystem</p>
+                                <p className="text-[8.5px] font-bold text-gray-300 tracking-tight mt-1">Find & connect with nearby skilled professionals</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1"><XIcon /></button>
@@ -94,8 +123,8 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
                     )}
                 </div>
 
-                {/* Complete Sign Up Button Card if User profile is not completed or to edit skill profile */}
-                {currentUser && (
+                {/* Complete Sign Up Button Card if User profile is not completed */}
+                {currentUser && !currentUser.isProfileCompleted && (
                     <div className="p-3 bg-gradient-to-br from-amber-500 via-amber-400 to-yellow-500 border-b border-amber-600 text-black shadow-inner">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-1.5">
@@ -133,8 +162,17 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
                             <button
                                 key={item.label}
                                 onClick={() => {
-                                    onNavigate(item.page);
-                                    onClose();
+                                    if (item.page === 'sacco_dashboard') {
+                                        if (currentUser?.accountType === 'organization' || currentUser?.saccoCode || currentUser?.saccoMember) {
+                                            onNavigate('sacco_dashboard');
+                                            onClose();
+                                        } else {
+                                            setShowSaccoNotice(true);
+                                        }
+                                    } else {
+                                        onNavigate(item.page);
+                                        onClose();
+                                    }
                                 }}
                                 className="w-full flex items-start gap-3 p-3 text-black hover:bg-gray-100 rounded-2xl transition-all group text-left border border-transparent hover:border-gray-200"
                             >
@@ -176,6 +214,77 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
                     )}
                 </div>
             </div>
+
+            {/* Sacco Portal Info / Gate Modal for Individual accounts */}
+            {showSaccoNotice && (
+                <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 font-sans animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 text-black shadow-2xl border border-gray-200">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl p-2 bg-blue-100 rounded-2xl">🏢</span>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-wider text-gray-900">
+                                        Sacco & Org Portal
+                                    </h3>
+                                    <p className="text-[10px] text-blue-600 font-extrabold uppercase">
+                                        For Registered Organizations & Schools
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowSaccoNotice(false)} 
+                                className="text-gray-400 hover:text-black font-black p-1 text-base cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-2xl space-y-2 text-xs">
+                            <p className="text-gray-800 font-bold leading-relaxed">
+                                The Sacco & Organization Portal is designed for users who signed up with a <strong>Sacco Registration No.</strong> and selected <strong>Organization Account Type</strong> (Saccos, Vocational Schools, Cooperatives).
+                            </p>
+                            <div className="pt-1 space-y-1.5">
+                                <div className="flex items-start gap-1.5 text-[11px] font-semibold text-gray-700">
+                                    <span className="text-blue-600 font-black">🛡️</span>
+                                    <span><strong>Security Vetting:</strong> Multi-layer manual approval step for member professionals.</span>
+                                </div>
+                                <div className="flex items-start gap-1.5 text-[11px] font-semibold text-gray-700">
+                                    <span className="text-blue-600 font-black">🛒</span>
+                                    <span><strong>Sell Offerings:</strong> List organization services & vocational courses for sale on Tukosoko.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 pt-1">
+                            <button
+                                onClick={() => {
+                                    setShowSaccoNotice(false);
+                                    onClose();
+                                    onNavigate('sacco_dashboard');
+                                }}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all cursor-pointer"
+                            >
+                                View Public Sacco Directory &rarr;
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowSaccoNotice(false);
+                                    onClose();
+                                    if (onOpenCompleteSignUp) {
+                                        onOpenCompleteSignUp();
+                                    } else {
+                                        onNavigate('login');
+                                    }
+                                }}
+                                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-black py-2.5 rounded-2xl text-xs uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                Register / Switch to Organization
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <style>{`
                 @keyframes slide-in-left {
                     from { transform: translateX(-100%); }

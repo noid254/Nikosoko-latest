@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { ServiceProvider, SpecialBanner, Premise } from '../types';
+import type { ServiceProvider, SpecialBanner, Premise, CatalogueItem } from '../types';
 
 import DashboardPage from './admin/DashboardPage';
 import UsersPage from './admin/UsersPage';
@@ -10,6 +10,8 @@ import BroadcastPage from './admin/BroadcastPage';
 import CategoriesPage from './admin/CategoriesPage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import PropertiesPage from './admin/PropertiesPage';
+
+import CatalogueAdminPage from './admin/CatalogueAdminPage';
 
 interface SuperAdminDashboardProps {
     onBack: () => void;
@@ -30,9 +32,12 @@ interface SuperAdminDashboardProps {
     onRejectRequest: (orgId: string, userId: string) => void;
     premises: Premise[];
     onUpdatePremise: (premise: Premise) => void;
+    catalogueItems?: CatalogueItem[];
+    onVerifyCatalogueItem?: (itemId: string, isVerified: boolean) => void;
+    onDeleteCatalogueItem?: (itemId: string) => void;
 }
 
-export type AdminPage = 'Dashboard' | 'Users' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories' | 'Organizations' | 'Properties';
+export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Properties' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories';
 
 // Icons
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
@@ -59,6 +64,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                     onViewProvider={props.onViewProvider} 
                     onUpdateProvider={props.onUpdateProvider} 
                     onDeleteProvider={props.onDeleteProvider} 
+                />;
+            case 'Catalogue':
+                return <CatalogueAdminPage
+                    catalogueItems={props.catalogueItems || []}
+                    providers={props.providers}
+                    onVerifyItem={props.onVerifyCatalogueItem || (() => {})}
+                    onDeleteItem={props.onDeleteCatalogueItem}
                 />;
             case 'Analytics':
                 return <AnalyticsPage providers={props.providers} />;
@@ -100,6 +112,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
     const navItems: { page: AdminPage, icon: React.ReactNode }[] = [
         { page: 'Dashboard', icon: <HomeIcon/> },
         { page: 'Users', icon: <UsersIcon/> },
+        { page: 'Catalogue', icon: <TagIcon/> },
         { page: 'Organizations', icon: <OrgIcon/> },
         { page: 'Properties', icon: <BuildingIcon/> },
         { page: 'Analytics', icon: <ChartIcon/> },

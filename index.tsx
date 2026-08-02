@@ -14,3 +14,18 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Register ServiceWorker for Progressive Web App (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('NikoSoko PWA ServiceWorker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('NikoSoko PWA ServiceWorker registration failed:', error);
+      });
+  });
+}
+

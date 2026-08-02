@@ -193,7 +193,7 @@ const DoorProfile: React.FC<DoorProfileProps> = ({ unit, premise, tenant, onBack
                             </div>
 
                             <div className="border-b border-gray-100 flex gap-6">
-                                <button onClick={() => setActiveTab('works')} className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'works' ? 'border-brand-navy text-brand-navy' : 'border-transparent text-gray-400'}`}>Gallery</button>
+                                <button onClick={() => setActiveTab('works')} className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'works' ? 'border-brand-navy text-brand-navy' : 'border-transparent text-gray-400'}`}>Listings</button>
                                 <button onClick={() => setActiveTab('qr')} className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'qr' ? 'border-brand-navy text-brand-navy' : 'border-transparent text-gray-400'}`}>QR Code</button>
                             </div>
 

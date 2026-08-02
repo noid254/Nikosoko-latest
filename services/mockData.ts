@@ -84,6 +84,15 @@ export const mockProviders: ServiceProvider[] = [
         rateType: 'per hour', 
         currency: 'Ksh', 
         isVerified: true, 
+        isSaccoVerified: true,
+        saccoMember: {
+            saccoId: 'sacco-stima',
+            saccoName: 'Stima Sacco',
+            saccoCode: 'SACCO-STIMA',
+            status: 'Confirmed',
+            requestedAt: '2026-01-10T10:00:00Z',
+            confirmedAt: '2026-01-11T09:00:00Z'
+        },
         about: '20 years of experience in residential and industrial plumbing.', 
         skills: [
             {
@@ -121,6 +130,15 @@ export const mockProviders: ServiceProvider[] = [
         rateType: 'per task', 
         currency: 'Ksh', 
         isVerified: true, 
+        isSaccoVerified: true,
+        saccoMember: {
+            saccoId: 'sacco-utumishi',
+            saccoName: 'Utumishi Sacco',
+            saccoCode: 'SACCO-UTUMISHI',
+            status: 'Confirmed',
+            requestedAt: '2026-02-01T10:00:00Z',
+            confirmedAt: '2026-02-02T09:00:00Z'
+        },
         about: 'Eco-friendly cleaning for homes and offices.', 
         skills: [
             {
@@ -158,6 +176,15 @@ export const mockProviders: ServiceProvider[] = [
         rateType: 'per hour', 
         currency: 'Ksh', 
         isVerified: true, 
+        isSaccoVerified: true,
+        saccoMember: {
+            saccoId: 'sacco-utumishi',
+            saccoName: 'Utumishi Sacco',
+            saccoCode: 'SACCO-UTUMISHI',
+            status: 'Confirmed',
+            requestedAt: '2026-02-01T10:00:00Z',
+            confirmedAt: '2026-02-02T09:00:00Z'
+        },
         about: 'Specializing in smart home wiring and solar installations.', 
         skills: [
             {
@@ -286,8 +313,147 @@ export const mockProviders: ServiceProvider[] = [
 ];
 
 export const mockCatalogueItems: CatalogueItem[] = [
-    { id: 'cat-s24', providerId: 'p-gizmo', title: 'Samsung Galaxy S24 Ultra', category: 'Product', description: '512GB, AI Enhanced. Titanium Gray.', price: 'Ksh 165,000', imageUrls: ['https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=400'], isVerified: true },
-    { id: 'cat-mac', providerId: 'p-gizmo', title: 'MacBook Air M2', category: 'Product', description: '13-inch, 256GB SSD, 8GB RAM.', price: 'Ksh 120,000', imageUrls: ['https://images.unsplash.com/photo-1611186871348-b1ec696e5237?q=80&w=400'], isVerified: true },
+    { 
+        id: 'cat-tutor-1', 
+        providerId: 'h2', 
+        title: 'Maths Lesson & Exam Prep Coaching', 
+        category: 'Tutoring', 
+        description: 'One-on-one high school & primary mathematics tuition covering algebra, calculus, geometry & KCSE exam preparation. Flexible online or doorstep home visits.', 
+        price: 'Ksh 200 / hour', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=800',
+            'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=800',
+            'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '1 hour per lesson',
+        discountInfo: 'First trial lesson 50% off'
+    },
+    { 
+        id: 'cat-tv-1', 
+        providerId: 'h3', 
+        title: 'TV Wall Mounting & Cable Concealing', 
+        category: 'TV Mounting', 
+        description: 'Professional TV mounting for 32" to 75" LED/OLED/QLED TVs. Includes heavy-duty wall bracket, wall drilling, precision leveling, cable trunking/concealing, and audio-visual signal setup.', 
+        price: 'Ksh 1,500', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1593784991095-a205069470b6?q=80&w=800',
+            'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=800',
+            'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '45 mins',
+        discountInfo: 'Free travel within 2km of Lavington'
+    },
+    { 
+        id: 'cat-key-1', 
+        providerId: 'h6', 
+        title: 'Emergency Key Cutting & Duplicate', 
+        category: 'Key Cutter', 
+        description: 'High-precision computer-guided key duplication for door locks, padlock keys, cabinets, and vehicle keys. Tested on-site for guaranteed smooth turn.', 
+        price: 'Ksh 300 / key', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=800',
+            'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '10 mins',
+        discountInfo: 'Discounts available for 3+ keys'
+    },
+    { 
+        id: 'cat-braid-1', 
+        providerId: 'h4', 
+        title: 'Knotless Hair Braiding & Edge Styling', 
+        category: 'Braiding', 
+        description: 'Pain-free knotless braids with neat parting, scalp oiling, and hair trim. Includes color extension matching and edge styling.', 
+        price: 'Ksh 2,500', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1560869713-7d0a29430803?q=80&w=800',
+            'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=800',
+            'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '3 hours',
+        discountInfo: 'Complimentary scalp treatment included'
+    },
+    { 
+        id: 'cat-water-1', 
+        providerId: 'h1', 
+        title: 'Purified Water Refill - 20L Bottle', 
+        category: 'Water Refill', 
+        description: '7-stage reverse osmosis purified drinking water. Doorstep delivery right to your apartment door or office floor. Includes sanitized cap seal.', 
+        price: 'Ksh 150 / refill', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1548839140-29a749e1cf4e?q=80&w=800',
+            'https://images.unsplash.com/photo-1527100673774-cce25eafaf7f?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '15 mins doorstep',
+        discountInfo: 'Free delivery within 1.5km'
+    },
+    { 
+        id: 'cat-gas-1', 
+        providerId: 't3', 
+        title: 'LPG Cooking Gas Refill - 13kg Cylinder', 
+        category: 'Gas Refill', 
+        description: 'Genuine 13kg LPG gas cylinder refill (K-Gas, Total, Pro-Gas, Afrigas). Includes free seal safety check and burner leak test upon delivery.', 
+        price: 'Ksh 1,450 / refill', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800',
+            'https://images.unsplash.com/photo-1520333789090-1afc82db536a?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '20 mins express',
+        discountInfo: 'Free safety seal verification'
+    },
+    { 
+        id: 'cat-elec-1', 
+        providerId: 'h3', 
+        title: 'Circuit Breaker & Power Fault Repair', 
+        category: 'Electrical', 
+        description: 'Diagnostic troubleshooting for tripping breakers, flickering lights, burning switch sockets, and main board wiring. EPRA certified.', 
+        price: 'Ksh 1,200', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800',
+            'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '35 mins',
+        discountInfo: 'Emergency response available'
+    },
+    { 
+        id: 'cat-plumb-1', 
+        providerId: 'h1', 
+        title: 'Drain Unclogging & Pipe Leak Seal', 
+        category: 'Plumbing', 
+        description: 'High pressure rod unclogging for kitchen sinks and bathroom drains. Replacement of worn washers, pipe seals, and leaky taps.', 
+        price: 'Ksh 1,800', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=800',
+            'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '40 mins',
+        discountInfo: 'Guaranteed leak-free for 30 days'
+    },
+    { 
+        id: 'cat-shoe-1', 
+        providerId: 'h2', 
+        title: 'Express Leather Shoe Stitching & Polish', 
+        category: 'Shoe Repair', 
+        description: 'Heavy-duty sole stitching, heel cap restoration, and deep leather cleaning & color polish. Express turnaround.', 
+        price: 'Ksh 400', 
+        imageUrls: [
+            'https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=800',
+            'https://images.unsplash.com/photo-1560769629-975ec94e6a86?q=80&w=800'
+        ], 
+        isVerified: true,
+        duration: '20 mins',
+        discountInfo: 'Pickup & dropoff available'
+    },
+    { 
+        id: 'cat-s24', providerId: 'p-gizmo', title: 'Samsung Galaxy S24 Ultra', category: 'Product', description: '512GB, AI Enhanced. Titanium Gray.', price: 'Ksh 165,000', imageUrls: ['https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=400'], isVerified: true },
+    { id: 'cat-mac', providerId: 'p-gizmo', title: 'MacBook Air M2', category: 'Product', description: '13-inch, 256GB SSD, 8GB RAM.', price: 'Ksh 120,000', imageUrls: ['https://images.unsplash.com/photo-1611186871348-b1ec696e5237?q=80&w=400'], isVerified: true }
 ];
 
 export const mockDocuments: Document[] = [

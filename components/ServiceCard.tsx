@@ -17,9 +17,10 @@ interface ServiceCardProps {
     provider: ServiceProvider;
     onClick: () => void;
     searchTerm?: string;
+    onViewSacco?: (provider: ServiceProvider) => void;
 }
 
-const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm }) => {
+const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm, onViewSacco }) => {
     const images = [provider.coverImageUrl, ...(provider.works || [])].filter(Boolean);
 
     // Check if any specific skill matches the search query, or pick the primary verified skill
@@ -39,6 +40,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
     const displayRate = matchedSkill?.hourlyRate || provider.hourlyRate;
     const displayCurrency = matchedSkill?.currency || provider.currency || 'KES';
 
+    const isSaccoConfirmed = provider.isSaccoVerified || provider.saccoMember?.status === 'Confirmed' || provider.saccoMember?.status === 'Approved';
+
     return (
         <div 
             onClick={onClick} 
@@ -56,21 +59,42 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                     ))}
                 </div>
 
-                {provider.isVerified && (
-                    <div className="absolute top-1.5 right-1.5 bg-blue-500 text-white rounded-full p-0.5 shadow-xs z-10 pointer-events-none flex items-center justify-center">
-                        <VerifiedIcon className="w-3 h-3 text-white" />
-                    </div>
-                )}
+                <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-10">
+                    {provider.isVerified && (
+                        <div className="bg-emerald-500 text-white rounded-full p-0.5 shadow-xs flex items-center justify-center" title="Verified Provider">
+                            <VerifiedIcon className="w-3 h-3 text-white" />
+                        </div>
+                    )}
+                </div>
                 
                 <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold tracking-wider uppercase z-10">
                     {provider.distanceKm}km
                 </div>
 
-                {matchedSkill && (
-                    <div className="absolute top-1.5 left-1.5 bg-emerald-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black tracking-wider uppercase z-10 shadow-xs">
-                        ⚡ Certified
-                    </div>
-                )}
+                <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10 items-start">
+                    {matchedSkill && (
+                        <div className="bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow-xs flex items-center gap-0.5">
+                            <span>⚡ CERTIFIED</span>
+                        </div>
+                    )}
+                    {isSaccoConfirmed && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewSacco) {
+                                    onViewSacco(provider);
+                                } else {
+                                    alert(`Member of ${provider.saccoMember?.saccoName || 'Utumishi Sacco'}`);
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-wider uppercase shadow-md flex items-center gap-1 border border-blue-400/30 active:scale-95 transition-transform cursor-pointer"
+                            title="Click to view Sacco & Organization Profile"
+                        >
+                            <span className="flex-shrink-0 text-[8.5px]">💙</span>
+                            <span>a member of {provider.saccoMember?.saccoName || 'Utumishi Sacco'}</span>
+                        </button>
+                    )}
+                </div>
             </div>
             
             <div className="p-2 space-y-1 flex-1 flex flex-col">
@@ -78,11 +102,33 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                     <h3 className="font-bold text-xs text-gray-900 truncate leading-snug flex-1">
                         {displayTitle}
                     </h3>
-                    <div className="flex items-center gap-0.5 text-[9px] bg-amber-50 text-amber-800 px-1 py-0.5 rounded-md font-extrabold border border-amber-200/60 flex-shrink-0">
-                        <StarIcon className="text-amber-500 fill-amber-500" />
+                    <div className={`flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-md font-extrabold border flex-shrink-0 ${
+                        isSaccoConfirmed ? 'bg-blue-50 text-blue-900 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200/60'
+                    }`}>
+                        <StarIcon className={isSaccoConfirmed ? 'text-blue-600 fill-blue-600' : 'text-amber-500 fill-amber-500'} />
                         <span>{provider.rating.toFixed(1)}</span>
+                        {isSaccoConfirmed && <span className="text-[7.5px] font-black text-blue-600">Sacco</span>}
                     </div>
                 </div>
+
+                {/* Sacco member blue tag */}
+                {isSaccoConfirmed && (
+                    <p className="text-[9.5px] text-blue-600 font-semibold truncate leading-none">
+                        a member of{' '}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewSacco) {
+                                    onViewSacco(provider);
+                                }
+                            }}
+                            className="font-black underline text-blue-700 hover:text-blue-900 cursor-pointer"
+                            title="Click to view Sacco & Organization Profile"
+                        >
+                            {provider.saccoMember?.saccoName || 'Utumishi Sacco'}
+                        </button>
+                    </p>
+                )}
 
                 {/* Specific Skill Description / Bio snippet */}
                 <p className="text-[9px] text-gray-500 font-normal line-clamp-2 leading-tight">

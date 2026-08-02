@@ -16,6 +16,8 @@ interface ProfileViewProps {
   savedContacts: string[];
   onToggleSaveContact: (providerId: string) => void;
   catalogueItems?: any[];
+  onUpdateCatalogueItem?: (item: any) => void;
+  onDeleteCatalogueItem?: (itemId: string) => void;
   onBook: (provider: ServiceProvider) => void;
   onJoin: (provider: ServiceProvider) => void;
   isFlaggedByUser: boolean;
@@ -24,6 +26,11 @@ interface ProfileViewProps {
   onViewDocument: (doc: Document) => void;
   onViewCatalogue?: (provider: ServiceProvider) => void;
   onNavigate?: (page: CurrentPage) => void;
+  onViewSaccoModal?: (provider: ServiceProvider) => void;
+  onApproveSaccoMember?: (orgId: string, userId: string) => void;
+  onRejectSaccoMember?: (orgId: string, userId: string) => void;
+  onDisputeRating?: (providerId: string, reviewerName: string, rating: number, comment: string, disputeReason: string) => void;
+  onResolveDispute?: (saccoId: string, disputeId: string, action: 'resolve' | 'dismiss') => void;
 }
 
 const StarIcon = ({ className = "w-5 h-5" }) => <svg className={className} fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>;
@@ -38,6 +45,8 @@ const BookmarkIcon = ({ filled }: { filled: boolean }) => <svg xmlns="http://www
 const CatalogueIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7s0 4 8 4 8-4 8-4" /></svg>;
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
 const rateSuffix: Record<ServiceProvider['rateType'], string> = {
     'per hour': 'hr', 'per day': 'day', 'per task': 'task', 'per month': 'mo', 'per piece work': 'item', 'per km': 'km', 'per sqm': 'm²', 'per cbm': 'm³', 'per appearance': 'show'
@@ -46,16 +55,118 @@ const rateSuffix: Record<ServiceProvider['rateType'], string> = {
 const ProfileView: React.FC<ProfileViewProps> = ({ 
     profileData, isOwner, isAuthenticated, onBack, onLogout, onUpdate, 
     onContactClick, onInitiateContact, savedContacts, onToggleSaveContact, 
-    catalogueItems, onBook, onViewDocument, onViewCatalogue, onNavigate, onFlag, allDocuments = []
+    catalogueItems, onUpdateCatalogueItem, onDeleteCatalogueItem, onBook, onViewDocument, onViewCatalogue, onNavigate, onViewSaccoModal, onFlag, allDocuments = [],
+    onApproveSaccoMember, onRejectSaccoMember, onDisputeRating, onResolveDispute
 }) => {
     const [showMenu, setShowMenu] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [galleryTab, setGalleryTab] = useState<'skills' | 'works' | 'qr'>('skills');
     
+    // Sacco Dispute Modal State
+    const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [disputeReason, setDisputeReason] = useState('');
+    
     // Flag Modal state
     const [showFlagModal, setShowFlagModal] = useState(false);
     const [flagCategory, setFlagCategory] = useState('Inappropriate content / service');
     const [flagReasonText, setFlagReasonText] = useState('');
+
+    // Editing Listing (Catalogue Item) State
+    const [editingCatalogueItem, setEditingCatalogueItem] = useState<any | null>(null);
+
+    // Editing Skill Rate Card State
+    const [editingSkillItem, setEditingSkillItem] = useState<{
+        id?: string;
+        skillTitle: string;
+        hourlyRate: number | string;
+        rateType: ServiceProvider['rateType'];
+        description: string;
+        certificationName?: string;
+        issuingSchool?: string;
+        yearObtained?: string;
+        isNew?: boolean;
+    } | null>(null);
+
+    const handleSaveCatalogueListing = () => {
+        if (!editingCatalogueItem || !onUpdateCatalogueItem) return;
+        onUpdateCatalogueItem(editingCatalogueItem);
+        setEditingCatalogueItem(null);
+    };
+
+    const handleDeleteCatalogueListing = (itemId: string) => {
+        if (window.confirm("Are you sure you want to delete this service listing?")) {
+            if (onDeleteCatalogueItem) {
+                onDeleteCatalogueItem(itemId);
+            }
+        }
+    };
+
+    const handleSaveSkillCard = () => {
+        if (!editingSkillItem) return;
+        const currentSkills = (profileData.skills && profileData.skills.length > 0)
+            ? [...profileData.skills]
+            : [];
+        
+        let updatedSkills: any[];
+        if (editingSkillItem.isNew) {
+            const newSk = {
+                id: `sk_${Date.now()}`,
+                skillTitle: editingSkillItem.skillTitle || profileData.service || 'Service Skill',
+                category: 'Service Skill',
+                hourlyRate: Number(editingSkillItem.hourlyRate) || 0,
+                rateType: editingSkillItem.rateType || 'per hour',
+                currency: profileData.currency || 'KES',
+                description: editingSkillItem.description || '',
+                certificationName: editingSkillItem.certificationName || '',
+                issuingSchool: editingSkillItem.issuingSchool || '',
+                yearObtained: editingSkillItem.yearObtained || new Date().getFullYear().toString()
+            };
+            updatedSkills = [newSk, ...currentSkills];
+        } else {
+            updatedSkills = currentSkills.map(s => (s.id === editingSkillItem.id || (!s.id && currentSkills.length === 1)) ? {
+                ...s,
+                skillTitle: editingSkillItem.skillTitle,
+                hourlyRate: Number(editingSkillItem.hourlyRate) || 0,
+                rateType: editingSkillItem.rateType,
+                description: editingSkillItem.description,
+                certificationName: editingSkillItem.certificationName,
+                issuingSchool: editingSkillItem.issuingSchool,
+                yearObtained: editingSkillItem.yearObtained
+            } : s);
+            if (!currentSkills.some(s => s.id === editingSkillItem.id) && currentSkills.length === 0) {
+                updatedSkills = [{
+                    id: `sk_${Date.now()}`,
+                    skillTitle: editingSkillItem.skillTitle,
+                    category: 'Service Skill',
+                    hourlyRate: Number(editingSkillItem.hourlyRate) || 0,
+                    rateType: editingSkillItem.rateType,
+                    currency: profileData.currency || 'KES',
+                    description: editingSkillItem.description,
+                    certificationName: editingSkillItem.certificationName,
+                    issuingSchool: editingSkillItem.issuingSchool,
+                    yearObtained: editingSkillItem.yearObtained
+                }];
+            }
+        }
+
+        onUpdate({
+            ...profileData,
+            skills: updatedSkills
+        });
+        setEditingSkillItem(null);
+    };
+
+    const handleDeleteSkillCard = (skillId: string) => {
+        if (!window.confirm("Are you sure you want to delete this skill rating card?")) return;
+        const currentSkills = (profileData.skills && profileData.skills.length > 0)
+            ? [...profileData.skills]
+            : [];
+        const updatedSkills = currentSkills.filter(s => s.id !== skillId);
+        onUpdate({
+            ...profileData,
+            skills: updatedSkills
+        });
+    };
     
     // Batch Update State (Camera Only)
     const [showBatchModal, setShowBatchModal] = useState(false);
@@ -449,7 +560,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                         <div className="space-y-1">
                             <div className="flex items-center justify-center gap-1.5">
                                 <h1 className="text-xl font-black text-black">{isOwner ? `$KILL ID: ${displayId}` : displayName}</h1>
-                                {profileData.isVerified && <VerifiedIcon className="w-5 h-5 text-black" />}
+                                {profileData.isVerified && <VerifiedIcon className="w-5 h-5 text-emerald-600" />}
                                 {isOwner && (
                                     <button 
                                         onClick={() => setIsEditing(true)} 
@@ -460,7 +571,42 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                     </button>
                                 )}
                             </div>
-                            <div className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-600">
+
+                            {/* Sacco Badge & Verified Text */}
+                            {(() => {
+                                const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
+                                const saccoName = profileData.saccoMember?.saccoName || 'Utumishi Sacco';
+                                return (
+                                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                                        {isSaccoConfirmed ? (
+                                            <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50/90 border border-blue-200/80 px-3.5 py-1 rounded-full shadow-2xs">
+                                                <span className="text-blue-600">💙</span>
+                                                <span>a member of</span>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (onViewSaccoModal) {
+                                                            onViewSaccoModal(profileData);
+                                                        } else {
+                                                            alert(`Member of ${saccoName}`);
+                                                        }
+                                                    }}
+                                                    className="font-black text-blue-700 underline hover:text-blue-900 cursor-pointer ml-0.5"
+                                                    title="Click to view Sacco & Organization Profile"
+                                                >
+                                                    {saccoName}
+                                                </button>
+                                            </div>
+                                        ) : profileData.saccoMember?.status === 'Pending' ? (
+                                            <span className="bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                                                <span>⏳</span>
+                                                <span>Sacco Verification Pending</span>
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="flex items-center justify-center gap-1 text-xs font-semibold text-gray-600 pt-1">
                                 <span>{profileData.service}</span>
                                 {isOwner && (
                                     <button 
@@ -502,6 +648,54 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     <div className="text-center"><div className="flex items-center justify-center gap-0.5"><LocationIcon className="w-3.5 h-3.5 text-red-500" /><span className="font-bold text-xs text-brand-navy">{profileData.distanceKm}km</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Dist.</p></div>
                     <div className="text-center"><div className="flex items-center justify-center gap-0.5"><RateIcon className="w-3.5 h-3.5 text-green-500" /><span className="font-bold text-xs text-brand-navy">{profileData.currency}{profileData.hourlyRate}/{rateSuffix[profileData.rateType]}</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Rate</p></div>
                 </div>
+
+                {/* Sacco Member Boost & Rating Dispute Banner */}
+                {(() => {
+                    const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
+                    if (!isSaccoConfirmed) return null;
+                    return (
+                        <div className="mx-4 mt-3 bg-blue-50/90 border border-blue-200 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-2xs">
+                            <div className="flex items-center gap-2.5 text-left">
+                                <span className="text-xl p-1.5 bg-blue-600 text-white rounded-xl shadow-xs">💙</span>
+                                <div>
+                                    <span className="text-xs font-black text-blue-950 uppercase tracking-wider block leading-tight">Sacco Member (+0.3 Rating Boost)</span>
+                                    <span className="text-[9.5px] text-blue-800 font-semibold block mt-0.5">Confirmed member of {profileData.saccoMember?.saccoName || 'Registered Sacco'}. Rating disputes audited by Sacco.</span>
+                                </div>
+                            </div>
+                            {!isOwner && onDisputeRating && (
+                                <button
+                                    onClick={() => setShowDisputeModal(true)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase px-3 py-2 rounded-xl shadow-sm transition-colors flex-shrink-0"
+                                >
+                                    ⚖️ Dispute Rating
+                                </button>
+                            )}
+                        </div>
+                    );
+                })()}
+
+                {/* Sacco Organization Shortcut (Only for profile owner) */}
+                {isOwner && profileData.accountType === 'organization' && onNavigate && (
+                    <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-3xl shadow-lg border border-blue-500/30 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl p-2 bg-white/10 rounded-2xl">🏢</span>
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-wider text-blue-200">
+                                    Sacco & Organization Portal
+                                </h3>
+                                <p className="text-[10px] text-gray-300">
+                                    Add/remove members, approve requests & update public Sacco profile.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => onNavigate('sacco_dashboard')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-black text-[10px] uppercase tracking-wider px-3 py-2 rounded-xl shadow-md active:scale-95 transition-all flex-shrink-0"
+                        >
+                            Open Dashboard &rarr;
+                        </button>
+                    </div>
+                )}
 
                 {/* Profile CTA Buttons Section */}
                 <div className="px-4 pt-3">
@@ -615,16 +809,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                         </div>
                     )}
                     
-                    {/* Tabs ($kills / Works / QR ID) */}
+                    {/* Tabs ($kills / Listings / QR ID) */}
                     <div className="border-b border-gray-100 mt-6 flex justify-between items-end">
                         <div className="flex gap-4">
                             <button onClick={() => setGalleryTab('skills')} className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${galleryTab === 'skills' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>$kills</button>
-                            <button onClick={() => setGalleryTab('works')} className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${galleryTab === 'works' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>Works</button>
+                            <button onClick={() => setGalleryTab('works')} className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${galleryTab === 'works' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>Listings</button>
                             <button onClick={() => setGalleryTab('qr')} className={`pb-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${galleryTab === 'qr' ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>QR ID</button>
                         </div>
                         {isOwner && galleryTab === 'works' && (
-                            <button onClick={() => setShowBatchModal(true)} className="mb-3 p-2 bg-black text-white rounded-xl shadow-sm hover:bg-gray-800 transition-colors">
-                                <PlusIcon />
+                            <button 
+                              onClick={() => onNavigate ? onNavigate('sellService') : setShowBatchModal(true)} 
+                              className="mb-3 px-3 py-1.5 bg-brand-navy text-white text-[10px] font-black uppercase rounded-xl shadow-xs hover:bg-black transition-colors flex items-center gap-1"
+                              title="List a new service for sale"
+                            >
+                              <span>+ Sell Service</span>
                             </button>
                         )}
                     </div>
@@ -632,6 +830,28 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     <div className="mt-4 pb-20">
                         {galleryTab === 'skills' && (
                             <div className="space-y-3">
+                                <div className="flex items-center justify-between pb-1">
+                                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                                        Skill Rate Cards & Offerings ({skillsList.length})
+                                    </h3>
+                                    {isOwner && (
+                                        <button 
+                                            onClick={() => setEditingSkillItem({
+                                                isNew: true,
+                                                skillTitle: profileData.service || '',
+                                                hourlyRate: profileData.hourlyRate || 500,
+                                                rateType: profileData.rateType || 'per hour',
+                                                description: '',
+                                                certificationName: '',
+                                                issuingSchool: '',
+                                                yearObtained: new Date().getFullYear().toString()
+                                            })}
+                                            className="text-[10px] text-brand-navy font-bold hover:underline flex items-center gap-1 bg-brand-navy/10 px-2 py-1 rounded-lg"
+                                        >
+                                            + Add Skill Rate Card
+                                        </button>
+                                    )}
+                                </div>
                                 {skillsList.map((sk: any, idx: number) => (
                                     <div key={sk.id || idx} className="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-xs space-y-2">
                                         <div className="flex justify-between items-start gap-2">
@@ -656,16 +876,141 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                         <p className="text-[10px] text-gray-600 font-medium leading-relaxed bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                                             {sk.description || profileData.about}
                                         </p>
+                                        {isOwner && (
+                                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                                <button
+                                                    onClick={() => setEditingSkillItem({
+                                                        id: sk.id || `sk_${idx}`,
+                                                        skillTitle: sk.skillTitle || sk.name || profileData.service,
+                                                        hourlyRate: sk.hourlyRate || 0,
+                                                        rateType: sk.rateType || 'per hour',
+                                                        description: sk.description || '',
+                                                        certificationName: sk.certificationName || '',
+                                                        issuingSchool: sk.issuingSchool || '',
+                                                        yearObtained: sk.yearObtained || ''
+                                                    })}
+                                                    className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg flex items-center gap-1"
+                                                >
+                                                    <EditIcon /> <span>Edit</span>
+                                                </button>
+                                                {skillsList.length > 1 && (
+                                                    <button
+                                                        onClick={() => handleDeleteSkillCard(sk.id || `sk_${idx}`)}
+                                                        className="text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1"
+                                                    >
+                                                        <TrashIcon /> <span>Delete</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         )}
                         {galleryTab === 'works' && (
-                            <div className="grid grid-cols-3 gap-2">
-                                {(profileData.works || []).map((w, i) => <img key={i} src={w} className="aspect-square object-cover rounded-xl bg-gray-200" alt="" />)}
-                                {(profileData.works || []).length === 0 && (
-                                    <div className="col-span-3 py-10 text-center text-gray-300">
-                                        <p className="text-[10px] font-black uppercase tracking-widest">No work samples captured</p>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                                        Services Listed for Sale ({ (catalogueItems || []).length })
+                                    </h3>
+                                    {isOwner && (
+                                        <button 
+                                            onClick={() => onNavigate && onNavigate('sellService')}
+                                            className="text-[10px] text-brand-navy font-bold hover:underline"
+                                        >
+                                            + Add Service Listing
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Listed Catalogue / Service Cards */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {(catalogueItems || []).map((item: any) => (
+                                        <div key={item.id} className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden flex flex-col justify-between p-3 space-y-2">
+                                            <div className="flex gap-3 items-center">
+                                                <img 
+                                                    src={item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300'} 
+                                                    alt={item.title} 
+                                                    className="w-16 h-16 rounded-xl object-cover bg-gray-100 border border-gray-100 flex-shrink-0"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className="bg-brand-navy/10 text-brand-navy text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase truncate">
+                                                            {item.category}
+                                                        </span>
+                                                        {item.isVerified ? (
+                                                            <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                                                ✓ Verified
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-1.5 py-0.5 rounded-md">
+                                                                ⏳ Pending Admin
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h4 className="font-extrabold text-xs text-gray-900 mt-1 leading-snug line-clamp-1">
+                                                        {item.title}
+                                                    </h4>
+                                                    <p className="text-xs font-black text-brand-navy mt-0.5">
+                                                        {item.price}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-gray-600 line-clamp-2 font-medium bg-gray-50 p-2 rounded-xl">
+                                                {item.description}
+                                            </p>
+
+                                            {isOwner && (
+                                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                                    <button
+                                                        onClick={() => setEditingCatalogueItem({ ...item })}
+                                                        className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg flex items-center gap-1"
+                                                    >
+                                                        <EditIcon /> <span>Edit Listing</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteCatalogueListing(item.id)}
+                                                        className="text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg flex items-center gap-1"
+                                                    >
+                                                        <TrashIcon /> <span>Delete</span>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {(catalogueItems || []).length === 0 && (
+                                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-4 space-y-2">
+                                            <span className="text-2xl">🛍️</span>
+                                            <p className="text-xs font-bold text-gray-700">No active service listings published</p>
+                                            <p className="text-[10px] text-gray-500 max-w-xs mx-auto">
+                                                {isOwner 
+                                                    ? "Publish your skill rate card (e.g. Maths Tuition at Ksh 200/hr or TV Mounting) to appear on Tukosoko."
+                                                    : "This provider has not added specific service rate cards yet."}
+                                            </p>
+                                            {isOwner && (
+                                                <button
+                                                    onClick={() => onNavigate && onNavigate('sellService')}
+                                                    className="mt-2 bg-brand-navy text-white text-xs font-black px-4 py-2 rounded-xl uppercase tracking-wider hover:bg-black transition-colors"
+                                                >
+                                                    🚀 List Service for Sale
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Work Portfolio Photos */}
+                                {(profileData.works || []).length > 0 && (
+                                    <div className="pt-3 border-t border-gray-100 space-y-2">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                                            Work Portfolio & Photo Gallery
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {(profileData.works || []).map((w, i) => (
+                                                <img key={i} src={w} className="aspect-square object-cover rounded-xl bg-gray-200 border border-gray-100" alt="" />
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -713,12 +1058,263 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Sacco Rating Dispute Modal */}
+            {showDisputeModal && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                    <span>⚖️</span> File Rating Dispute via Sacco
+                                </h3>
+                                <p className="text-[10px] text-gray-500 font-bold">
+                                    Submit audit request to {profileData.saccoMember?.saccoName || 'Registered Sacco'}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowDisputeModal(false)} className="text-gray-400 hover:text-black font-bold text-xl">&times;</button>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block">
+                                Reason for Rating Dispute:
+                            </label>
+                            <textarea
+                                value={disputeReason}
+                                onChange={e => setDisputeReason(e.target.value)}
+                                placeholder="Explain why this rating or review is inaccurate or disputed (e.g. Unfair rating due to client cancellation or delayed parts delivery)..."
+                                rows={4}
+                                className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-900"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                onClick={() => setShowDisputeModal(false)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!disputeReason.trim()) return;
+                                    if (onDisputeRating) {
+                                        onDisputeRating(profileData.id, 'User / Client', profileData.rating, 'Customer Review', disputeReason.trim());
+                                    }
+                                    setShowDisputeModal(false);
+                                    setDisputeReason('');
+                                    alert(`Dispute ticket submitted to ${profileData.saccoMember?.saccoName || 'Sacco Executive Committee'} for audit.`);
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-blue-700 shadow-md"
+                            >
+                                Submit Dispute Ticket
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Service Listing Modal */}
+            {editingCatalogueItem && (
+                <div className="fixed inset-0 bg-black/80 z-[120] flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                    <span>✏️</span> Edit Service Listing
+                                </h3>
+                                <p className="text-[10px] text-gray-500 font-bold">Update service details listed on Tukosoko marketplace</p>
+                            </div>
+                            <button onClick={() => setEditingCatalogueItem(null)} className="text-gray-400 hover:text-black font-bold text-xl">&times;</button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Listing Title</label>
+                                <input 
+                                    type="text"
+                                    value={editingCatalogueItem.title || ''}
+                                    onChange={e => setEditingCatalogueItem({ ...editingCatalogueItem, title: e.target.value })}
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Category</label>
+                                <input 
+                                    type="text"
+                                    value={editingCatalogueItem.category || ''}
+                                    onChange={e => setEditingCatalogueItem({ ...editingCatalogueItem, category: e.target.value })}
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Price / Rate (e.g. Ksh 500 per hr)</label>
+                                <input 
+                                    type="text"
+                                    value={editingCatalogueItem.price || ''}
+                                    onChange={e => setEditingCatalogueItem({ ...editingCatalogueItem, price: e.target.value })}
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Description</label>
+                                <textarea 
+                                    rows={3}
+                                    value={editingCatalogueItem.description || ''}
+                                    onChange={e => setEditingCatalogueItem({ ...editingCatalogueItem, description: e.target.value })}
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none resize-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Image URL</label>
+                                <input 
+                                    type="text"
+                                    value={editingCatalogueItem.imageUrls?.[0] || ''}
+                                    onChange={e => setEditingCatalogueItem({ 
+                                        ...editingCatalogueItem, 
+                                        imageUrls: [e.target.value] 
+                                    })}
+                                    placeholder="https://images.unsplash.com/..."
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                            <button
+                                onClick={() => setEditingCatalogueItem(null)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveCatalogueListing}
+                                className="px-4 py-2 bg-brand-navy text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black shadow-md"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit / Add Skill Rate Card Modal */}
+            {editingSkillItem && (
+                <div className="fixed inset-0 bg-black/80 z-[120] flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                    <span>🎯</span> {editingSkillItem.isNew ? 'Add Skill Rate Card' : 'Edit Skill Rate Card'}
+                                </h3>
+                                <p className="text-[10px] text-gray-500 font-bold">Configure skill details and pricing visible on your profile</p>
+                            </div>
+                            <button onClick={() => setEditingSkillItem(null)} className="text-gray-400 hover:text-black font-bold text-xl">&times;</button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Skill Title / Offering</label>
+                                <input 
+                                    type="text"
+                                    value={editingSkillItem.skillTitle || ''}
+                                    onChange={e => setEditingSkillItem({ ...editingSkillItem, skillTitle: e.target.value })}
+                                    placeholder="e.g. Electrical Installation, Hair Braiding"
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Rate (KES)</label>
+                                    <input 
+                                        type="number"
+                                        value={editingSkillItem.hourlyRate || ''}
+                                        onChange={e => setEditingSkillItem({ ...editingSkillItem, hourlyRate: e.target.value })}
+                                        placeholder="500"
+                                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Rate Unit</label>
+                                    <select
+                                        value={editingSkillItem.rateType || 'per hour'}
+                                        onChange={e => setEditingSkillItem({ ...editingSkillItem, rateType: e.target.value as any })}
+                                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                    >
+                                        <option value="per hour">per hour</option>
+                                        <option value="per day">per day</option>
+                                        <option value="per task">per task</option>
+                                        <option value="per month">per month</option>
+                                        <option value="per piece work">per item</option>
+                                        <option value="per km">per km</option>
+                                        <option value="per sqm">per m²</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Skill Description / Scope</label>
+                                <textarea 
+                                    rows={3}
+                                    value={editingSkillItem.description || ''}
+                                    onChange={e => setEditingSkillItem({ ...editingSkillItem, description: e.target.value })}
+                                    placeholder="Describe what is included in this service..."
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none resize-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Certification Name (Optional)</label>
+                                <input 
+                                    type="text"
+                                    value={editingSkillItem.certificationName || ''}
+                                    onChange={e => setEditingSkillItem({ ...editingSkillItem, certificationName: e.target.value })}
+                                    placeholder="e.g. EPRA Class T3 License"
+                                    className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Issuing Body / Institution</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSkillItem.issuingSchool || ''}
+                                        onChange={e => setEditingSkillItem({ ...editingSkillItem, issuingSchool: e.target.value })}
+                                        placeholder="e.g. NITA / TVET"
+                                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-wider block mb-1">Year Obtained</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSkillItem.yearObtained || ''}
+                                        onChange={e => setEditingSkillItem({ ...editingSkillItem, yearObtained: e.target.value })}
+                                        placeholder="2022"
+                                        className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-900 focus:bg-white focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                            <button
+                                onClick={() => setEditingSkillItem(null)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveSkillCard}
+                                className="px-4 py-2 bg-brand-navy text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black shadow-md"
+                            >
+                                Save Skill Rate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>;
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>;
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 
 export default ProfileView;

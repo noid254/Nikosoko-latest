@@ -53,6 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialMode = '
   const [serviceTitle, setServiceTitle] = useState('');
   const [category, setCategory] = useState('PERSONAL');
   const [accountType, setAccountType] = useState<'individual' | 'organization'>('individual');
+  const [saccoRegNo, setSaccoRegNo] = useState('');
   const [location, setLocation] = useState('Nairobi, Kenya');
   const [about, setAbout] = useState('');
   
@@ -243,6 +244,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialMode = '
             coverImageUrl: coverImageUrl,
             category,
             accountType,
+            saccoCode: saccoRegNo.trim() ? `SACCO-${saccoRegNo.trim().toUpperCase()}` : (accountType === 'organization' ? `ORG-${fullName.trim().substring(0, 6).toUpperCase()}` : undefined),
+            saccoDetails: accountType === 'organization' ? {
+              registrationNo: saccoRegNo.trim() || 'REG-SOC/2026/001',
+              location: location.trim() || 'Nairobi, Kenya',
+              contactPhone: finalPhone,
+              description: about.trim() || 'Official Organization Account',
+              totalMembers: 1
+            } : undefined,
             location: location.trim() || 'Nairobi, Kenya',
             about: about.trim(),
             hourlyRate: parseFloat(hourlyRate) || 0,
@@ -474,13 +483,35 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialMode = '
                       <select 
                           value={accountType} 
                           onChange={e => setAccountType(e.target.value as any)}
-                          className="block w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-navy text-gray-900 font-bold text-xs"
+                          className="block w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-navy text-gray-900 font-bold text-xs cursor-pointer"
                       >
-                          <option value="individual">Individual</option>
-                          <option value="organization">Business / Organization</option>
+                          <option value="individual">Individual Professional</option>
+                          <option value="organization">Organization / School / Sacco</option>
                       </select>
                     </div>
                   </div>
+
+                  {accountType === 'organization' && (
+                    <div className="bg-blue-50/90 border border-blue-200 p-3.5 rounded-2xl space-y-2 font-sans">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">🏢</span>
+                        <label className="block text-[10px] font-black text-blue-900 uppercase tracking-widest">
+                          Sacco / Org Registration No. *
+                        </label>
+                      </div>
+                      <input 
+                        type="text" 
+                        required={accountType === 'organization'}
+                        value={saccoRegNo} 
+                        onChange={e => setSaccoRegNo(e.target.value)} 
+                        placeholder="e.g. REG-SOC/2026/0912 or School Reg No." 
+                        className="block w-full p-2.5 bg-white border border-blue-200 rounded-xl text-xs font-mono font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                      />
+                      <p className="text-[10px] text-blue-800 font-semibold leading-tight">
+                        🏢 Grants access to the <strong>Sacco & Org Portal</strong> for multi-layer member vetting approvals & offering listings.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Location</label>

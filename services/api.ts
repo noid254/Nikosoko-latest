@@ -337,6 +337,24 @@ export const updateProvider = async (updatedProvider: ServiceProvider): Promise<
     return updatedProvider;
 };
 
+export const updateCatalogueItem = async (updatedItem: CatalogueItem): Promise<CatalogueItem> => {
+    await delay();
+    const items = getTable<CatalogueItem>(DB_KEYS.CATALOGUE);
+    const index = items.findIndex(i => i.id === updatedItem.id);
+    if (index > -1) {
+        items[index] = updatedItem;
+        saveTable(DB_KEYS.CATALOGUE, items);
+    }
+    return updatedItem;
+};
+
+export const deleteCatalogueItem = async (id: string): Promise<void> => {
+    await delay();
+    const items = getTable<CatalogueItem>(DB_KEYS.CATALOGUE);
+    const filtered = items.filter(i => i.id !== id);
+    saveTable(DB_KEYS.CATALOGUE, filtered);
+};
+
 export const updatePremise = async (updatedPremise: Premise): Promise<Premise> => {
     await delay();
     const premises = getTable<Premise>(DB_KEYS.PREMISES);

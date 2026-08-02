@@ -1,0 +1,12 @@
+# NikoSoko Search Engine Crawling Directive Rules
+User-agent: *
+Allow: /
+Allow: /tukosoko
+Allow: /skill_id
+Allow: /sacco_dashboard
+Allow: /courses
+Allow: /services/
+Allow: /sacco/
+
+# Sitemap location
+Sitemap: https://nikosoko.app/sitemap.xml

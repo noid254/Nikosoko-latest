@@ -125,6 +125,28 @@ export interface ShopDetails {
   website?: string;
 }
 
+export interface SaccoMembership {
+  saccoId: string;
+  saccoName: string;
+  saccoCode: string;
+  status: 'Pending' | 'Confirmed' | 'Approved' | 'Rejected';
+  requestedAt: string;
+  confirmedAt?: string;
+}
+
+export interface RatingDispute {
+  id: string;
+  providerId: string;
+  providerName: string;
+  reviewerName: string;
+  originalRating: number;
+  comment: string;
+  disputeReason: string;
+  status: 'Pending' | 'Resolved' | 'Dismissed';
+  createdAt: string;
+  resolutionNote?: string;
+}
+
 export interface ServiceProvider {
   id: string;
   name: string;
@@ -166,10 +188,22 @@ export interface ServiceProvider {
   menu?: MenuItem[];
   bundles?: MenuBundle[];
   referralCode?: string;
+  saccoCode?: string;
+  saccoMember?: SaccoMembership;
+  isSaccoVerified?: boolean;
   isProfileCompleted?: boolean;
+  saccoDetails?: {
+    description?: string;
+    location?: string;
+    totalMembers?: number;
+    registrationNo?: string;
+    contactPhone?: string;
+    rulesAndBenefits?: string;
+  };
   hasCatalogue?: boolean;
   catalogueItems?: CatalogueItem[];
   joinRequests?: { id: string; userId: string; userName: string; userPhone?: string; status: 'Pending' | 'Approved' | 'Rejected' | 'pending' }[];
+  ratingDisputes?: RatingDispute[];
 }
 
 export interface QaRibuRequest {
@@ -195,7 +229,7 @@ export interface QaRibuRequest {
   isDigitalKey?: boolean;
 }
 
-export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'invoices' | 'invoiceGenerator' | 'quoteGenerator' | 'receiptGenerator' | 'brandKit' | 'myDocuments' | 'scanDocument' | 'profile' | 'tukosoko' | 'mycontacts' | 'mycatalogue' | 'settings' | 'admin' | 'gigs' | 'createGig' | 'addService' | 'messages' | 'assetRegistry' | 'registerAsset' | 'ownershipCheck' | 'documentDetail' | 'createPost' | 'createProductPost' | 'mytoolkit' | 'workshopSetup' | 'login' | 'qrScan' | 'premiseLanding' | 'manage_order' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id';
+export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'invoices' | 'invoiceGenerator' | 'quoteGenerator' | 'receiptGenerator' | 'brandKit' | 'myDocuments' | 'scanDocument' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'settings' | 'admin' | 'gigs' | 'createGig' | 'addService' | 'messages' | 'assetRegistry' | 'registerAsset' | 'ownershipCheck' | 'documentDetail' | 'createPost' | 'createProductPost' | 'mytoolkit' | 'workshopSetup' | 'login' | 'qrScan' | 'premiseLanding' | 'manage_order' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
 
 export interface BusinessAssets {
   name: string;

@@ -1011,7 +1011,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({ currentUser, onBack, on
                                 <input 
                                     required
                                     className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-black outline-none focus:bg-white focus:border-black"
-                                    placeholder="e.g. EPRA Class T3 / NITA Artisan Cert / KITI Licence"
+                                    placeholder="e.g. EPRA Class T3 / NITA Professional Cert / KITI Licence"
                                     value={newCertName}
                                     onChange={e => setNewCertName(e.target.value)}
                                 />

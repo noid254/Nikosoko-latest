@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import * as api from './services/api';
 import { 
   ServiceProvider, CatalogueItem, Document, QaRibuRequest, SpecialBanner, 
-  InboxMessage, Gig, Premise, UnitDetails, SetupData, CurrentPage, OrderData, BusinessAssets, UnitKey 
+  InboxMessage, Gig, Premise, UnitDetails, SetupData, CurrentPage, OrderData, BusinessAssets, UnitKey, RatingDispute
 } from './types';
 
 import AuthModal from './components/AuthModal';
@@ -22,6 +22,7 @@ import BrandKitView from './components/BusinessAssets';
 import MyDocumentsView from './components/MyDocumentsView';
 import ScanDocumentView from './components/ScanDocumentView';
 import Tukosoko from './components/Tukosoko';
+import PendingRatingsView from './components/PendingRatingsView';
 import MyContactsView from './components/MyContactsView';
 import CatalogueView from './components/CatalogueView';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
@@ -42,7 +43,11 @@ import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
 import DoorProfile from './components/DoorProfile';
 import SkillDashboard from './components/SkillDashboard';
+import SaccoDashboard from './components/SaccoDashboard';
+import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
+import SEOHead from './components/SEOHead';
+import SEOMapModal from './components/SEOMapModal';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(null);
@@ -52,6 +57,7 @@ function App() {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'nickname' | 'complete_signup'>('nickname');
+  const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const handleOpenCompleteSignUp = () => {
@@ -121,6 +127,7 @@ function App() {
   const [selectedTools, setSelectedTools] = useState<CurrentPage[]>(['home', 'journey', 'admin']);
   const [businessAssets, setBusinessAssets] = useState<BusinessAssets | null>(null);
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
+  const [isSEOMapOpen, setIsSEOMapOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -260,6 +267,124 @@ function App() {
     setCurrentPage('home');
   };
 
+  const handleApproveSaccoRequest = (orgId: string, userId: string) => {
+    setProviders(prev => prev.map(p => {
+      if (p.id === userId) {
+        const updated = {
+          ...p,
+          isSaccoVerified: true,
+          saccoMember: p.saccoMember ? {
+            ...p.saccoMember,
+            status: 'Confirmed' as const,
+            confirmedAt: new Date().toISOString()
+          } : {
+            saccoId: orgId,
+            saccoName: 'Registered Sacco',
+            saccoCode: '',
+            status: 'Confirmed' as const,
+            requestedAt: new Date().toISOString(),
+            confirmedAt: new Date().toISOString()
+          }
+        };
+        if (currentUser?.id === userId) {
+          setCurrentUser(updated);
+        }
+        if (viewingProvider?.id === userId) {
+          setViewingProvider(updated);
+        }
+        return updated;
+      }
+      if (p.id === orgId) {
+        const updatedRequests = (p.joinRequests || []).map(r => r.userId === userId ? { ...r, status: 'Approved' as const } : r);
+        const updatedOrg = { ...p, joinRequests: updatedRequests };
+        if (viewingProvider?.id === orgId) {
+          setViewingProvider(updatedOrg);
+        }
+        return updatedOrg;
+      }
+      return p;
+    }));
+  };
+
+  const handleRejectSaccoRequest = (orgId: string, userId: string) => {
+    setProviders(prev => prev.map(p => {
+      if (p.id === userId) {
+        const updated = {
+          ...p,
+          isSaccoVerified: false,
+          saccoMember: p.saccoMember ? { ...p.saccoMember, status: 'Rejected' as const } : undefined
+        };
+        if (currentUser?.id === userId) {
+          setCurrentUser(updated);
+        }
+        if (viewingProvider?.id === userId) {
+          setViewingProvider(updated);
+        }
+        return updated;
+      }
+      if (p.id === orgId) {
+        const updatedRequests = (p.joinRequests || []).map(r => r.userId === userId ? { ...r, status: 'Rejected' as const } : r);
+        const updatedOrg = { ...p, joinRequests: updatedRequests };
+        if (viewingProvider?.id === orgId) {
+          setViewingProvider(updatedOrg);
+        }
+        return updatedOrg;
+      }
+      return p;
+    }));
+  };
+
+  const handleDisputeRating = (providerId: string, reviewerName: string, rating: number, comment: string, disputeReason: string) => {
+    const targetProvider = providers.find(p => p.id === providerId);
+    if (!targetProvider || !targetProvider.saccoMember?.saccoId) return;
+
+    const saccoId = targetProvider.saccoMember.saccoId;
+    const dispute: RatingDispute = {
+      id: `dsp_${Date.now()}`,
+      providerId,
+      providerName: targetProvider.name,
+      reviewerName,
+      originalRating: rating,
+      comment,
+      disputeReason,
+      status: 'Pending',
+      createdAt: new Date().toISOString()
+    };
+
+    setProviders(prev => prev.map(p => {
+      if (p.id === saccoId) {
+        const updatedOrg = {
+          ...p,
+          ratingDisputes: [...(p.ratingDisputes || []), dispute]
+        };
+        if (viewingProvider?.id === saccoId) setViewingProvider(updatedOrg);
+        return updatedOrg;
+      }
+      return p;
+    }));
+  };
+
+  const handleResolveDispute = (saccoId: string, disputeId: string, action: 'resolve' | 'dismiss') => {
+    setProviders(prev => prev.map(p => {
+      if (p.id === saccoId) {
+        const updatedDisputes = (p.ratingDisputes || []).map(d => {
+          if (d.id === disputeId) {
+            return {
+              ...d,
+              status: action === 'resolve' ? ('Resolved' as const) : ('Dismissed' as const),
+              resolutionNote: action === 'resolve' ? 'Resolved by Sacco Executive Committee' : 'Dismissed after review'
+            };
+          }
+          return d;
+        });
+        const updatedOrg = { ...p, ratingDisputes: updatedDisputes };
+        if (viewingProvider?.id === saccoId) setViewingProvider(updatedOrg);
+        return updatedOrg;
+      }
+      return p;
+    }));
+  };
+
   const handleNavigate = (page: CurrentPage) => {
       if (currentUser?.role === 'Gateman' && isGatemanOnShift && page !== 'qaribu') {
           alert("Please end your shift before navigating.");
@@ -328,6 +453,16 @@ function App() {
   };
 
   const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
+  const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
+
+  const handleVerifyCatalogueItem = (itemId: string, isVerified: boolean) => {
+      setCatalogueItems(prev => prev.map(item => item.id === itemId ? { ...item, isVerified } : item));
+  };
+
+  const handleDeleteCatalogueItem = async (itemId: string) => {
+      await api.deleteCatalogueItem(itemId);
+      setCatalogueItems(prev => prev.filter(item => item.id !== itemId));
+  };
 
   const recordContact = (providerId: string) => {
       setContactHistory(prev => {
@@ -341,6 +476,10 @@ function App() {
 
   const handleBackWithReviewCheck = (onConfirmBack: () => void) => {
       const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
+      if (unratedIds.length >= 3) {
+          setCurrentPage('pendingRatings');
+          return;
+      }
       if (unratedIds.length > 0) {
           const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
           if (unratedProviders.length > 0) {
@@ -349,7 +488,7 @@ function App() {
               setPendingReviews([firstUnrated]);
               setReviewModalSubtitle(`Rate your interaction with ${firstUnrated.name} before leaving.`);
               setReviewPostponeCount(record?.postponeCount || 0);
-              setIsForcedReview((record?.postponeCount || 0) >= 3 || unratedIds.length >= 3);
+              setIsForcedReview((record?.postponeCount || 0) >= 3);
               setShowReviewModal(true);
               setPendingBackAction(() => onConfirmBack);
               return;
@@ -364,6 +503,17 @@ function App() {
       // Filter unrated items in contact history
       const unratedHistory = contactHistory.filter(c => !ratedProviderIds.includes(c.providerId));
 
+      // Requirement: If a person interacts with more than 3 CTAs for different people, take them to pending ratings page to choose which to rate first
+      if (unratedHistory.length >= 3) {
+          setPendingCtaTargetProvider(provider);
+          setPendingCtaAction(() => () => {
+              recordContact(provider.id);
+              if (actionCallback) actionCallback();
+          });
+          setCurrentPage('pendingRatings');
+          return false;
+      }
+
       // Find previous unrated contacts (excluding target provider if re-contacting)
       const previousUnratedItems = unratedHistory.filter(c => c.providerId !== provider.id);
       const unratedItemToReview = previousUnratedItems.length > 0 ? previousUnratedItems[0] : null;
@@ -371,7 +521,7 @@ function App() {
       if (unratedItemToReview) {
           const providerToReview = providers.find(p => p.id === unratedItemToReview.providerId) || provider;
           const postponeCnt = unratedItemToReview.postponeCount || 0;
-          const isForced = postponeCnt >= 3 || unratedHistory.length >= 3;
+          const isForced = postponeCnt >= 3;
 
           setPendingReviews([providerToReview]);
           setReviewModalSubtitle(
@@ -432,6 +582,11 @@ function App() {
       if (currentUser?.id === saved.id) setCurrentUser(saved);
   };
 
+  const handleUpdateCatalogueItem = async (updatedItem: any) => {
+      await api.updateCatalogueItem(updatedItem);
+      setCatalogueItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+  };
+
   const handleDeleteProviderAdmin = async (id: string) => {
       await api.deleteProvider(id);
       setProviders(prev => prev.filter(p => p.id !== id));
@@ -463,7 +618,45 @@ function App() {
 
     switch (currentPage) {
       case 'home':
-        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} onViewSacco={(p) => setSaccoModalProvider(p)} />;
+      case 'tukosoko':
+      case 'services':
+        return (
+          <Tukosoko 
+            items={catalogueItems} 
+            providers={providers} 
+            currentUser={currentUser}
+            onAddCatalogueItem={(newItem) => setCatalogueItems(prev => [newItem, ...prev])}
+            onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
+            onBack={() => setIsSideMenuOpen(true)} 
+            onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
+            hasNewMessages={false} 
+            onNavigate={handleNavigate}
+            isAuthenticated={isAuthenticated}
+            onAuthClick={() => setIsAuthModalOpen(true)}
+            onInitiateContact={(p) => handleCtaInteraction(p)}
+            onBookProvider={(p) => setBookingTargetProvider(p)}
+          />
+        );
+      case 'sellService':
+        return (
+          <Tukosoko 
+            items={catalogueItems} 
+            providers={providers} 
+            currentUser={currentUser}
+            initialViewMode="sellService"
+            onAddCatalogueItem={(newItem) => setCatalogueItems(prev => [newItem, ...prev])}
+            onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
+            onBack={() => setCurrentPage('tukosoko')} 
+            onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
+            hasNewMessages={false} 
+            onNavigate={handleNavigate}
+            isAuthenticated={isAuthenticated}
+            onAuthClick={() => setIsAuthModalOpen(true)}
+            onInitiateContact={(p) => handleCtaInteraction(p)}
+            onBookProvider={(p) => setBookingTargetProvider(p)}
+          />
+        );
       case 'qaribu':
         return <GatePass allProviders={providers} allTenants={providers.filter(p => p.premiseId)} premises={premises} currentUser={currentUser} isAuthenticated={isAuthenticated} qaribuRequests={qaribuRequests} onUpdateRequestStatus={async (id, s) => {}} onScanClick={() => setCurrentPage('qrScan')} onBack={() => setCurrentPage('home')} onStartShift={handleToggleShift} onNavigate={handleNavigate} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onSelectPremise={(p) => { setSelectedPremise(p); setCurrentPage('premiseLanding'); }} onAuthClick={() => setIsAuthModalOpen(true)} />;
       case 'profile': {
@@ -488,6 +681,8 @@ function App() {
             savedContacts={[]} 
             onToggleSaveContact={() => {}} 
             catalogueItems={catalogueItems.filter(i => i.providerId === profileToView.id)} 
+            onUpdateCatalogueItem={handleUpdateCatalogueItem}
+            onDeleteCatalogueItem={handleDeleteCatalogueItem}
             onBook={() => setBookingTargetProvider(profileToView)} 
             onJoin={() => {}} 
             isFlaggedByUser={false} 
@@ -495,9 +690,26 @@ function App() {
             allDocuments={documents} 
             onViewDocument={(d) => { setSelectedDocument(d); setCurrentPage('documentDetail'); }} 
             onNavigate={handleNavigate}
+            onViewSaccoModal={(p) => setSaccoModalProvider(p)}
+            onApproveSaccoMember={handleApproveSaccoRequest}
+            onRejectSaccoMember={handleRejectSaccoRequest}
+            onDisputeRating={handleDisputeRating}
+            onResolveDispute={handleResolveDispute}
           />
         ) : null;
       }
+      case 'sacco_dashboard':
+        return (
+          <SaccoDashboard 
+            currentUser={currentUser} 
+            providers={providers} 
+            onBack={() => setCurrentPage('home')} 
+            onUpdateProvider={handleUpdateProviderAdmin} 
+            onApproveSaccoMember={handleApproveSaccoRequest} 
+            onRejectSaccoMember={handleRejectSaccoRequest} 
+            onResolveDispute={handleResolveDispute} 
+          />
+        );
       case 'qrScan':
         return <QRScannerView onBack={() => setCurrentPage('home')} onScanSuccess={handleScanSuccess} />;
       case 'skill_id':
@@ -536,8 +748,6 @@ function App() {
         return <MessageCenterView onBack={() => setCurrentPage('home')} currentUser={currentUser} onOpenCompleteSignUp={handleOpenCompleteSignUp} />;
       case 'mytoolkit':
         return <MyToolkit allTools={[]} selectedTools={selectedTools} onSave={setSelectedTools} onNavigate={handleNavigate} onBack={() => setCurrentPage('home')} />;
-      case 'services':
-        return <ServiceMarketplace providers={providers} specialBanners={specialBanners} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} />;
       case 'myplaces':
         return <MyPlaces onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} providers={providers} premises={premises} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onNavigate={handleNavigate} onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} onSelectPremise={(p) => { setSelectedPremise(p); setCurrentPage('premiseLanding'); }} />;
       case 'journey':
@@ -552,7 +762,6 @@ function App() {
       case 'brandKit':
       case 'documentDetail':
       case 'scanDocument':
-      case 'tukosoko':
         return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'mycontacts':
         return <MyContactsView contacts={providers.filter(p => p.id !== currentUser?.id).slice(0, 5)} onSelectContact={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} />;
@@ -562,8 +771,54 @@ function App() {
         return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'registerAsset':
         return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+      case 'pendingRatings': {
+        const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
+        const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
+        return (
+          <PendingRatingsView
+            unratedProviders={unratedProviders.length > 0 ? unratedProviders : providers.slice(0, 3)}
+            targetProvider={pendingCtaTargetProvider}
+            onRateProvider={(providerId, rating, comment) => {
+              handleRateProvider(providerId, rating, comment);
+            }}
+            onFlagProvider={(providerId, reason) => {
+              handleFlagProvider(providerId, reason);
+            }}
+            onBack={() => {
+              setCurrentPage('home');
+            }}
+            onContinueAction={() => {
+              if (pendingCtaAction) {
+                pendingCtaAction();
+                setPendingCtaAction(null);
+              }
+            }}
+          />
+        );
+      }
       case 'admin':
-        return <SuperAdminDashboard onBack={() => setCurrentPage('home')} providers={providers} onUpdateProvider={handleUpdateProviderAdmin} onDeleteProvider={handleDeleteProviderAdmin} onViewProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} categories={[]} onAddCategory={() => {}} onDeleteCategory={() => {}} onBroadcast={() => {}} specialBanners={[]} onAddBanner={() => {}} onDeleteBanner={() => {}} onCreateOrganization={() => {}} onApproveRequest={() => {}} onRejectRequest={() => {}} premises={premises} onUpdatePremise={() => {}} />;
+        return <SuperAdminDashboard 
+          onBack={() => setCurrentPage('home')} 
+          providers={providers} 
+          onUpdateProvider={handleUpdateProviderAdmin} 
+          onDeleteProvider={handleDeleteProviderAdmin} 
+          onViewProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
+          categories={[]} 
+          onAddCategory={() => {}} 
+          onDeleteCategory={() => {}} 
+          onBroadcast={() => {}} 
+          specialBanners={[]} 
+          onAddBanner={() => {}} 
+          onDeleteBanner={() => {}} 
+          onCreateOrganization={() => {}} 
+          onApproveRequest={() => {}} 
+          onRejectRequest={() => {}} 
+          premises={premises} 
+          onUpdatePremise={() => {}} 
+          catalogueItems={catalogueItems}
+          onVerifyCatalogueItem={handleVerifyCatalogueItem}
+          onDeleteCatalogueItem={handleDeleteCatalogueItem}
+        />;
       default:
         return <NikoSoko providers={providers} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
     }
@@ -746,6 +1001,7 @@ function App() {
         </div>
       )}
 
+      <SEOHead currentPage={currentPage} selectedProvider={viewingProvider} />
       <SideMenu 
         isOpen={isSideMenuOpen} 
         onClose={() => setIsSideMenuOpen(false)} 
@@ -754,6 +1010,12 @@ function App() {
         isSuperAdmin={isSuperAdmin} 
         onLogout={handleLogout} 
         onOpenCompleteSignUp={handleOpenCompleteSignUp}
+        onOpenSEOMap={() => setIsSEOMapOpen(true)}
+      />
+      <SEOMapModal 
+        isOpen={isSEOMapOpen} 
+        onClose={() => setIsSEOMapOpen(false)} 
+        onNavigate={(page) => handleNavigate(page)} 
       />
       {isAuthModalOpen && (
         <AuthModal 
@@ -776,6 +1038,12 @@ function App() {
         />
       )}
       {bookingTargetProvider && <BookingModal provider={bookingTargetProvider} onClose={() => setBookingTargetProvider(null)} />}
+      <SaccoModal 
+        isOpen={Boolean(saccoModalProvider)} 
+        onClose={() => setSaccoModalProvider(null)} 
+        provider={saccoModalProvider} 
+        saccoOrg={saccoModalProvider ? providers.find(p => p.id === saccoModalProvider.saccoMember?.saccoId || p.name === saccoModalProvider.saccoMember?.saccoName) || null : null} 
+      />
       {renderContent()}
     </>
   );
