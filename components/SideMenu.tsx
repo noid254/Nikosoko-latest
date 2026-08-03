@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ServiceProvider, CurrentPage } from '../types';
+import LocationPromptModal from './LocationPromptModal';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface SideMenuProps {
   onLogout: () => void;
   onOpenCompleteSignUp?: () => void;
   onOpenSEOMap?: () => void;
+  onUpdateUser?: (updated: ServiceProvider) => void;
 }
 
 const XIcon = () => (
@@ -18,12 +20,36 @@ const XIcon = () => (
   </svg>
 );
 
-const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, currentUser, isSuperAdmin, onLogout, onOpenCompleteSignUp, onOpenSEOMap }) => {
-    const [isOnline, setIsOnline] = useState(currentUser?.isOnline ?? true);
-
+const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, currentUser, isSuperAdmin, onLogout, onOpenCompleteSignUp, onOpenSEOMap, onUpdateUser }) => {
+    const isOnline = Boolean(currentUser?.isOnline);
+    const [showLocationPrompt, setShowLocationPrompt] = useState(false);
     const [showSaccoNotice, setShowSaccoNotice] = useState(false);
 
     if (!isOpen) return null;
+
+    const handleToggleAvailability = () => {
+        if (!currentUser) return;
+        if (!isOnline) {
+            // Require location update before going Available for Hire
+            setShowLocationPrompt(true);
+        } else {
+            // Go offline
+            onUpdateUser?.({
+                ...currentUser,
+                isOnline: false
+            });
+        }
+    };
+
+    const handleConfirmLocation = (newLocation: string) => {
+        if (!currentUser) return;
+        onUpdateUser?.({
+            ...currentUser,
+            isOnline: true,
+            location: newLocation
+        });
+        setShowLocationPrompt(false);
+    };
 
     const hasCatalogueActive = Boolean(currentUser?.hasCatalogue || (currentUser?.catalogueItems && currentUser.catalogueItems.length > 0));
 
@@ -106,14 +132,27 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, curren
                             </div>
                             
                             <div className="flex items-center justify-between px-1">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Available For Hire</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Available For Hire</span>
+                                    <span className="text-[8px] font-bold text-amber-400 truncate max-w-[150px]">
+                                        {isOnline ? `📍 ${currentUser?.location || 'Live Location'}` : 'Offline (Requires Location Update)'}
+                                    </span>
+                                </div>
                                 <button 
-                                    onClick={() => setIsOnline(!isOnline)}
-                                    className={`relative w-9 h-5 rounded-full transition-colors ${isOnline ? 'bg-white' : 'bg-gray-700'}`}
+                                    onClick={handleToggleAvailability}
+                                    title={isOnline ? "Click to go Offline" : "Click to update location and go Available for Hire"}
+                                    className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${isOnline ? 'bg-emerald-400' : 'bg-gray-700'}`}
                                 >
                                     <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-black rounded-full transition-transform ${isOnline ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                 </button>
                             </div>
+
+                            <LocationPromptModal 
+                                isOpen={showLocationPrompt}
+                                onClose={() => setShowLocationPrompt(false)}
+                                currentLocation={currentUser?.location}
+                                onConfirm={handleConfirmLocation}
+                            />
                         </div>
                     ) : (
                         <div className="py-2">

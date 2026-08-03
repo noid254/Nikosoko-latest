@@ -15,6 +15,8 @@ const WhatsAppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ item, onClose, provider, isAuthenticated, onAuthClick, onInitiateContact }) => {
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+
   const handleCall = () => {
     if (!provider) return;
     if (!isAuthenticated) {
@@ -37,6 +39,10 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
     }
   }
 
+  const images = item.imageUrls && item.imageUrls.length > 0 
+    ? item.imageUrls.slice(0, 6) 
+    : ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-end z-50 animate-fade-in" onClick={onClose}>
       <div 
@@ -48,21 +54,67 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
-            <div className="snap-x snap-mandatory flex overflow-x-auto no-scrollbar">
-                {item.imageUrls.map((url, index) => (
-                    <div key={index} className="flex-shrink-0 w-full h-72 snap-center">
-                        <img 
-                            src={url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'} 
-                            alt={`${item.title} image ${index + 1}`} 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800';
-                            }}
-                        />
-                    </div>
-                ))}
+            {/* MAIN WORK PHOTO DISPLAY WITH BADGE */}
+            <div className="relative w-full h-72 bg-gray-900 group">
+                <img 
+                    src={images[activeImageIndex] || images[0]} 
+                    alt={`${item.title} work photo ${activeImageIndex + 1}`} 
+                    className="w-full h-full object-cover transition-all duration-300" 
+                    onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800';
+                    }}
+                />
+                
+                {/* PHOTO COUNTER BADGE */}
+                <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-white/20">
+                    <span>📷</span>
+                    <span>Work Photo {activeImageIndex + 1} of {images.length}</span>
+                </div>
+
+                {/* NAVIGATION ARROWS */}
+                {images.length > 1 && (
+                    <>
+                        <button
+                            onClick={() => setActiveImageIndex(prev => (prev > 0 ? prev - 1 : images.length - 1))}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center font-bold text-sm hover:bg-black transition cursor-pointer"
+                        >
+                            ‹
+                        </button>
+                        <button
+                            onClick={() => setActiveImageIndex(prev => (prev < images.length - 1 ? prev + 1 : 0))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center font-bold text-sm hover:bg-black transition cursor-pointer"
+                        >
+                            ›
+                        </button>
+                    </>
+                )}
             </div>
+
+            {/* UP TO 6 THUMBNAIL STRIP */}
+            {images.length > 1 && (
+                <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar border-b border-gray-800">
+                    {images.map((imgUrl, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setActiveImageIndex(idx)}
+                            className={`relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                                activeImageIndex === idx 
+                                    ? 'border-amber-400 scale-105 shadow-md' 
+                                    : 'border-transparent opacity-60 hover:opacity-100'
+                            }`}
+                        >
+                            <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                            {activeImageIndex === idx && (
+                                <div className="absolute inset-0 border border-amber-400 rounded-lg pointer-events-none"></div>
+                            )}
+                        </button>
+                    ))}
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-auto flex-shrink-0">
+                        Work Portfolio ({images.length}/6)
+                    </span>
+                </div>
+            )}
 
             <div className="p-5 space-y-4">
               <p className="text-sm font-bold text-brand-gold uppercase tracking-wider">{item.category}</p>

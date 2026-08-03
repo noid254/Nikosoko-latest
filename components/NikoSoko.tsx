@@ -49,21 +49,24 @@ interface HighlightCategory {
     id: string;
     title: string;
     keyword: string;
+    icon: string;
+    bgClass: string;
+    activeClass: string;
 }
 
 const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
-    { id: 'boda', title: 'Boda', keyword: 'boda' },
-    { id: 'taxi', title: 'Taxi', keyword: 'taxi' },
-    { id: 'electrician', title: 'Electrician', keyword: 'electric' },
-    { id: 'plumber', title: 'Plumber', keyword: 'plumb' },
-    { id: 'refills', title: 'Gas & Water', keyword: 'refill' },
-    { id: 'tv', title: 'TV Mounting', keyword: 'tv' },
-    { id: 'braiding', title: 'Braiding', keyword: 'braid' },
-    { id: 'cleaner', title: 'Cleaning', keyword: 'clean' },
-    { id: 'mechanic', title: 'Mechanic & Tech', keyword: 'repair' },
-    { id: 'courier', title: 'Delivery', keyword: 'deliver' },
-    { id: 'solar', title: 'Solar', keyword: 'solar' },
-    { id: 'tutoring', title: 'Tutoring', keyword: 'tutor' }
+    { id: 'boda', title: 'Boda', keyword: 'boda', icon: '🛵', bgClass: 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100', activeClass: 'bg-amber-500 text-black border-amber-600 font-black shadow-md' },
+    { id: 'taxi', title: 'Taxi', keyword: 'taxi', icon: '🚕', bgClass: 'bg-yellow-50 text-yellow-900 border-yellow-300 hover:bg-yellow-100', activeClass: 'bg-yellow-400 text-black border-yellow-500 font-black shadow-md' },
+    { id: 'electrician', title: 'Electrician', keyword: 'electric', icon: '⚡', bgClass: 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100', activeClass: 'bg-blue-600 text-white border-blue-700 font-black shadow-md' },
+    { id: 'plumber', title: 'Plumber', keyword: 'plumb', icon: '🚰', bgClass: 'bg-sky-50 text-sky-900 border-sky-300 hover:bg-sky-100', activeClass: 'bg-sky-500 text-white border-sky-600 font-black shadow-md' },
+    { id: 'refills', title: 'Gas & Water', keyword: 'refill', icon: '💧', bgClass: 'bg-cyan-50 text-cyan-900 border-cyan-300 hover:bg-cyan-100', activeClass: 'bg-cyan-600 text-white border-cyan-700 font-black shadow-md' },
+    { id: 'tv', title: 'TV Mounting', keyword: 'tv', icon: '📺', bgClass: 'bg-indigo-50 text-indigo-900 border-indigo-300 hover:bg-indigo-100', activeClass: 'bg-indigo-600 text-white border-indigo-700 font-black shadow-md' },
+    { id: 'braiding', title: 'Braiding', keyword: 'braid', icon: '💇‍♀️', bgClass: 'bg-pink-50 text-pink-900 border-pink-300 hover:bg-pink-100', activeClass: 'bg-pink-500 text-white border-pink-600 font-black shadow-md' },
+    { id: 'cleaner', title: 'Cleaning', keyword: 'clean', icon: '🧹', bgClass: 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100', activeClass: 'bg-emerald-600 text-white border-emerald-700 font-black shadow-md' },
+    { id: 'mechanic', title: 'Mechanic & Tech', keyword: 'repair', icon: '🧰', bgClass: 'bg-orange-50 text-orange-900 border-orange-300 hover:bg-orange-100', activeClass: 'bg-orange-500 text-white border-orange-600 font-black shadow-md' },
+    { id: 'courier', title: 'Delivery', keyword: 'deliver', icon: '📦', bgClass: 'bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100', activeClass: 'bg-purple-600 text-white border-purple-700 font-black shadow-md' },
+    { id: 'solar', title: 'Solar', keyword: 'solar', icon: '☀️', bgClass: 'bg-lime-50 text-lime-900 border-lime-300 hover:bg-lime-100', activeClass: 'bg-lime-500 text-black border-lime-600 font-black shadow-md' },
+    { id: 'tutoring', title: 'Tutoring', keyword: 'tutor', icon: '📚', bgClass: 'bg-teal-50 text-teal-900 border-teal-300 hover:bg-teal-100', activeClass: 'bg-teal-600 text-white border-teal-700 font-black shadow-md' }
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
@@ -221,13 +224,14 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                 <button
                                     key={cat.id}
                                     onClick={() => handleCategoryClick(cat)}
-                                    className={`px-3 py-1 border text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer ${
+                                    className={`px-3 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer shadow-xs ${
                                         isSelected 
-                                            ? 'bg-black text-white border-black' 
-                                            : 'bg-white text-gray-700 border-gray-200 hover:border-black'
+                                            ? cat.activeClass 
+                                            : cat.bgClass
                                     }`}
                                 >
-                                    {cat.title}
+                                    <span className="text-sm leading-none">{cat.icon}</span>
+                                    <span>{cat.title}</span>
                                 </button>
                             );
                         })}

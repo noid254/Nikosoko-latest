@@ -108,6 +108,15 @@ function App() {
     }
   });
 
+  const [dismissedProviderIds, setDismissedProviderIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_dismissed_provider_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [reviewModalSubtitle, setReviewModalSubtitle] = useState<string>('');
   const [reviewPostponeCount, setReviewPostponeCount] = useState<number>(0);
   const [pendingCtaAction, setPendingCtaAction] = useState<(() => void) | null>(null);
@@ -501,55 +510,9 @@ function App() {
   const handleCtaInteraction = (provider: ServiceProvider, actionCallback?: () => void): boolean => {
       if (!provider || !provider.id) return false;
 
-      // Filter unrated items in contact history
-      const unratedHistory = contactHistory.filter(c => !ratedProviderIds.includes(c.providerId));
-
-      // Requirement: If a person interacts with more than 3 CTAs for different people, take them to pending ratings page to choose which to rate first
-      if (unratedHistory.length >= 3) {
-          setPendingCtaTargetProvider(provider);
-          setPendingCtaAction(() => () => {
-              recordContact(provider.id);
-              if (actionCallback) actionCallback();
-          });
-          setCurrentPage('pendingRatings');
-          return false;
-      }
-
-      // Find previous unrated contacts (excluding target provider if re-contacting)
-      const previousUnratedItems = unratedHistory.filter(c => c.providerId !== provider.id);
-      const unratedItemToReview = previousUnratedItems.length > 0 ? previousUnratedItems[0] : null;
-
-      if (unratedItemToReview) {
-          const providerToReview = providers.find(p => p.id === unratedItemToReview.providerId) || provider;
-          const postponeCnt = unratedItemToReview.postponeCount || 0;
-          const isForced = postponeCnt >= 3;
-
-          setPendingReviews([providerToReview]);
-          setReviewModalSubtitle(
-              `Rate your previous interaction with ${providerToReview.name} before contacting ${provider.name}.`
-          );
-          setReviewPostponeCount(postponeCnt);
-          setIsForcedReview(isForced);
-
-          setPendingCtaAction(() => () => {
-              recordContact(provider.id);
-              if (actionCallback) actionCallback();
-          });
-
-          setShowReviewModal(true);
-          return false; // Paused until user rates or postpones
-      }
-
-      // No prior unrated contact: record target contact and execute
+      // Record contact timestamp for post-service 2-3 hour follow-up reminder
       recordContact(provider.id);
       if (actionCallback) actionCallback();
-
-      // Prompt immediate rating/postpone modal for current contact (postpone count starts at 0)
-      setPendingReviews([provider]);
-      setReviewModalSubtitle(`How was your interaction with ${provider.name}?`);
-      setReviewPostponeCount(0);
-      setIsForcedReview(false);
-      setShowReviewModal(true);
 
       return true;
   };
@@ -953,11 +916,35 @@ function App() {
       alert("Profile flagged successfully. Thank you for your feedback.");
   };
 
+  const handleNeverHappened = (providerId: string) => {
+      const newDismissed = Array.from(new Set([...dismissedProviderIds, providerId]));
+      setDismissedProviderIds(newDismissed);
+      localStorage.setItem('nikosoko_dismissed_provider_ids', JSON.stringify(newDismissed));
+
+      setContactHistory(prev => {
+          const updated = prev.filter(c => c.providerId !== providerId);
+          localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
+          return updated;
+      });
+
+      if (simulated6HOverdueId === providerId) {
+          setSimulated6HOverdueId(null);
+      }
+
+      const updatedPending = pendingReviews.filter(p => p.id !== providerId);
+      setPendingReviews(updatedPending);
+
+      if (updatedPending.length === 0) {
+          setShowReviewModal(false);
+      }
+  };
+
   const active6HourItem = contactHistory.find(c => {
       if (ratedProviderIds.includes(c.providerId)) return false;
+      if (dismissedProviderIds.includes(c.providerId)) return false;
       if (simulated6HOverdueId === c.providerId) return true;
       const hoursPassed = (Date.now() - c.contactedAt) / (1000 * 3600);
-      return hoursPassed >= 6;
+      return hoursPassed >= 2;
   });
 
   const active6HourProvider = active6HourItem ? providers.find(p => p.id === active6HourItem.providerId) : null;
@@ -968,46 +955,54 @@ function App() {
       onOpenSignUp={handleOpenCompleteSignUp}
       onOpenLogin={handleOpenLogin}
     >
-      {/* 6-Hour SMS / Push Notification Banner Popup */}
+      {/* 2-3 Hour Post-Service Notification Reminder Banner */}
       {active6HourProvider && active6HourItem && (
-        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-md px-3 animate-bounce">
-          <div className="bg-black text-white p-3 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xl shrink-0">📱</span>
-              <div>
-                <div className="font-black text-amber-300 text-[10px] uppercase tracking-wider flex items-center gap-1">
-                  <span>SMS & Push Reminder</span>
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-lg px-3 animate-fade-in">
+          <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto min-w-0">
+              <span className="text-xl shrink-0 p-1.5 bg-amber-400/20 rounded-xl">📱</span>
+              <div className="min-w-0 flex-1">
+                <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider">
+                  Post-Service Reminder
                 </div>
-                <p className="text-gray-200 font-bold text-[11px] leading-tight">
-                  Rate your interaction with <span className="text-amber-400">{active6HourProvider.name}</span>?
+                <p className="text-gray-100 font-bold text-xs leading-tight truncate">
+                  Rate your service with <span className="text-amber-400 font-extrabold">{active6HourProvider.name}</span>?
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-2 sm:pt-0">
               <button
                 onClick={() => {
                   setPendingReviews([active6HourProvider]);
-                  setReviewModalSubtitle(`Reminder to rate ${active6HourProvider.name}`);
+                  setReviewModalSubtitle(`Reminder to rate your service with ${active6HourProvider.name}`);
                   setReviewPostponeCount(active6HourItem.postponeCount || 0);
-                  setIsForcedReview((active6HourItem.postponeCount || 0) >= 3);
+                  setIsForcedReview(false);
                   setShowReviewModal(true);
                 }}
-                className="bg-amber-400 text-black font-black px-2.5 py-1.5 rounded-xl hover:bg-amber-300 transition-transform active:scale-95 uppercase text-[9.5px] tracking-wider"
+                className="bg-amber-400 text-black font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all active:scale-95 uppercase text-[10px] tracking-wider cursor-pointer"
               >
-                Rate Now
+                Rate
+              </button>
+              <button
+                onClick={() => handleNeverHappened(active6HourProvider.id)}
+                className="bg-white/10 text-gray-200 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
+                title="Service did not take place"
+              >
+                Never Happened
               </button>
               <button
                 onClick={() => handleSmsPostpone(active6HourProvider.id)}
-                className="bg-white/10 text-white font-bold px-2 py-1.5 rounded-xl hover:bg-white/20 text-[9.5px]"
+                className="bg-white/10 text-gray-400 hover:text-white font-bold px-2 py-1.5 rounded-xl hover:bg-white/20 text-[10px] cursor-pointer"
+                title="Remind me later"
               >
-                Postpone ({active6HourItem.postponeCount || 0}/3)
+                Later
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <SEOHead currentPage={currentPage} selectedProvider={viewingProvider} />
+      <SEOHead provider={viewingProvider || currentUser} />
       <SideMenu 
         isOpen={isSideMenuOpen} 
         onClose={() => setIsSideMenuOpen(false)} 
@@ -1017,6 +1012,11 @@ function App() {
         onLogout={handleLogout} 
         onOpenCompleteSignUp={handleOpenCompleteSignUp}
         onOpenSEOMap={() => setIsSEOMapOpen(true)}
+        onUpdateUser={(updated) => {
+            setCurrentUser(updated);
+            setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
+            api.updateProvider(updated);
+        }}
       />
       <SEOMapModal 
         isOpen={isSEOMapOpen} 
@@ -1040,6 +1040,7 @@ function App() {
           onRate={handleRateProvider} 
           onFlag={handleFlagProvider} 
           onPostpone={handlePostponeReview}
+          onNeverHappened={handleNeverHappened}
           onClose={handleCloseReviewModal} 
         />
       )}

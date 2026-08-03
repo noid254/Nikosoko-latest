@@ -157,12 +157,17 @@ export interface ServiceProvider {
   coverImageUrl: string;
   catalogueBannerUrl?: string;
   rating: number;
+  ratingCount?: number;
   distanceKm: number;
   hourlyRate: number;
   rateType: 'per hour' | 'per day' | 'per task' | 'per month' | 'per piece work' | 'per km' | 'per sqm' | 'per cbm' | 'per appearance';
   currency: string;
   isVerified: boolean;
   about: string;
+  bio?: string;
+  rate?: string;
+  saccoId?: string;
+  saccoName?: string;
   works: string[];
   skills?: Skill[];
   category: string;

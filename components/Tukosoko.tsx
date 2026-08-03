@@ -461,12 +461,88 @@ interface SellServicePageProps {
   onAuthClick: () => void;
 }
 
+const TITLE_PRESETS: Record<string, string[]> = {
+  'Tutoring': [
+    'Maths Lesson & KCSE Exam Prep',
+    'Physics & Chemistry Coaching',
+    'Primary Homework Help & Remedial',
+    'English Grammar & Spoken Practice'
+  ],
+  'TV Mounting': [
+    'TV Wall Mounting & Cable Concealing',
+    'Soundbar & Bracket Installation',
+    'Full Motion Mount Setup (32"-75")'
+  ],
+  'Key Cutter': [
+    'Master Key Duplicate & Cutting',
+    'Padlock & Door Key Duplication',
+    'Emergency Lockout Key Service'
+  ],
+  'Braiding': [
+    'Knotless Braids & Box Braids',
+    'Lines & Cornrows Hair Styling',
+    'Dreadlocks Maintenance & Wash'
+  ],
+  'Water Refill': [
+    '20L Purified Water Doorstep Refill',
+    'Bulk Mineral Water Supply',
+    'Dispenser Bottle Exchange'
+  ],
+  'Gas Refill': [
+    '6kg / 13kg Cooking Gas Cylinder Delivery',
+    'Doorstep Gas Hose & Regulator Inspection',
+    'Cylinder Swap & Connection'
+  ],
+  'Electrical': [
+    'House Wiring & Socket Fitting',
+    'Circuit Breaker & Fuse Repair',
+    'Solar & Inverter Installation'
+  ],
+  'Plumbing': [
+    'Pipe Leak Repair & Unclogging',
+    'Shower & Sink Fitting',
+    'Water Tank Installation & Maintenance'
+  ],
+  'Shoe Repair': [
+    'Shoe Sole Replacement & Stitching',
+    'Leather Boot Cleaning & Polish',
+    'Zip Replacement & Heel Repair'
+  ],
+  'Other Service': [
+    'General Handyman & Home Repairs',
+    'Doorstep Appliance Servicing',
+    'Custom Technical Consultation'
+  ]
+};
+
+const OFFER_PRESETS = [
+  'First trial lesson 50% off',
+  'Free travel within 3km radius',
+  '10% discount for repeat clients',
+  'Free inspection & quotation',
+  'Includes complimentary cleanup'
+];
+
+const DESCRIPTION_TEMPLATES: Record<string, string> = {
+  'Tutoring': 'Comprehensive one-on-one lessons tailored to the student\'s learning pace. Covers core concepts, past paper practice, and exam techniques. Flexible online or doorstep home visits.',
+  'TV Mounting': 'Professional wall mounting for TV sizes 32 to 75 inches. Includes sturdy wall bracket fitting, precise leveling, cable trunking/concealing, and device testing.',
+  'Key Cutter': 'Precision key duplication using modern key cutting machines. Quick turnaround at your doorstep or shop location. Fits all standard door locks, padlocks, and cabinet locks.',
+  'Braiding': 'Neat and durable braiding services with maximum attention to hair health and edge protection. Customer can provide hair extensions or request them in advance.',
+  'Water Refill': 'Clean, lab-tested purified drinking water delivered directly to your house or office. Fast doorstep delivery with bottle washing and hygiene handling.',
+  'Gas Refill': 'Safe and authentic cooking gas refill and delivery. Free safety checks for gas leakages, regulator fit, and hose tightness included with every delivery.',
+  'Electrical': 'Licensed electrical repairs, fault troubleshooting, light fixture fitting, and power outlet repairs. Safe compliance with national safety standards.',
+  'Plumbing': 'Prompt plumbing solutions for leaking pipes, clogged drainage, tap replacements, and bathroom fittings. Quality materials and clean workmanship guaranteed.',
+  'Shoe Repair': 'Expert shoe restoration including sole re-glueing, stitching, heel taps, leather conditioning, and deep cleaning for all footwear types.',
+  'Other Service': 'Reliable, professional service delivered with strict quality controls, clear upfront pricing, and customer satisfaction guarantee.'
+};
+
 const SellServicePage: React.FC<SellServicePageProps> = ({
   currentUser,
   onBack,
   onSubmit,
   onAuthClick
 }) => {
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [category, setCategory] = useState('Tutoring');
   const [title, setTitle] = useState('');
   const [priceAmount, setPriceAmount] = useState('200');
@@ -480,21 +556,27 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
 
   const handleCategoryChange = (newCat: string) => {
     setCategory(newCat);
+    const defaultTitle = TITLE_PRESETS[newCat]?.[0] || 'Professional Service Listing';
+    setTitle(defaultTitle);
 
-    if (newCat === 'Tutoring' && (!title || title.includes('TV') || title.includes('Key'))) {
-      setTitle('Maths Lesson & Exam Coaching');
+    if (newCat === 'Tutoring') {
       setPriceAmount('200');
       setRateUnit('/ hour');
       setDuration('1 hour');
-      setDescription('One-on-one mathematics tuition covering algebra, geometry & KCSE exam prep. Flexible online or doorstep home visits.');
+      setDescription(DESCRIPTION_TEMPLATES['Tutoring']);
       setOfferNote('First trial lesson 50% off');
-    } else if (newCat === 'TV Mounting' && (!title || title.includes('Maths'))) {
-      setTitle('TV Wall Mounting & Cable Trunking');
+    } else if (newCat === 'TV Mounting') {
       setPriceAmount('1500');
       setRateUnit('fixed');
       setDuration('45 mins');
-      setDescription('Professional bracket installation for 32" to 75" TVs including wall drilling & cable concealing.');
+      setDescription(DESCRIPTION_TEMPLATES['TV Mounting']);
       setOfferNote('Free travel within 3km');
+    } else {
+      setPriceAmount('500');
+      setRateUnit('/ job');
+      setDuration('1 hour');
+      setDescription(DESCRIPTION_TEMPLATES[newCat] || DESCRIPTION_TEMPLATES['Other Service']);
+      setOfferNote('Free inspection');
     }
   };
 
@@ -534,14 +616,17 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinalSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!currentUser) {
       onAuthClick();
       return;
     }
 
-    if (!title.trim() || !priceAmount.trim()) return;
+    if (!title.trim() || !priceAmount.trim()) {
+      alert("Please ensure Service Title and Price are provided.");
+      return;
+    }
 
     const formattedPrice = rateUnit === 'fixed' 
       ? `Ksh ${priceAmount}`
@@ -569,343 +654,590 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
   const currentPresets = CATEGORY_PHOTO_PRESETS[category] || CATEGORY_PHOTO_PRESETS['Other Service'];
   const activeCoverImage = uploadedImages[0] || currentPresets[0];
 
-  return (
-    <div className="bg-gray-50 min-h-screen font-sans pb-28 max-w-md mx-auto border-x border-gray-100 relative">
-      
-      {/* Sticky Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40 px-3.5 py-2.5 flex items-center justify-between shadow-2xs">
-        <button 
-          type="button"
-          onClick={onBack}
-          className="p-2 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-1.5 text-xs font-black"
-        >
-          <BackIcon />
-          <span>Back</span>
-        </button>
+  const totalSteps = 6;
 
-        <div className="text-center">
-          <h1 className="text-sm font-black text-brand-navy tracking-tight uppercase leading-none">Sell Service Card</h1>
-          <p className="text-[9px] font-black tracking-widest text-amber-600 uppercase mt-0.5">Publish Skill Rate to Tukosoko</p>
+  const nextStep = () => {
+    if (currentStep === 2 && !title.trim()) {
+      alert("Please enter a service title.");
+      return;
+    }
+    if (currentStep === 3 && (!priceAmount || Number(priceAmount) <= 0)) {
+      alert("Please enter a valid price amount.");
+      return;
+    }
+    if (currentStep < totalSteps) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    } else {
+      onBack();
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 min-h-screen font-sans pb-28 max-w-md mx-auto border-x border-gray-100 relative flex flex-col">
+      
+      {/* Sticky Top Header with Navigation & Progress Indicator */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-40 shadow-2xs">
+        {/* Progress bar */}
+        <div className="w-full bg-gray-100 h-1.5 overflow-hidden">
+          <div 
+            className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full transition-all duration-300 ease-out" 
+            style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+          />
         </div>
 
-        <div className="w-12"></div>
-      </header>
+        <div className="px-3.5 py-2.5 flex items-center justify-between">
+          <button 
+            type="button"
+            onClick={prevStep}
+            className="p-2 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-1.5 text-xs font-black cursor-pointer"
+          >
+            <BackIcon />
+            <span>{currentStep === 1 ? 'Back' : 'Previous'}</span>
+          </button>
 
-      {/* Main Form Page */}
-      <main className="p-3.5 space-y-4">
+          <div className="text-center">
+            <span className="text-[9.5px] font-black tracking-widest text-amber-600 uppercase">
+              Step {currentStep} of {totalSteps}
+            </span>
+            <h1 className="text-xs font-black text-brand-navy uppercase tracking-tight leading-none mt-0.5">
+              Sell Skill Wizard
+            </h1>
+          </div>
 
-        {/* Hero Card / Explanation Banner */}
-        <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800 space-y-1.5">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl">🎓</span>
-            <div>
-              <h2 className="font-black text-xs uppercase tracking-wide text-amber-400">Sell Skills & Doorstep Services</h2>
-              <p className="text-[10px] text-gray-300 font-medium leading-snug">
-                Signed up as a teacher? Sell Maths lessons at Ksh 200/hr. Electricians, plumbers & key cutters can list doorstep rate packages!
-              </p>
-            </div>
+          <div className="w-14 flex justify-end">
+            <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+              {Math.round((currentStep / totalSteps) * 100)}%
+            </span>
           </div>
         </div>
 
-        {/* User Profile / Skill ID Badge */}
+        {/* Step dots for quick jump */}
+        <div className="flex items-center justify-center gap-1.5 pb-2 border-t border-gray-50 pt-1.5 px-3">
+          {[1, 2, 3, 4, 5, 6].map((stepNum) => (
+            <button
+              key={stepNum}
+              type="button"
+              onClick={() => {
+                if (stepNum <= currentStep) setCurrentStep(stepNum);
+              }}
+              className={`h-2 rounded-full transition-all cursor-pointer ${
+                stepNum === currentStep 
+                  ? 'w-6 bg-brand-navy' 
+                  : stepNum < currentStep 
+                    ? 'w-2 bg-amber-400' 
+                    : 'w-2 bg-gray-200'
+              }`}
+              title={`Go to Step ${stepNum}`}
+            />
+          ))}
+        </div>
+      </header>
+
+      {/* Main Container - Single Input Focus Screen per Step */}
+      <main className="p-4 flex-1 flex flex-col justify-between space-y-4">
+
+        {/* User Skill Badge Header */}
         {currentUser ? (
-          <div className="bg-white p-3 rounded-2xl border border-gray-200 shadow-2xs flex items-center gap-3">
+          <div className="bg-white p-2.5 rounded-2xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
             <img 
               src={currentUser.avatarUrl} 
               alt={currentUser.name} 
-              className="w-10 h-10 rounded-full object-cover border-2 border-brand-navy shadow-2xs" 
+              className="w-9 h-9 rounded-full object-cover border-2 border-brand-navy shadow-2xs shrink-0" 
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-xs text-gray-900 truncate">{currentUser.name}</span>
-                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                <span className="text-[8.5px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                   ✓ Verified Skill ID
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 font-semibold truncate">{currentUser.service || 'Professional Service Provider'}</p>
+              <p className="text-[9.5px] text-gray-500 font-semibold truncate">{currentUser.service || 'Skill Provider'}</p>
             </div>
           </div>
         ) : (
           <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-amber-900">Sign in to publish your service card</p>
+              <p className="text-xs font-bold text-amber-900">Sign in to publish your skill</p>
               <p className="text-[10px] text-amber-700">Connect with your Skill ID profile</p>
             </div>
             <button 
               type="button" 
               onClick={onAuthClick}
-              className="bg-brand-navy text-white text-xs font-black px-3 py-1.5 rounded-xl uppercase tracking-wider"
+              className="bg-brand-navy text-white text-xs font-black px-3 py-1.5 rounded-xl uppercase tracking-wider cursor-pointer"
             >
               Sign In
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* STEP 1: CATEGORY SELECTION */}
+        {currentStep === 1 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">🏷️</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 1: Choose Skill Category
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    Select the main category for the service or skill you want to offer to clients.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          {/* 1. Category Selector */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-2">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-              1. Select Service Category
-            </label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-              {[
-                { id: 'Tutoring', label: 'Tutoring', icon: '📚' },
-                { id: 'TV Mounting', label: 'TV Mount', icon: '📺' },
-                { id: 'Key Cutter', label: 'Key Cutter', icon: '🔑' },
-                { id: 'Braiding', label: 'Braiding', icon: '💇' },
-                { id: 'Water Refill', label: 'Water', icon: '💧' },
-                { id: 'Gas Refill', label: 'Gas', icon: '⛽' },
-                { id: 'Electrical', label: 'Electrical', icon: '⚡' },
-                { id: 'Plumbing', label: 'Plumbing', icon: '🚰' },
-                { id: 'Shoe Repair', label: 'Shoe Repair', icon: '👟' },
-                { id: 'Other Service', label: 'Other', icon: '🛠️' }
-              ].map(cat => (
-                <button
-                  type="button"
-                  key={cat.id}
-                  onClick={() => handleCategoryChange(cat.id)}
-                  className={`p-2 rounded-xl text-[10px] font-extrabold flex flex-col items-center justify-center gap-1 border transition-all ${
-                    category === cat.id 
-                      ? 'bg-brand-navy text-white border-brand-navy shadow-xs' 
-                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="text-base">{cat.icon}</span>
-                  <span className="truncate w-full text-center">{cat.label}</span>
-                </button>
-              ))}
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+              <label className="block text-xs font-black uppercase tracking-wider text-gray-800">
+                Select Skill Category
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '📚', desc: 'Maths, Science, Languages' },
+                  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '📺', desc: 'Brackets & Cable conceals' },
+                  { id: 'Key Cutter', label: 'Key Cutter', icon: '🔑', desc: 'Duplicates & Locks' },
+                  { id: 'Braiding', label: 'Hair Braiding', icon: '💇', desc: 'Knotless, Lines & Styling' },
+                  { id: 'Water Refill', label: 'Water Refill', icon: '💧', desc: 'Clean 20L Doorstep Water' },
+                  { id: 'Gas Refill', label: 'Gas Refill', icon: '⛽', desc: '6kg & 13kg Cylinder Delivery' },
+                  { id: 'Electrical', label: 'Electrical Work', icon: '⚡', desc: 'Wiring, Sockets, Repairs' },
+                  { id: 'Plumbing', label: 'Plumbing', icon: '🚰', desc: 'Leaks, Taps & Drains' },
+                  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '👟', desc: 'Soles, Stitching & Polish' },
+                  { id: 'Other Service', label: 'Other Skill', icon: '🛠️', desc: 'Custom Crafts & Handyman' }
+                ].map(cat => (
+                  <button
+                    type="button"
+                    key={cat.id}
+                    onClick={() => handleCategoryChange(cat.id)}
+                    className={`p-3 rounded-2xl text-left border-2 transition-all flex items-start gap-2.5 cursor-pointer ${
+                      category === cat.id 
+                        ? 'bg-brand-navy text-white border-brand-navy shadow-md scale-[1.01]' 
+                        : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-2xl shrink-0 mt-0.5">{cat.icon}</span>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xs leading-tight truncate">{cat.label}</div>
+                      <div className={`text-[9.5px] mt-0.5 leading-snug font-medium line-clamp-1 ${category === cat.id ? 'text-amber-300' : 'text-gray-500'}`}>
+                        {cat.desc}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* 2. Service Title */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-              2. Service Title *
-            </label>
-            <input 
-              type="text" 
-              required 
-              value={title} 
-              onChange={e => setTitle(e.target.value)}
-              placeholder={category === 'Tutoring' ? 'e.g. High School Maths Tuition & Exam Coaching' : 'e.g. TV Wall Mounting Service'}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
-            />
-          </div>
+        {/* STEP 2: SERVICE TITLE */}
+        {currentStep === 2 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">✏️</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 2: Service Title
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    What specific service or lesson package are you listing?
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          {/* 3. Rate & Billing Unit */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-2">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-              3. Rate & Billing Unit *
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
               <div>
-                <span className="text-[9px] font-bold text-gray-500 mb-1 block">Amount (Ksh)</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Service Title *
+                </label>
                 <input 
-                  type="number" 
+                  type="text" 
                   required 
-                  value={priceAmount} 
-                  onChange={e => setPriceAmount(e.target.value)}
-                  placeholder="200"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
+                  value={title} 
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="e.g. High School Maths Tuition & Exam Coaching"
+                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
                 />
               </div>
 
-              <div>
-                <span className="text-[9px] font-bold text-gray-500 mb-1 block">Billing Frequency</span>
-                <select 
-                  value={rateUnit} 
-                  onChange={e => setRateUnit(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
-                >
-                  <option value="/ hour">/ hour</option>
-                  <option value="/ lesson">/ lesson</option>
-                  <option value="/ session">/ session</option>
-                  <option value="/ refill">/ refill</option>
-                  <option value="/ job">/ job</option>
-                  <option value="/ day">/ day</option>
-                  <option value="fixed">Fixed Price</option>
-                </select>
+              {/* Quick Title Suggestion Chips */}
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
+                  Tap suggested title for {category}:
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {(TITLE_PRESETS[category] || TITLE_PRESETS['Other Service']).map((preset, pIdx) => (
+                    <button
+                      type="button"
+                      key={pIdx}
+                      onClick={() => setTitle(preset)}
+                      className={`text-left p-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-between cursor-pointer ${
+                        title === preset 
+                          ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-xs' 
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span>{preset}</span>
+                      {title === preset && <span className="text-amber-600 font-black">✓</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* 4. Duration & Special Offer */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-2">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-              4. Duration & Offer Note
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+        {/* STEP 3: PRICE & BILLING UNIT */}
+        {currentStep === 3 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">💰</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 3: Rate & Pricing
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    Set your service fee and billing frequency.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
               <div>
-                <span className="text-[9px] font-bold text-gray-500 mb-1 block">Est. Duration</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Rate Amount (Ksh) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-black text-sm">
+                    Ksh
+                  </span>
+                  <input 
+                    type="number" 
+                    required 
+                    value={priceAmount} 
+                    onChange={e => setPriceAmount(e.target.value)}
+                    placeholder="200"
+                    className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl py-3.5 pl-14 pr-4 text-base font-black text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Billing Frequency
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: '/ hour', label: '/ hour' },
+                    { id: '/ lesson', label: '/ lesson' },
+                    { id: '/ session', label: '/ session' },
+                    { id: '/ refill', label: '/ refill' },
+                    { id: '/ job', label: '/ job' },
+                    { id: '/ day', label: '/ day' },
+                    { id: 'fixed', label: 'Fixed Price' }
+                  ].map((unit) => (
+                    <button
+                      type="button"
+                      key={unit.id}
+                      onClick={() => setRateUnit(unit.id)}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-black border text-center transition-all cursor-pointer ${
+                        rateUnit === unit.id 
+                          ? 'bg-brand-navy text-white border-brand-navy shadow-xs' 
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {unit.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Preview Box */}
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900">Client Rate Display:</span>
+                <span className="text-sm font-black text-brand-navy bg-white px-3 py-1 rounded-xl border border-amber-300 shadow-2xs">
+                  {rateUnit === 'fixed' ? `Ksh ${priceAmount || 0}` : `Ksh ${priceAmount || 0} ${rateUnit}`}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: DURATION & OFFER NOTE */}
+        {currentStep === 4 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">⏱️</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 4: Duration & Special Offer
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    How long does the service take and any promotional discounts?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Est. Duration / Completion Time
+                </label>
                 <input 
                   type="text" 
                   value={duration} 
                   onChange={e => setDuration(e.target.value)}
-                  placeholder="1 hour"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
+                  placeholder="e.g. 1 hour, 45 mins, 2 days"
+                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
                 />
               </div>
 
               <div>
-                <span className="text-[9px] font-bold text-gray-500 mb-1 block">Special Offer / Discount</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Special Offer / Discount Note (Optional)
+                </label>
                 <input 
                   type="text" 
                   value={offerNote} 
                   onChange={e => setOfferNote(e.target.value)}
-                  placeholder="e.g. First lesson 50% off"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
+                  placeholder="e.g. First trial lesson 50% off"
+                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* 5. Description */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-              5. Description & Details
-            </label>
-            <textarea 
-              rows={3}
-              value={description} 
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Provide clear details on topics covered, tools brought, doorstep service area..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-medium text-gray-900 focus:outline-none focus:border-brand-navy focus:bg-white"
-            />
-          </div>
-
-          {/* 6. Image Upload from Gallery ONLY */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-gray-700">
-                6. Service Photos (Upload from Gallery)
-              </label>
-              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                {uploadedImages.length} {uploadedImages.length === 1 ? 'photo' : 'photos'} uploaded
-              </span>
-            </div>
-
-            {/* Hidden File Input */}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              multiple 
-              onChange={handleGalleryUpload} 
-              className="hidden" 
-            />
-
-            {/* Gallery Upload Area */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full border-2 border-dashed border-gray-300 hover:border-brand-navy p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer group"
-            >
-              <div className="w-10 h-10 rounded-full bg-blue-100 text-brand-navy flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                🖼️
+              {/* Offer presets */}
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
+                  Or tap quick offer note:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {OFFER_PRESETS.map((offer, oIdx) => (
+                    <button
+                      type="button"
+                      key={oIdx}
+                      onClick={() => setOfferNote(offer)}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        offerNote === offer
+                          ? 'bg-amber-400 text-black border-amber-500 font-black'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {offer}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-xs font-black text-gray-900">Upload Photo from Gallery</p>
-              <p className="text-[9px] text-gray-500 font-semibold">Select 1 or more photos directly from your phone gallery</p>
-            </button>
+            </div>
+          </div>
+        )}
 
-            {/* Uploaded Gallery Photos Grid */}
-            {uploadedImages.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[9px] font-extrabold uppercase text-gray-500">Your Gallery Photos:</span>
-                <div className="grid grid-cols-3 gap-2">
+        {/* STEP 5: SERVICE DESCRIPTION */}
+        {currentStep === 5 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">📝</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 5: Service Description
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    Describe what is included, your experience, and service coverage area.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
+                  Detailed Description
+                </label>
+                <textarea 
+                  rows={5}
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Provide details on tools brought, qualifications, doorstep area..."
+                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-medium text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner leading-relaxed resize-none"
+                />
+              </div>
+
+              {/* Reset to Category Template */}
+              <div className="pt-2 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setDescription(DESCRIPTION_TEMPLATES[category] || DESCRIPTION_TEMPLATES['Other Service'])}
+                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                >
+                  ⚡ Fill with {category} Template
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: PHOTOS & LIVE PREVIEW / PUBLISH */}
+        {currentStep === 6 && (
+          <div className="space-y-4 animate-fade-in flex-1">
+            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl p-2 bg-white/10 rounded-2xl">📸</span>
+                <div>
+                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
+                    Step 6: Photos & Publish
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
+                    Upload photos from gallery and preview your live marketplace card.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo Upload Card */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800">
+                  Service Photos (From Gallery)
+                </label>
+                <span className="text-[9.5px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
+                  {uploadedImages.length} uploaded
+                </span>
+              </div>
+
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                multiple 
+                onChange={handleGalleryUpload} 
+                className="hidden" 
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-gray-300 hover:border-brand-navy p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 text-brand-navy flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                  🖼️
+                </div>
+                <p className="text-xs font-black text-gray-900">Upload Photo from Phone Gallery</p>
+              </button>
+
+              {uploadedImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 pt-2">
                   {uploadedImages.map((imgData, idx) => (
                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
                       <img src={imgData} alt={`Uploaded ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-md hover:bg-red-700 transition-colors"
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-md hover:bg-red-700 transition-colors cursor-pointer"
                         title="Remove image"
                       >
                         ✕
                       </button>
-                      {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 bg-brand-navy/90 text-white text-[7px] font-black px-1.5 py-0.5 rounded-md">
-                          COVER
-                        </span>
-                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Category Stock Presets (Quick selection) */}
-            <div className="pt-2 border-t border-gray-100 space-y-1.5">
-              <span className="text-[9px] font-extrabold uppercase text-gray-400">Or tap to add stock sample photo:</span>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {currentPresets.map((presetUrl, pIdx) => (
-                  <button
-                    type="button"
-                    key={pIdx}
-                    onClick={() => handleAddPresetImage(presetUrl)}
-                    className="relative w-16 h-14 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0 hover:opacity-90 transition-opacity"
-                  >
-                    <img src={presetUrl} alt="" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5">
-                      + Add
-                    </span>
-                  </button>
-                ))}
+              {/* Stock Photo Presets */}
+              <div className="pt-2 border-t border-gray-100 space-y-1.5">
+                <span className="text-[9px] font-extrabold uppercase text-gray-400">Or tap to add stock sample photo:</span>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {currentPresets.map((presetUrl, pIdx) => (
+                    <button
+                      type="button"
+                      key={pIdx}
+                      onClick={() => handleAddPresetImage(presetUrl)}
+                      className="relative w-16 h-14 rounded-xl overflow-hidden border border-gray-200 shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
+                    >
+                      <img src={presetUrl} alt="" className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5">
+                        + Add
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-          </div>
-
-          {/* 7. Live Preview Card */}
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-2xs space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 block">
-              7. Live Marketplace Card Preview
-            </span>
-            
-            <div className="max-w-[220px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="relative h-32 bg-gray-100 overflow-hidden">
-                <img src={activeCoverImage} alt="" className="w-full h-full object-cover" />
-                <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[8px] font-black px-2 py-0.5 rounded-md uppercase">
-                  {category}
-                </span>
-                <span className="absolute bottom-1.5 left-1.5 bg-white text-brand-navy font-black text-xs px-2 py-0.5 rounded-lg border border-gray-100">
-                  {rateUnit === 'fixed' ? `Ksh ${priceAmount}` : `Ksh ${priceAmount} ${rateUnit}`}
-                </span>
-              </div>
-              <div className="p-2.5">
-                <h3 className="font-extrabold text-gray-900 text-[11px] leading-tight truncate">
-                  {title || 'Service Title'}
-                </h3>
-                <p className="text-[9px] text-gray-500 line-clamp-1 mt-0.5 font-medium">
-                  {description || 'Service details...'}
-                </p>
-                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[8px] font-bold text-gray-600">
-                  <span>{currentUser?.name || 'Your Name'}</span>
-                  <span className="text-blue-600 uppercase">Order ➔</span>
+            {/* Live Marketplace Card Preview */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
+              <span className="text-xs font-black uppercase tracking-wider text-gray-800 block text-center">
+                Live Card Preview
+              </span>
+              
+              <div className="max-w-[240px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+                <div className="relative h-32 bg-gray-100 overflow-hidden">
+                  <img src={activeCoverImage} alt="" className="w-full h-full object-cover" />
+                  <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[8.5px] font-black px-2 py-0.5 rounded-md uppercase">
+                    {category}
+                  </span>
+                  <span className="absolute bottom-1.5 left-1.5 bg-white text-brand-navy font-black text-xs px-2 py-0.5 rounded-lg border border-gray-100">
+                    {rateUnit === 'fixed' ? `Ksh ${priceAmount}` : `Ksh ${priceAmount} ${rateUnit}`}
+                  </span>
+                </div>
+                <div className="p-3">
+                  <h3 className="font-extrabold text-gray-900 text-xs leading-tight truncate">
+                    {title || 'Service Title'}
+                  </h3>
+                  <p className="text-[9.5px] text-gray-500 line-clamp-2 mt-0.5 font-medium">
+                    {description || 'Service details...'}
+                  </p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold text-gray-600">
+                    <span>{currentUser?.name || 'Your Name'}</span>
+                    <span className="text-blue-600 font-black uppercase">Order ➔</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Submit Action */}
-          <div className="pt-2">
-            <button 
-              type="submit"
-              className="w-full bg-brand-navy hover:bg-black text-white py-3.5 px-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
-            >
-              <span>🚀 Publish Service Card Live</span>
-            </button>
-            <button 
+        {/* Step Bottom Controls Footer */}
+        <div className="pt-3 border-t border-gray-200 bg-white sticky bottom-0 p-3 -mx-4 -mb-4 rounded-t-2xl shadow-lg flex items-center gap-2">
+          {currentStep > 1 && (
+            <button
               type="button"
-              onClick={onBack}
-              className="w-full mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors"
+              onClick={prevStep}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
             >
-              Cancel
+              ← Back
             </button>
-          </div>
+          )}
 
-        </form>
+          {currentStep < totalSteps ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="flex-2 bg-brand-navy hover:bg-black text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Next Step</span>
+              <span>➔</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleFinalSubmit()}
+              className="flex-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>🚀 Publish Skill Live</span>
+            </button>
+          )}
+        </div>
 
       </main>
     </div>

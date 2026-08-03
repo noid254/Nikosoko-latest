@@ -125,7 +125,7 @@ const CatalogueFormModal: React.FC<{ onSave: (item: Omit<CatalogueItem, 'id' | '
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const categories: CatalogueCategory[] = ['Product', 'Service', 'Professional Service', 'For Rent', 'For Sale'];
-    const maxImages = ['For Rent', 'For Sale'].includes(category) ? 5 : 3;
+    const maxImages = 6;
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;

@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage } from '../types';
+import LocationPromptModal from './LocationPromptModal';
+import SEOHead from './SEOHead';
 
 interface ProfileViewProps {
   profileData: ServiceProvider;
@@ -71,41 +73,26 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     const [flagCategory, setFlagCategory] = useState('Inappropriate content / service');
     const [flagReasonText, setFlagReasonText] = useState('');
 
-    // GPS Locating State for Online Status Toggle
-    const [isLocatingGps, setIsLocatingGps] = useState(false);
+    // Location Prompt Modal State for Available for Hire Status Toggle
+    const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
     const handleToggleOnlineStatus = () => {
         if (!profileData.isOnline) {
-            setIsLocatingGps(true);
-            if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const { latitude, longitude } = position.coords;
-                        setIsLocatingGps(false);
-                        onUpdate({
-                            ...profileData,
-                            isOnline: true,
-                            location: `${latitude.toFixed(3)}°N, ${longitude.toFixed(3)}°E`
-                        });
-                        alert(`GPS location updated: (${latitude.toFixed(4)}, ${longitude.toFixed(4)}). You are now ONLINE!`);
-                    },
-                    (error) => {
-                        setIsLocatingGps(false);
-                        onUpdate({
-                            ...profileData,
-                            isOnline: true
-                        });
-                        alert('Online status activated.');
-                    },
-                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-                );
-            } else {
-                setIsLocatingGps(false);
-                onUpdate({ ...profileData, isOnline: true });
-            }
+            // Require location update before going Available for Hire
+            setShowLocationPrompt(true);
         } else {
+            // Go offline
             onUpdate({ ...profileData, isOnline: false });
         }
+    };
+
+    const handleConfirmLocationPrompt = (newLocation: string) => {
+        onUpdate({
+            ...profileData,
+            isOnline: true,
+            location: newLocation
+        });
+        setShowLocationPrompt(false);
     };
 
     // Editing Listing (Catalogue Item) State
@@ -662,6 +649,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                                 <span>Sacco Verification Pending</span>
                                             </span>
                                         ) : null}
+
+
                                     </div>
                                 );
                             })()}
@@ -1372,6 +1361,15 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                 </div>
             )}
+
+            <SEOHead provider={profileData} />
+
+            <LocationPromptModal 
+                isOpen={showLocationPrompt}
+                onClose={() => setShowLocationPrompt(false)}
+                currentLocation={profileData.location}
+                onConfirm={handleConfirmLocationPrompt}
+            />
         </div>
     );
 };
