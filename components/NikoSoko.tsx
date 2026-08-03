@@ -350,9 +350,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                                     e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
                                                 }}
                                             />
-                                            <div className="absolute top-1.5 left-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10 max-w-[100px] truncate">
-                                                {item.category || 'Service'}
-                                            </div>
+
 
                                             {/* Distance/Proximity Badge in Black space and green text */}
                                             {provider && (

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import * as api from '../services/api';
+import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
 import type { ServiceProvider } from '../types';
 
 interface AuthModalProps {
@@ -120,9 +121,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     }
   };
 
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
   const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -164,29 +168,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     );
   };
 
-  const handleCompleteProfileSubmit = (e: React.FormEvent) => {
+  const handleCompleteProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !serviceTitle.trim()) {
         setError("Please enter your name and profession.");
         return;
     }
 
-    const hasReferral = Boolean(referralCode.trim().length > 0);
-    const finalPhone = phoneNum.trim() || `254${phone}`;
-    const finalAvatar = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName.trim())}&background=random`;
+    setIsLoading(true);
+    try {
+        const hasReferral = Boolean(referralCode.trim().length > 0);
+        const finalPhone = phoneNum.trim() || `254${phone}`;
+        const tempUserId = `sp_${Date.now()}`;
+        let finalAvatar = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName.trim())}&background=random`;
 
-    const mockResponse: api.VerifyOtpResponse = tempAuthResponse || {
-      success: true,
-      user: null,
-      token: `token_${Date.now()}`,
-      isSuperAdmin: false
-    };
+        // Upload avatar to Firebase Storage if selected file or base64 data URL
+        if (avatarFile) {
+            finalAvatar = await uploadImageToStorage(avatarFile, `users/${tempUserId}/avatar_${Date.now()}`);
+        } else if (avatarUrl && avatarUrl.startsWith('data:')) {
+            finalAvatar = await uploadImageToStorage(avatarUrl, `users/${tempUserId}/avatar_${Date.now()}`);
+        }
 
-    onLogin(
-        mockResponse, 
-        finalPhone, 
-        fullName.trim(),
-        {
+        const mockResponse: api.VerifyOtpResponse = tempAuthResponse || {
+          success: true,
+          user: null,
+          token: `token_${Date.now()}`,
+          isSuperAdmin: false
+        };
+
+        const fullProfileData: Partial<ServiceProvider> = {
+            id: tempUserId,
             name: fullName.trim(),
             phone: finalPhone,
             service: serviceTitle.trim(),
@@ -202,8 +213,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             referralCode: referralCode.trim(),
             isVerified: hasReferral,
             isProfileCompleted: true
-        }
-    );
+        };
+
+        await saveUserProfileToFirestore(tempUserId, fullProfileData);
+
+        onLogin(
+            mockResponse, 
+            finalPhone, 
+            fullName.trim(),
+            fullProfileData
+        );
+    } catch (err: any) {
+        console.error("Error during profile registration:", err);
+        setError("Failed to upload avatar or complete profile.");
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (

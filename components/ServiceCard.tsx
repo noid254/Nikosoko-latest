@@ -83,7 +83,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                 )}
 
                 {/* Top Left: Sacco Badge */}
-                {isSaccoConfirmed ? (
+                {isSaccoConfirmed && (
                     <div className="absolute top-1.5 left-1.5 z-10">
                         <button
                             onClick={(e) => {
@@ -96,11 +96,6 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                             <span>●</span>
                             <span className="truncate max-w-[90px]">{saccoName}</span>
                         </button>
-                    </div>
-                ) : (
-                    /* Category Label Badge on Top Left if no Sacco */
-                    <div className="absolute top-1.5 left-1.5 z-10 bg-black/80 backdrop-blur-xs text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-white/20 max-w-[100px] truncate">
-                        {categoryName}
                     </div>
                 )}
 

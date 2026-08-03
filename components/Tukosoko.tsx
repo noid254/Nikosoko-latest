@@ -68,14 +68,14 @@ const TukosokoItemCard: React.FC<TukosokoItemCardProps> = ({ item, provider, onC
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
         />
         
-        {/* Category & Refill Badge */}
-        <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
-          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md backdrop-blur-xs text-white ${
-            isRefill ? 'bg-emerald-600/90' : 'bg-black/75'
-          }`}>
-            {isRefill ? '🔄 Refill' : (item.category || 'Service')}
-          </span>
-        </div>
+        {/* Refill Badge */}
+        {isRefill && (
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+            <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md backdrop-blur-xs text-white bg-emerald-600/90">
+              🔄 Refill
+            </span>
+          </div>
+        )}
 
         {/* Top Right Badges */}
         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
@@ -1183,9 +1183,6 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
               <div className="max-w-[240px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
                 <div className="relative h-32 bg-gray-100 overflow-hidden">
                   <img src={activeCoverImage} alt="" className="w-full h-full object-cover" />
-                  <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[8.5px] font-black px-2 py-0.5 rounded-md uppercase">
-                    {category}
-                  </span>
                   <span className="absolute bottom-1.5 left-1.5 bg-white text-brand-navy font-black text-xs px-2 py-0.5 rounded-lg border border-gray-100">
                     {rateUnit === 'fixed' ? `Ksh ${priceAmount}` : `Ksh ${priceAmount} ${rateUnit}`}
                   </span>

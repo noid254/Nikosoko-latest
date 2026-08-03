@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage } from '../types';
+import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
 import LocationPromptModal from './LocationPromptModal';
 import SkillDetailModal from './SkillDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -214,12 +215,17 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         (profileData.selectedProfileButtons?.length ? profileData.selectedProfileButtons : ['call', 'book', 'chat']) as any
     );
 
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [isUploadingImages, setIsUploadingImages] = useState(false);
+
     const avatarFileInputRef = useRef<HTMLInputElement>(null);
     const coverFileInputRef = useRef<HTMLInputElement>(null);
 
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setAvatarFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
             if (reader.result) setEditAvatarUrl(reader.result as string);
@@ -230,6 +236,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setCoverFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
             if (reader.result) setEditCoverImageUrl(reader.result as string);
@@ -256,17 +263,66 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         else if (onInitiateContact(profileData)) onBook(profileData);
     };
 
-    const handleUpdateProfile = () => {
-        onUpdate({
-            ...profileData,
-            name: editName,
-            service: editService,
-            avatarUrl: editAvatarUrl || profileData.avatarUrl,
-            coverImageUrl: editCoverImageUrl || profileData.coverImageUrl,
-            about: editAbout.slice(0, 280),
-            selectedProfileButtons: editButtons
-        });
-        setIsEditing(false);
+    const handleUpdateProfile = async () => {
+        setIsUploadingImages(true);
+        try {
+            let finalAvatarUrl = profileData.avatarUrl;
+            let finalCoverImageUrl = profileData.coverImageUrl || '';
+
+            // 1. Upload Avatar File/Data URL to Firebase Storage if changed
+            if (avatarFile) {
+                finalAvatarUrl = await uploadImageToStorage(
+                    avatarFile,
+                    `users/${profileData.id}/avatar_${Date.now()}`
+                );
+            } else if (editAvatarUrl && editAvatarUrl.startsWith('data:')) {
+                finalAvatarUrl = await uploadImageToStorage(
+                    editAvatarUrl,
+                    `users/${profileData.id}/avatar_${Date.now()}`
+                );
+            } else if (editAvatarUrl) {
+                finalAvatarUrl = editAvatarUrl;
+            }
+
+            // 2. Upload Cover Image File/Data URL to Firebase Storage if changed
+            if (coverFile) {
+                finalCoverImageUrl = await uploadImageToStorage(
+                    coverFile,
+                    `users/${profileData.id}/cover_${Date.now()}`
+                );
+            } else if (editCoverImageUrl && editCoverImageUrl.startsWith('data:')) {
+                finalCoverImageUrl = await uploadImageToStorage(
+                    editCoverImageUrl,
+                    `users/${profileData.id}/cover_${Date.now()}`
+                );
+            } else if (editCoverImageUrl) {
+                finalCoverImageUrl = editCoverImageUrl;
+            }
+
+            const updatedProfile: ServiceProvider = {
+                ...profileData,
+                name: editName,
+                service: editService,
+                avatarUrl: finalAvatarUrl,
+                coverImageUrl: finalCoverImageUrl,
+                about: editAbout.slice(0, 280),
+                selectedProfileButtons: editButtons
+            };
+
+            // 3. Save directly into user document in Cloud Firestore
+            await saveUserProfileToFirestore(profileData.id, updatedProfile);
+
+            // 4. Update application state
+            onUpdate(updatedProfile);
+            setIsEditing(false);
+            setAvatarFile(null);
+            setCoverFile(null);
+        } catch (err) {
+            console.error("Error updating profile images or saving to Firestore:", err);
+            alert("An error occurred while uploading profile images. Please try again.");
+        } finally {
+            setIsUploadingImages(false);
+        }
     };
 
     const handleBatchCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {

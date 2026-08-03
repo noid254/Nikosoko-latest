@@ -2,6 +2,7 @@
 import { API_BASE_URL } from '../config';
 import type { ServiceProvider, CatalogueItem, Document, QaRibuRequest, SpecialBanner, InboxMessage, Event, Premise, Gig, Ticket, UnitDetails, SetupData, UnitKey } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockQaRibuRequests, mockSpecialBanners, mockInboxMessages, mockEvents, mockGigs, mockTickets, mockCategories, mockPremises } from './mockData';
+import { saveUserProfileToFirestore, getUserProfileFromFirestore, getAllUserProfilesFromFirestore } from './firebase';
 
 // --- Database Configuration (LocalStorage) ---
 const DB_KEYS = {
@@ -152,12 +153,26 @@ export const verifyOtp = async (phone: string, otp: string): Promise<VerifyOtpRe
     }
 
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-    const existingUser = providers.find(p => {
+    let existingUser = providers.find(p => {
         if (!p.phone) return false;
         const pClean = cleanNum(p.phone);
         return pClean === normPhone || (last9.length === 9 && pClean.endsWith(last9));
     });
     
+    // Fetch latest profile from Firestore if available
+    if (existingUser?.id) {
+        const firestoreUser = await getUserProfileFromFirestore(existingUser.id);
+        if (firestoreUser) {
+            existingUser = { ...existingUser, ...firestoreUser };
+            // Update local storage DB
+            const index = providers.findIndex(p => p.id === existingUser!.id);
+            if (index > -1) {
+                providers[index] = existingUser;
+                saveTable(DB_KEYS.PROVIDERS, providers);
+            }
+        }
+    }
+
     const token = 'valid-token-for-' + (existingUser?.phone || phone);
     setToken(token);
 
@@ -177,11 +192,26 @@ export const getMyProfile = async (): Promise<ServiceProvider> => {
         const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
         const cleanPhone = phone.replace(/\D/g, '');
         if (cleanPhone.endsWith('723119356') || phone === '254723119356' || phone === '0723119356') {
-            const sa = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356');
-            return sa || SUPER_ADMIN_PROVIDER;
+            let sa = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356') || SUPER_ADMIN_PROVIDER;
+            const firestoreSa = await getUserProfileFromFirestore(sa.id);
+            if (firestoreSa) {
+                sa = { ...sa, ...firestoreSa };
+            }
+            return sa;
         }
-        const user = providers.find(p => p.phone === phone || (phone.startsWith('0') && p.phone === '254' + phone.slice(1)));
-        if (user) return user;
+        let user = providers.find(p => p.phone === phone || (phone.startsWith('0') && p.phone === '254' + phone.slice(1)));
+        if (user) {
+            const firestoreUser = await getUserProfileFromFirestore(user.id);
+            if (firestoreUser) {
+                user = { ...user, ...firestoreUser };
+                const index = providers.findIndex(p => p.id === user!.id);
+                if (index > -1) {
+                    providers[index] = user;
+                    saveTable(DB_KEYS.PROVIDERS, providers);
+                }
+            }
+            return user;
+        }
         throw new Error("User not found for token");
     }
     throw new Error("No valid token");
@@ -190,7 +220,26 @@ export const getMyProfile = async (): Promise<ServiceProvider> => {
 // --- Data Fetching (GET) ---
 export const getProviders = async (): Promise<ServiceProvider[]> => {
     await delay();
-    return getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
+    const localProviders = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
+    try {
+        const firestoreProfiles = await getAllUserProfilesFromFirestore();
+        if (firestoreProfiles.length > 0) {
+            const mergedMap = new Map<string, ServiceProvider>();
+            localProviders.forEach(p => mergedMap.set(p.id, p));
+            firestoreProfiles.forEach(fp => {
+                if (fp.id) {
+                    const existing = mergedMap.get(fp.id);
+                    mergedMap.set(fp.id, { ...(existing || {} as ServiceProvider), ...fp });
+                }
+            });
+            const mergedList = Array.from(mergedMap.values());
+            saveTable(DB_KEYS.PROVIDERS, mergedList);
+            return mergedList;
+        }
+    } catch (e) {
+        console.error("Error merging firestore providers:", e);
+    }
+    return localProviders;
 };
 
 export const getEvents = async (): Promise<Event[]> => {
@@ -328,10 +377,16 @@ export const registerPremise = async (name: string, superhostId: string, details
 // --- Data Modification (PUT) ---
 export const updateProvider = async (updatedProvider: ServiceProvider): Promise<ServiceProvider> => {
     await delay();
+    if (updatedProvider.id) {
+        await saveUserProfileToFirestore(updatedProvider.id, updatedProvider);
+    }
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
     const index = providers.findIndex(p => p.id === updatedProvider.id);
     if (index > -1) {
         providers[index] = updatedProvider;
+        saveTable(DB_KEYS.PROVIDERS, providers);
+    } else {
+        providers.push(updatedProvider);
         saveTable(DB_KEYS.PROVIDERS, providers);
     }
     return updatedProvider;
