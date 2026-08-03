@@ -23,7 +23,7 @@ import MyDocumentsView from './components/MyDocumentsView';
 import ScanDocumentView from './components/ScanDocumentView';
 import Tukosoko from './components/Tukosoko';
 import PendingRatingsView from './components/PendingRatingsView';
-import MyContactsView from './components/MyContactsView';
+import MyContactsView, { SavedContactItem } from './components/MyContactsView';
 import CatalogueView from './components/CatalogueView';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import GigsPage from './components/GigsPage';
@@ -139,6 +139,63 @@ function App() {
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
   const [isSEOMapOpen, setIsSEOMapOpen] = useState(false);
 
+  const [savedContactsMap, setSavedContactsMap] = useState<Record<string, SavedContactItem>>(() => {
+    try {
+      const local = localStorage.getItem('nikosoko_saved_contacts_v2');
+      if (local) return JSON.parse(local);
+    } catch (e) {
+      console.error(e);
+    }
+    return {};
+  });
+
+  const handleToggleSaveContact = (providerId: string, customLabel?: string) => {
+    setSavedContactsMap(prev => {
+      const next = { ...prev };
+      if (next[providerId]) {
+        delete next[providerId];
+      } else {
+        next[providerId] = {
+          providerId,
+          label: customLabel || '',
+          savedAt: new Date().toISOString()
+        };
+      }
+      try {
+        localStorage.setItem('nikosoko_saved_contacts_v2', JSON.stringify(next));
+      } catch (e) { console.error(e); }
+      return next;
+    });
+  };
+
+  const handleUpdateContactLabel = (providerId: string, label: string) => {
+    setSavedContactsMap(prev => {
+      if (!prev[providerId]) return prev;
+      const next = {
+        ...prev,
+        [providerId]: {
+          ...prev[providerId],
+          label
+        }
+      };
+      try {
+        localStorage.setItem('nikosoko_saved_contacts_v2', JSON.stringify(next));
+      } catch (e) { console.error(e); }
+      return next;
+    });
+  };
+
+  const handleRemoveContact = (providerId: string) => {
+    setSavedContactsMap(prev => {
+      const next = { ...prev };
+      delete next[providerId];
+      try {
+        localStorage.setItem('nikosoko_saved_contacts_v2', JSON.stringify(next));
+      } catch (e) { console.error(e); }
+      return next;
+    });
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -180,6 +237,10 @@ function App() {
   const gateAuth = (action: () => void) => {
     if (!isAuthenticated) handleOpenLogin();
     else action();
+  };
+
+  const handleOpenSideMenu = () => {
+    gateAuth(() => setIsSideMenuOpen(true));
   };
 
   const handleLogin = (data: any, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => {
@@ -591,7 +652,7 @@ function App() {
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
             searchTerm={""} 
             setSearchTerm={() => {}} 
-            onBack={() => setIsSideMenuOpen(true)} 
+            onBack={handleOpenSideMenu} 
             onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
             hasNewMessages={false} 
             onNavigate={handleNavigate} 
@@ -643,8 +704,8 @@ function App() {
             onDelete={() => {}} 
             onContactClick={() => setIsAuthModalOpen(true)} 
             onInitiateContact={() => handleCtaInteraction(profileToView)} 
-            savedContacts={[]} 
-            onToggleSaveContact={() => {}} 
+            savedContacts={Object.keys(savedContactsMap)} 
+            onToggleSaveContact={(id) => handleToggleSaveContact(id)} 
             catalogueItems={catalogueItems.filter(i => i.providerId === profileToView.id)} 
             onUpdateCatalogueItem={handleUpdateCatalogueItem}
             onDeleteCatalogueItem={handleDeleteCatalogueItem}
@@ -727,15 +788,25 @@ function App() {
       case 'brandKit':
       case 'documentDetail':
       case 'scanDocument':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'mycontacts':
-        return <MyContactsView contacts={providers.filter(p => p.id !== currentUser?.id).slice(0, 5)} onSelectContact={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} />;
+        return (
+          <MyContactsView 
+            savedContactsMap={savedContactsMap} 
+            providers={providers} 
+            onSelectContact={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
+            onUpdateLabel={handleUpdateContactLabel} 
+            onRemoveContact={handleRemoveContact} 
+            onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} 
+            onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} 
+          />
+        );
       case 'mycatalogue':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'assetRegistry':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'registerAsset':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'pendingRatings': {
         const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
         const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
@@ -785,7 +856,7 @@ function App() {
           onDeleteCatalogueItem={handleDeleteCatalogueItem}
         />;
       default:
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={() => setIsSideMenuOpen(true)} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
     }
   };
 

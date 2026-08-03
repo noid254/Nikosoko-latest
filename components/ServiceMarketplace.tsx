@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { ServiceProvider, SpecialBanner, CurrentPage } from '../types';
 import ServiceCard from './ServiceCard';
+import OrgDetailModal from './OrgDetailModal';
 
 // --- Icons ---
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
@@ -59,6 +60,7 @@ interface ServiceMarketplaceProps {
 }
 
 const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, specialBanners, onSelectProvider, onBack, onMessagesClick, hasNewMessages, onNavigate }) => {
+    const [selectedOrgModal, setSelectedOrgModal] = useState<{ orgName: string; cert?: any } | null>(null);
     const [activeParent, setActiveParent] = useState<ParentCategory>('HOME');
     const [activeChild, setActiveChild] = useState<string>('All');
     const [isSearchActive, setIsSearchActive] = useState(false);
@@ -289,6 +291,7 @@ const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, spec
                                 key={provider.id} 
                                 provider={provider} 
                                 onClick={() => onSelectProvider(provider)} 
+                                onViewOrg={(orgName, cert) => setSelectedOrgModal({ orgName, cert })}
                             />
                         ))}
                     </div>
@@ -310,6 +313,18 @@ const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, spec
                     <span>SELL A SERVICE</span>
                 </button>
             </div>
+
+            <OrgDetailModal
+                isOpen={Boolean(selectedOrgModal)}
+                onClose={() => setSelectedOrgModal(null)}
+                orgName={selectedOrgModal?.orgName}
+                fullSkillCert={selectedOrgModal?.cert ? {
+                    certificationName: selectedOrgModal.cert.certificationName,
+                    issuingSchool: selectedOrgModal.cert.issuingSchool,
+                    yearObtained: selectedOrgModal.cert.yearObtained,
+                    licenseNumber: selectedOrgModal.cert.licenseNumber
+                } : undefined}
+            />
         </div>
     );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage } from '../types';
 import LocationPromptModal from './LocationPromptModal';
+import SkillDetailModal from './SkillDetailModal';
+import OrgDetailModal from './OrgDetailModal';
 import SEOHead from './SEOHead';
 
 interface ProfileViewProps {
@@ -75,6 +77,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
     // Location Prompt Modal State for Available for Hire Status Toggle
     const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+
+    // Selected Skill for Detail Modal
+    const [selectedSkillForModal, setSelectedSkillForModal] = useState<any>(null);
+    const [selectedOrgModal, setSelectedOrgModal] = useState<{ orgName: string; cert?: any } | null>(null);
 
     const handleToggleOnlineStatus = () => {
         if (!profileData.isOnline) {
@@ -490,20 +496,19 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
                         {!isOwner && (
                             <div className="flex items-center gap-1.5">
-                                <button 
-                                    onClick={() => onToggleSaveContact(profileData.id)} 
-                                    className={`font-black px-3 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1.5 text-[10px] uppercase tracking-wider backdrop-blur-md border active:scale-95 ${
-                                        savedContacts.includes(profileData.id) 
-                                            ? 'bg-amber-400 text-black border-amber-300 font-black' 
-                                            : 'bg-white/90 text-black border-white hover:bg-white'
-                                    }`}
-                                >
-                                    <BookmarkIcon filled={savedContacts.includes(profileData.id)} />
-                                    <span>{savedContacts.includes(profileData.id) ? 'Saved' : 'Save'}</span>
-                                </button>
+                                {!savedContacts.includes(profileData.id) && (
+                                    <button 
+                                        onClick={() => onToggleSaveContact(profileData.id)} 
+                                        className="font-black px-3.5 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1.5 text-[10px] uppercase tracking-wider bg-black text-white hover:bg-neutral-800 border border-black active:scale-95 cursor-pointer"
+                                        title="Save Contact to Phonebook"
+                                    >
+                                        <BookmarkIcon filled={false} />
+                                        <span>Save Contact</span>
+                                    </button>
+                                )}
                                 <button 
                                     onClick={() => setShowFlagModal(true)} 
-                                    className="font-black px-2.5 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] uppercase tracking-wider bg-red-600/90 text-white hover:bg-red-700 border border-red-500 backdrop-blur-md active:scale-95"
+                                    className="font-black px-2.5 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] uppercase tracking-wider bg-red-600/90 text-white hover:bg-red-700 border border-red-500 backdrop-blur-md active:scale-95 cursor-pointer"
                                     title="Flag or Report Profile"
                                 >
                                     <span>🚩</span>
@@ -904,17 +909,49 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                     )}
                                 </div>
                                 {skillsList.map((sk: any, idx: number) => (
-                                    <div key={sk.id || idx} className="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-xs space-y-2">
+                                    <div 
+                                        key={sk.id || idx} 
+                                        onClick={() => setSelectedSkillForModal({
+                                            ...sk,
+                                            skillTitle: sk.skillTitle || sk.name || profileData.service,
+                                            providerName: profileData.name,
+                                            providerAvatar: profileData.avatarUrl,
+                                            hourlyRate: sk.hourlyRate || profileData.hourlyRate
+                                        })}
+                                        className="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-2xs hover:border-black transition-all space-y-2 cursor-pointer group"
+                                    >
                                         <div className="flex justify-between items-start gap-2">
                                             <div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <h4 className="font-black text-xs text-black">{sk.skillTitle || sk.name || profileData.service}</h4>
+                                                    <h4 className="font-black text-xs text-black group-hover:underline">{sk.skillTitle || sk.name || profileData.service}</h4>
                                                     <span className="bg-black text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">Verified</span>
                                                 </div>
                                                 {(sk.certificationName || sk.issuingSchool) && (
-                                                    <p className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                                        {sk.certificationName} • {sk.issuingSchool} {sk.yearObtained ? '(' + sk.yearObtained + ')' : ''}
-                                                    </p>
+                                                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                        <span className="text-[10px] font-extrabold text-black">
+                                                            {sk.certificationName || 'Certified Competency'}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedOrgModal({
+                                                                    orgName: sk.issuingSchool || 'Accredited Institution',
+                                                                    cert: sk
+                                                                });
+                                                            }}
+                                                            className="text-[8.5px] font-black uppercase text-black bg-neutral-100 hover:bg-black hover:text-white px-1.5 py-0.5 rounded border border-neutral-300 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                                            title="Click to view certifying organization profile & offers"
+                                                        >
+                                                            <span>🏢 {sk.issuingSchool || 'NITA'} ({sk.yearObtained || '2024'})</span>
+                                                            <span>&rarr;</span>
+                                                        </button>
+                                                        {sk.licenseNumber && (
+                                                            <span className="text-[8.5px] font-mono font-bold text-neutral-600 bg-neutral-50 px-1 py-0.2 rounded border border-neutral-200">
+                                                                Lic #{sk.licenseNumber}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                             {sk.hourlyRate > 0 && (
@@ -927,33 +964,39 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                         <p className="text-[10px] text-gray-600 font-medium leading-relaxed bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                                             {sk.description || profileData.about}
                                         </p>
-                                        {isOwner && (
-                                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                                                <button
-                                                    onClick={() => setEditingSkillItem({
-                                                        id: sk.id || `sk_${idx}`,
-                                                        skillTitle: sk.skillTitle || sk.name || profileData.service,
-                                                        hourlyRate: sk.hourlyRate || 0,
-                                                        rateType: sk.rateType || 'per hour',
-                                                        description: sk.description || '',
-                                                        certificationName: sk.certificationName || '',
-                                                        issuingSchool: sk.issuingSchool || '',
-                                                        yearObtained: sk.yearObtained || ''
-                                                    })}
-                                                    className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg flex items-center gap-1"
-                                                >
-                                                    <EditIcon /> <span>Edit</span>
-                                                </button>
-                                                {skillsList.length > 1 && (
+                                        
+                                        <div className="flex items-center justify-between pt-1 text-[10px] font-bold text-black border-t border-dashed border-gray-100">
+                                            <span className="text-gray-500 group-hover:text-black transition-colors flex items-center gap-1">
+                                                <span>⚡ Tap for certification, scope & work samples &rarr;</span>
+                                            </span>
+                                            {isOwner && (
+                                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                     <button
-                                                        onClick={() => handleDeleteSkillCard(sk.id || `sk_${idx}`)}
-                                                        className="text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1"
+                                                        onClick={() => setEditingSkillItem({
+                                                            id: sk.id || `sk_${idx}`,
+                                                            skillTitle: sk.skillTitle || sk.name || profileData.service,
+                                                            hourlyRate: sk.hourlyRate || 0,
+                                                            rateType: sk.rateType || 'per hour',
+                                                            description: sk.description || '',
+                                                            certificationName: sk.certificationName || '',
+                                                            issuingSchool: sk.issuingSchool || '',
+                                                            yearObtained: sk.yearObtained || ''
+                                                        })}
+                                                        className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
                                                     >
-                                                        <TrashIcon /> <span>Delete</span>
+                                                        <EditIcon /> <span>Edit</span>
                                                     </button>
-                                                )}
-                                            </div>
-                                        )}
+                                                    {skillsList.length > 1 && (
+                                                        <button
+                                                            onClick={() => handleDeleteSkillCard(sk.id || `sk_${idx}`)}
+                                                            className="text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <TrashIcon /> <span>Delete</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -1369,6 +1412,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 onClose={() => setShowLocationPrompt(false)}
                 currentLocation={profileData.location}
                 onConfirm={handleConfirmLocationPrompt}
+            />
+
+            <SkillDetailModal 
+                isOpen={Boolean(selectedSkillForModal)}
+                onClose={() => setSelectedSkillForModal(null)}
+                skill={selectedSkillForModal}
+                onBookOrContact={() => onBook(profileData)}
+            />
+
+            <OrgDetailModal
+                isOpen={Boolean(selectedOrgModal)}
+                onClose={() => setSelectedOrgModal(null)}
+                orgName={selectedOrgModal?.orgName}
+                fullSkillCert={selectedOrgModal?.cert ? {
+                    certificationName: selectedOrgModal.cert.certificationName,
+                    issuingSchool: selectedOrgModal.cert.issuingSchool,
+                    yearObtained: selectedOrgModal.cert.yearObtained,
+                    licenseNumber: selectedOrgModal.cert.licenseNumber
+                } : undefined}
             />
         </div>
     );

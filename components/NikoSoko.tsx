@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CatalogueItem, CurrentPage } from '../types';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
+import OrgDetailModal from './OrgDetailModal';
 
 const MenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,6 +78,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     const [localSearch, setLocalSearch] = useState(searchTerm || '');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedCatalogueItem, setSelectedCatalogueItem] = useState<CatalogueItem | null>(null);
+    const [selectedOrgModal, setSelectedOrgModal] = useState<{ orgName: string; cert?: any } | null>(null);
 
     const handleCategoryClick = (cat: HighlightCategory) => {
         if (selectedCategory === cat.id) {
@@ -310,6 +312,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                     searchTerm={localSearch || searchTerm}
                                     onClick={() => onSelectProvider(provider)} 
                                     onViewSacco={onViewSacco}
+                                    onViewOrg={(orgName, cert) => setSelectedOrgModal({ orgName, cert })}
                                 />
                             ))}
                         </div>
@@ -463,6 +466,18 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     onInitiateContact={onInitiateContact || (() => true)}
                 />
             )}
+
+            <OrgDetailModal
+                isOpen={Boolean(selectedOrgModal)}
+                onClose={() => setSelectedOrgModal(null)}
+                orgName={selectedOrgModal?.orgName}
+                fullSkillCert={selectedOrgModal?.cert ? {
+                    certificationName: selectedOrgModal.cert.certificationName,
+                    issuingSchool: selectedOrgModal.cert.issuingSchool,
+                    yearObtained: selectedOrgModal.cert.yearObtained,
+                    licenseNumber: selectedOrgModal.cert.licenseNumber
+                } : undefined}
+            />
         </div>
     );
 };

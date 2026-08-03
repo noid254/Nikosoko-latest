@@ -18,9 +18,10 @@ interface ServiceCardProps {
     onClick: () => void;
     searchTerm?: string;
     onViewSacco?: (provider: ServiceProvider) => void;
+    onViewOrg?: (orgName: string, cert?: any) => void;
 }
 
-const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm, onViewSacco }) => {
+const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm, onViewSacco, onViewOrg }) => {
     const rawImages = [provider.coverImageUrl, ...(provider.works || [])].filter(Boolean);
     const images = rawImages.length > 0 ? rawImages : [DEFAULT_FALLBACK_IMAGE];
 
@@ -155,6 +156,31 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                             <p className="text-[8.5px] font-bold text-black uppercase tracking-wider flex-shrink-0 ml-1">On Request</p>
                         )}
                     </div>
+                    {matchedSkill?.issuingSchool ? (
+                        <div className="flex items-center gap-1 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onViewOrg) {
+                                        onViewOrg(matchedSkill.issuingSchool || 'Accredited Institution', matchedSkill);
+                                    }
+                                }}
+                                className="text-[8px] font-black uppercase text-black bg-neutral-100 hover:bg-black hover:text-white px-1.5 py-0.2 rounded border border-neutral-300 transition-colors flex items-center gap-0.5 cursor-pointer truncate max-w-full"
+                                title={`View ${matchedSkill.issuingSchool} profile & offers`}
+                            >
+                                <span>🏢 {matchedSkill.issuingSchool}</span>
+                                <span>&rarr;</span>
+                            </button>
+                        </div>
+                    ) : (matchedSkill?.certificationName?.toLowerCase().includes('rated') || displayTitle.toLowerCase().includes('bike')) ? (
+                        <div className="flex items-center gap-1">
+                            <span className="text-[8px] font-bold uppercase text-neutral-600 bg-neutral-100 px-1.5 py-0.2 rounded border border-neutral-200">
+                                ⭐ Customer Service Rated
+                            </span>
+                        </div>
+                    ) : null}
+
                     {isSaccoConfirmed && (
                         <p className="text-[8.5px] text-gray-500 font-medium truncate">
                             a member of{' '}
