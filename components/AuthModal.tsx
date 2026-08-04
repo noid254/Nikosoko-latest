@@ -215,7 +215,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             isProfileCompleted: true
         };
 
-        await saveUserProfileToFirestore(tempUserId, fullProfileData);
+        saveUserProfileToFirestore(tempUserId, fullProfileData).catch(console.error);
 
         onLogin(
             mockResponse, 

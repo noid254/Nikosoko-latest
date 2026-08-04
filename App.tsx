@@ -727,6 +727,7 @@ function App() {
               setViewingProvider(u); 
               if (currentUser?.id === u.id) setCurrentUser(u);
               setProviders(prev => prev.map(p => p.id === u.id ? u : p)); 
+              api.updateProvider(u);
             }} 
             onDelete={() => {}} 
             onContactClick={() => setIsAuthModalOpen(true)} 

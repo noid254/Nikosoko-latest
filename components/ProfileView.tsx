@@ -309,8 +309,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 selectedProfileButtons: editButtons
             };
 
-            // 3. Save directly into user document in Cloud Firestore
-            await saveUserProfileToFirestore(profileData.id, updatedProfile);
+            // 3. Save directly into user document in Cloud Firestore (non-blocking)
+            saveUserProfileToFirestore(profileData.id, updatedProfile).catch(console.error);
 
             // 4. Update application state
             onUpdate(updatedProfile);
@@ -318,8 +318,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({
             setAvatarFile(null);
             setCoverFile(null);
         } catch (err) {
-            console.error("Error updating profile images or saving to Firestore:", err);
-            alert("An error occurred while uploading profile images. Please try again.");
+            console.error("Error updating profile images or saving:", err);
+            alert("An error occurred while saving profile changes. Please try again.");
         } finally {
             setIsUploadingImages(false);
         }
