@@ -197,15 +197,24 @@ function App() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Safety fallback: Ensure splash screen unmounts within 2 seconds max
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    }, 2000);
+
     const loadData = async () => {
       try {
         let token = api.getToken();
         const savedAssets = localStorage.getItem('nikosoko_business_assets');
-        if (savedAssets) setBusinessAssets(JSON.parse(savedAssets));
+        if (savedAssets && isMounted) setBusinessAssets(JSON.parse(savedAssets));
 
         if (token) {
             const user = await api.getMyProfile().catch(() => null);
-            if (user) {
+            if (user && isMounted) {
               setCurrentUser(user);
               setIsAuthenticated(true);
               if (user.phone === '254723119356' || user.phone === '0723119356') setIsSuperAdmin(true);
@@ -215,18 +224,36 @@ function App() {
             }
         }
         const [providersData, catalogueData, docsData, requestsData, bannersData, premisesData] = await Promise.all([
-          api.getProviders(), api.getCatalogueItems(), api.getDocuments(), api.getQaRibuRequests(), api.getSpecialBanners(), api.getPremises()
+          api.getProviders().catch(() => []), 
+          api.getCatalogueItems().catch(() => []), 
+          api.getDocuments().catch(() => []), 
+          api.getQaRibuRequests().catch(() => []), 
+          api.getSpecialBanners().catch(() => []), 
+          api.getPremises().catch(() => [])
         ]);
-        setProviders(providersData);
-        setCatalogueItems(catalogueData);
-        setDocuments(docsData);
-        setQaRibuRequests(requestsData);
-        setSpecialBanners(bannersData);
-        setPremises(premisesData);
-      } catch (error) { console.error("Failed to load data", error); }
-      finally { setIsLoading(false); }
+        if (isMounted) {
+          if (providersData.length) setProviders(providersData);
+          if (catalogueData.length) setCatalogueItems(catalogueData);
+          if (docsData.length) setDocuments(docsData);
+          if (requestsData.length) setQaRibuRequests(requestsData);
+          if (bannersData.length) setSpecialBanners(bannersData);
+          if (premisesData.length) setPremises(premisesData);
+        }
+      } catch (error) { 
+        console.error("Failed to load data", error); 
+      } finally { 
+        if (isMounted) {
+          setIsLoading(false); 
+          clearTimeout(safetyTimer);
+        }
+      }
     };
     loadData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [isGatemanOnShift]);
 
   const handleSaveAssets = (assets: BusinessAssets) => {

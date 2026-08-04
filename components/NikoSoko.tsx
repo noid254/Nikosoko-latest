@@ -162,34 +162,35 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
             {/* MINIMALIST HEADER - STRICT BLACK & WHITE */}
-            <header className="bg-black text-white pt-6 pb-6 px-4 border-b border-gray-800">
-                <div className="flex justify-between items-center">
-                    <button 
-                        onClick={onBack} 
-                        aria-label="Open Menu"
-                        className="p-1 -ml-1 text-white hover:text-gray-300 transition-colors flex items-center justify-center"
-                    >
-                        <MenuIcon />
-                    </button>
+            <header className="bg-black text-white min-h-[160px] p-2 border-b border-gray-800 relative flex flex-col justify-center items-center overflow-hidden">
+                {/* Burger Menu Button - Top Left Corner */}
+                <button 
+                    onClick={onBack} 
+                    aria-label="Open Menu"
+                    className="absolute top-1.5 left-1.5 p-1 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer z-20"
+                >
+                    <MenuIcon />
+                </button>
 
-                    <div className="text-center cursor-pointer" onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}>
-                        <h1 className="text-xl font-black uppercase tracking-[0.25em] text-white leading-none">NIKOSOKO</h1>
-                        <p className="text-[8px] font-bold uppercase tracking-[0.3em] text-gray-400 mt-1">Neighborhood Skilled Marketplace</p>
-                    </div>
+                {/* Notification Bell Button - Top Right Corner */}
+                {(() => {
+                    const isUnread = hasNewMessages || Boolean(currentUser && !currentUser.isProfileCompleted);
+                    return (
+                        <button 
+                            onClick={onMessagesClick} 
+                            aria-label="Notifications"
+                            className="absolute top-1.5 right-1.5 p-1 text-white hover:text-gray-300 transition-colors relative flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer z-20"
+                        >
+                            <BellIcon />
+                            {isUnread && <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-white rounded-full"></div>}
+                        </button>
+                    );
+                })()}
 
-                    {(() => {
-                        const isUnread = hasNewMessages || Boolean(currentUser && !currentUser.isProfileCompleted);
-                        return (
-                            <button 
-                                onClick={onMessagesClick} 
-                                aria-label="Notifications"
-                                className="p-1 -mr-1 text-white hover:text-gray-300 transition-colors relative flex items-center justify-center"
-                            >
-                                <BellIcon />
-                                {isUnread && <div className="absolute top-0 right-0 w-2 h-2 bg-white rounded-full"></div>}
-                            </button>
-                        );
-                    })()}
+                {/* Centered Logo & Subtitle */}
+                <div className="text-center cursor-pointer z-10 py-2" onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}>
+                    <h1 className="text-2xl font-black uppercase tracking-[0.25em] text-white leading-none">NIKOSOKO</h1>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-400 mt-2">Neighborhood Skilled Marketplace</p>
                 </div>
             </header>
 

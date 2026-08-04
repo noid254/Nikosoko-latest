@@ -239,7 +239,7 @@ const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, spec
             
             {!isSearchActive && (
                 <>
-                    <div className="relative w-full h-80 shadow-lg">
+                    <div className="relative w-full h-[640px] shadow-lg">
                         <img src={bannerImageUrl} key={currentKey} alt="Nikosoko Banner" className="absolute inset-0 w-full h-full object-cover animate-fade-in" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20"></div>
                         

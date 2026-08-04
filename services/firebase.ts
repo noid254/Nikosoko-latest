@@ -95,6 +95,14 @@ export async function saveUserProfileToFirestore(
   }
 }
 
+// Helper to execute Firestore operations with a fast timeout so app load is never blocked
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 1200, fallbackValue: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallbackValue), timeoutMs))
+  ]);
+}
+
 /**
  * Retrieve user profile document directly from Cloud Firestore under `users/{userId}`.
  */
@@ -104,12 +112,13 @@ export async function getUserProfileFromFirestore(
   if (!userId) return null;
   try {
     const userRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(userRef);
-
-    if (docSnap.exists()) {
-      return docSnap.data() as ServiceProvider;
-    }
-    return null;
+    const fetchPromise = getDoc(userRef).then((docSnap) => {
+      if (docSnap.exists()) {
+        return docSnap.data() as ServiceProvider;
+      }
+      return null;
+    });
+    return await withTimeout(fetchPromise, 1200, null);
   } catch (error) {
     console.error(`Error fetching user profile from Firestore (users/${userId}):`, error);
     return null;
@@ -121,14 +130,16 @@ export async function getUserProfileFromFirestore(
  */
 export async function getAllUserProfilesFromFirestore(): Promise<ServiceProvider[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'users'));
-    const profiles: ServiceProvider[] = [];
-    querySnapshot.forEach((docSnap) => {
-      if (docSnap.exists()) {
-        profiles.push(docSnap.data() as ServiceProvider);
-      }
+    const fetchPromise = getDocs(collection(db, 'users')).then((querySnapshot) => {
+      const profiles: ServiceProvider[] = [];
+      querySnapshot.forEach((docSnap) => {
+        if (docSnap.exists()) {
+          profiles.push(docSnap.data() as ServiceProvider);
+        }
+      });
+      return profiles;
     });
-    return profiles;
+    return await withTimeout(fetchPromise, 1200, []);
   } catch (error) {
     console.error('Error fetching all user profiles from Firestore:', error);
     return [];

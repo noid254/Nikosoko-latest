@@ -17,7 +17,7 @@ const DesktopBannerLayout: React.FC<DesktopBannerLayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col lg:flex-row overflow-x-hidden">
       {/* PC / Desktop Banner Encouraging Sign-up to Trade Skills & Time */}
-      <aside className="hidden lg:flex lg:w-[460px] xl:w-[540px] 2xl:w-[620px] shrink-0 bg-gradient-to-br from-slate-900 via-brand-navy to-slate-950 text-white p-8 xl:p-12 flex-col justify-between border-r border-slate-800/80 relative overflow-hidden shadow-2xl">
+      <aside className="hidden lg:flex lg:w-[460px] xl:w-[540px] 2xl:w-[620px] min-h-[640px] shrink-0 bg-gradient-to-br from-slate-900 via-brand-navy to-slate-950 text-white p-8 xl:p-12 flex-col justify-between border-r border-slate-800/80 relative overflow-hidden shadow-2xl">
         {/* Glow Accents */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />

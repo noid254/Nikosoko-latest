@@ -115,30 +115,30 @@ const SideMenu: React.FC<SideMenuProps> = ({
       {/* Drawer Panel - Minimalist Clean Theme */}
       <div className="relative w-[260px] sm:w-[280px] bg-white h-full shadow-2xl flex flex-col animate-slide-in-left select-none overflow-hidden">
         
-        {/* Compact Black Header */}
-        <div className="bg-black text-white p-3.5 pt-4 space-y-2.5 shrink-0 border-b border-neutral-800">
-          <div className="flex items-center justify-between">
+        {/* Black Header - Same Drop/Height as NIKOSOKO Hero Banner (min-h-[160px]) */}
+        <div className="bg-black text-white p-4 min-h-[160px] flex flex-col justify-between shrink-0 border-b border-neutral-800">
+          <div className="flex items-center justify-between w-full">
             <div 
               onClick={() => {
                 onNavigate('profile');
                 onClose();
               }}
-              className="relative group cursor-pointer flex items-center gap-2.5"
+              className="relative group cursor-pointer flex items-center gap-2.5 min-w-0"
             >
-              <div className="relative">
+              <div className="relative shrink-0">
                 <img 
                   src={currentUser.avatarUrl} 
                   alt={currentUser.name} 
-                  className="w-11 h-11 rounded-full object-cover border border-neutral-700 shadow-xs transition-transform group-hover:scale-105" 
+                  className="w-12 h-12 rounded-full object-cover border border-neutral-700 shadow-xs transition-transform group-hover:scale-105" 
                 />
                 <span 
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${
+                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-black ${
                     isOnline ? 'bg-emerald-400' : 'bg-neutral-500'
                   }`}
                   title={isOnline ? 'Live' : 'Offline'}
                 />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-xs text-white truncate group-hover:text-neutral-300 transition-colors">
                   {currentUser.name}
                 </h2>
@@ -158,7 +158,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           </div>
 
           {/* Status & Toggle Pill */}
-          <div className="flex items-center justify-between text-[10.5px] pt-1.5 border-t border-neutral-800/80">
+          <div className="flex items-center justify-between text-[10.5px] pt-2 border-t border-neutral-800/80 w-full">
             <span className="text-neutral-300 font-normal flex items-center gap-1.5 truncate pr-2">
               <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'}`} />
               <span className="truncate">{isOnline ? (currentUser.location || 'Ruaka, Kiambu') : 'Offline'}</span>
@@ -166,7 +166,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
             <button
               type="button"
               onClick={handleToggleAvailability}
-              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full transition-all cursor-pointer shrink-0 ${
+              className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
                 isOnline 
                   ? 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700' 
                   : 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-xs'
