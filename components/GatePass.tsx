@@ -152,7 +152,7 @@ const GatePass: React.FC<GatePassProps> = ({
             <header className="bg-white px-6 py-5 flex flex-col border-b border-gray-100 sticky top-0 z-40 shadow-sm">
                 <div className="flex items-center justify-between mb-8">
                     <button onClick={onBack} className="p-3 -ml-3 text-gray-900 bg-gray-50 rounded-2xl active:scale-90 transition-all"><BackIcon /></button>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tighter italic uppercase leading-none">$KILL QARIBU</h1>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tighter italic uppercase leading-none">GATE PASS</h1>
                     <div className="w-12"></div>
                 </div>
                 <div className="flex bg-gray-100 p-1.5 rounded-[20px] shadow-inner ring-1 ring-black/5">

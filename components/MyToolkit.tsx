@@ -19,7 +19,7 @@ interface MyToolkitProps {
 }
 
 const TOOLS: ToolAction[] = [
-    { label: 'Qaribu', icon: '🔑', page: 'qaribu', color: 'bg-emerald-600' },
+    { label: 'Gate Pass', icon: '🔑', page: 'qaribu', color: 'bg-emerald-600' },
     { label: 'Nikosoko', icon: '🏠', page: 'home', color: 'bg-brand-navy' },
     { label: 'My Places', icon: '🏢', page: 'myplaces', color: 'bg-brand-navy' },
     { label: 'My Journey', icon: '🚀', page: 'journey', color: 'bg-brand-gold' },

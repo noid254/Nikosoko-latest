@@ -49,7 +49,7 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({ onBack, currentUs
     
     useEffect(() => {
         setMessages([
-            { id: 1, sender: 'team', text: 'Welcome to the $KILL Support Center! How can we help you today?', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+            { id: 1, sender: 'team', text: 'Welcome to Nikosoko Support Center! How can we help you today?', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
             { id: 2, sender: 'team', text: 'Tip: The more ratings you get, the more your profile will be recommended to others. Keep up the great work!', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
         ]);
         
@@ -101,7 +101,7 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({ onBack, currentUs
                 <button onClick={onBack} className="text-gray-600">
                     <BackIcon />
                 </button>
-                <h1 className="text-xl font-bold text-gray-800">$KILL Support</h1>
+                <h1 className="text-xl font-bold text-gray-800">Nikosoko Support</h1>
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

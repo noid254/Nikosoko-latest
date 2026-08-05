@@ -11,20 +11,12 @@ import SideMenu from './components/SideMenu';
 // Fix: Standardized to NikoSoko.tsx (uppercase 'S') to match component naming and resolve casing conflict.
 import NikoSoko from './components/NikoSoko';
 import ServiceMarketplace from './components/ServiceMarketplace';
-import MyPlaces from './components/MyPlaces';
-import GatePass from './components/GatePass';
 import JourneyPage from './components/JourneyPage';
-import InvoiceHub from './components/InvoiceHub';
-import InvoiceGenerator from './components/InvoiceGenerator';
-import QuoteGenerator from './components/QuoteGenerator';
-import ReceiptGenerator from './components/ReceiptGenerator';
-import BrandKitView from './components/BusinessAssets';
 import MyDocumentsView from './components/MyDocumentsView';
 import ScanDocumentView from './components/ScanDocumentView';
 import Tukosoko from './components/Tukosoko';
 import PendingRatingsView from './components/PendingRatingsView';
 import MyContactsView, { SavedContactItem } from './components/MyContactsView';
-import CatalogueView from './components/CatalogueView';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import GigsPage from './components/GigsPage';
 import CreatePostView from './components/CreatePostView';
@@ -35,13 +27,10 @@ import AssetRegistryView from './components/AssetRegistryView';
 import RegisterAssetView from './components/RegisterAssetView';
 import OwnershipCheckView from './components/OwnershipCheckView';
 import DocumentDetailView from './components/DocumentDetailView';
-import MyToolkit from './components/MyToolkit';
 import WorkshopSetup from './components/WorkshopSetup';
 import QRScannerView from './components/QRScannerView';
-import PremisePublicView from './components/PremisePublicView';
 import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
-import DoorProfile from './components/DoorProfile';
 import SkillDashboard from './components/SkillDashboard';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
@@ -522,7 +511,7 @@ function App() {
           gateAuth(() => setCurrentPage('skill_id'));
           return;
       }
-      if (['createPost', 'createProductPost', 'messages', 'assetRegistry', 'invoices', 'mytoolkit'].includes(page)) {
+      if (['createPost', 'createProductPost', 'messages', 'assetRegistry'].includes(page)) {
           gateAuth(() => setCurrentPage(page));
       } else {
           setCurrentPage(page);
@@ -534,19 +523,8 @@ function App() {
         const userId = data.split(':')[1];
         const provider = providers.find(p => p.id === userId);
         if (provider) { setViewingProvider(provider); setCurrentPage('profile'); }
-    } else if (data.startsWith('PREMISE:')) {
-        const pId = data.split(':')[1];
-        const premise = premises.find(p => p.id === pId);
-        if (premise) { setSelectedPremise(premise); setCurrentPage('premiseLanding'); }
-    } else if (data.startsWith('QARIBU:')) {
-        const parts = data.split(':');
-        const requestId = parts[1];
-        const request = qaribuRequests.find(r => r.id === requestId);
-        if (request) {
-            setCurrentPage('qaribu');
-        }
     } else {
-        alert("Unknown QR Code: " + data);
+        alert("Scanned Code: " + data);
     }
   };
 
@@ -573,25 +551,7 @@ function App() {
   };
 
   const handleBackWithReviewCheck = (onConfirmBack: () => void) => {
-      const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
-      if (unratedIds.length >= 3) {
-          setCurrentPage('pendingRatings');
-          return;
-      }
-      if (unratedIds.length > 0) {
-          const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
-          if (unratedProviders.length > 0) {
-              const firstUnrated = unratedProviders[0];
-              const record = contactHistory.find(c => c.providerId === firstUnrated.id);
-              setPendingReviews([firstUnrated]);
-              setReviewModalSubtitle(`Rate your interaction with ${firstUnrated.name} before leaving.`);
-              setReviewPostponeCount(record?.postponeCount || 0);
-              setIsForcedReview((record?.postponeCount || 0) >= 3);
-              setShowReviewModal(true);
-              setPendingBackAction(() => onConfirmBack);
-              return;
-          }
-      }
+      // Navigation & CTA interactions must remain fast and non-blocking
       onConfirmBack();
   };
 
@@ -710,8 +670,6 @@ function App() {
             onBookProvider={(p) => setBookingTargetProvider(p)}
           />
         );
-      case 'qaribu':
-        return <GatePass allProviders={providers} allTenants={providers.filter(p => p.premiseId)} premises={premises} currentUser={currentUser} isAuthenticated={isAuthenticated} qaribuRequests={qaribuRequests} onUpdateRequestStatus={async (id, s) => {}} onScanClick={() => setCurrentPage('qrScan')} onBack={() => setCurrentPage('home')} onStartShift={handleToggleShift} onNavigate={handleNavigate} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onSelectPremise={(p) => { setSelectedPremise(p); setCurrentPage('premiseLanding'); }} onAuthClick={() => setIsAuthModalOpen(true)} />;
       case 'profile': {
         const profileToView = viewingProvider || currentUser;
         return profileToView ? (
@@ -768,55 +726,10 @@ function App() {
         return <QRScannerView onBack={() => setCurrentPage('home')} onScanSuccess={handleScanSuccess} />;
       case 'skill_id':
         return <SkillDashboard currentUser={currentUser} onBack={() => setCurrentPage('home')} onNavigate={handleNavigate} onUpdateUser={(u) => { setCurrentUser(u); setProviders(prev => prev.map(p => p.id === u.id ? u : p)); }} onBookProvider={(p) => setBookingTargetProvider(p)} />;
-      case 'doorProfile':
-        return selectedPremise && selectedUnit ? (
-          <DoorProfile 
-            unit={selectedUnit} 
-            premise={selectedPremise} 
-            tenant={providers.find(p => p.id === selectedUnit.tenantId)} 
-            onBack={() => handleBackWithReviewCheck(() => setCurrentPage('premiseLanding'))} 
-            onContactHost={(type) => {
-              const t = providers.find(p => p.id === selectedUnit.tenantId);
-              if (t) {
-                if (!isAuthenticated) setIsAuthModalOpen(true);
-                else if (handleCtaInteraction(t)) {
-                  if (type === 'call') window.location.href = `tel:${t.phone}`;
-                  else window.open(`https://wa.me/${t.whatsapp || t.phone}`, '_blank');
-                }
-              }
-            }} 
-            isAuthenticated={isAuthenticated}
-            onAuthClick={() => setIsAuthModalOpen(true)}
-            onInitiateContact={(p) => handleCtaInteraction(p)}
-            catalogueItems={catalogueItems.filter(i => i.providerId === selectedUnit.tenantId)}
-            isKeyHolder={currentUser?.id === selectedUnit.tenantId || currentUser?.id === providers.find(p => p.id === selectedUnit.tenantId)?.tenantAdminId}
-            onUpdateDetails={handleUpdateUnitDetails}
-            onBookHost={(p) => {
-              if (handleCtaInteraction(p)) {
-                setBookingTargetProvider(p);
-              }
-            }}
-          />
-        ) : null;
       case 'messages':
         return <MessageCenterView onBack={() => setCurrentPage('home')} currentUser={currentUser} onOpenCompleteSignUp={handleOpenCompleteSignUp} />;
-      case 'mytoolkit':
-        return <MyToolkit allTools={[]} selectedTools={selectedTools} onSave={setSelectedTools} onNavigate={handleNavigate} onBack={() => setCurrentPage('home')} />;
-      case 'myplaces':
-        return <MyPlaces onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} providers={providers} premises={premises} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onNavigate={handleNavigate} onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} onSelectPremise={(p) => { setSelectedPremise(p); setCurrentPage('premiseLanding'); }} />;
       case 'journey':
         return <JourneyPage providers={providers} currentUser={currentUser} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => setCurrentPage('home')} />;
-      case 'premiseLanding':
-        return selectedPremise ? <PremisePublicView premise={selectedPremise} tenants={providers.filter(p => p.premiseId === selectedPremise.id)} catalogueItems={catalogueItems} onBack={() => handleBackWithReviewCheck(() => setCurrentPage('myplaces'))} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onViewDoor={(u, t) => { setSelectedUnit(u); setCurrentPage('doorProfile'); }} /> : null;
-      case 'invoices':
-      case 'invoiceGenerator':
-      case 'quoteGenerator':
-      case 'receiptGenerator':
-      case 'myDocuments':
-      case 'brandKit':
-      case 'documentDetail':
-      case 'scanDocument':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'mycontacts':
         return (
           <MyContactsView 
@@ -829,8 +742,6 @@ function App() {
             onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} 
           />
         );
-      case 'mycatalogue':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'assetRegistry':
         return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'registerAsset':

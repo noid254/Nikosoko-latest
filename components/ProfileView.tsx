@@ -658,7 +658,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     ) : (
                         <div className="space-y-1">
                             <div className="flex items-center justify-center gap-1.5">
-                                <h1 className="text-xl font-black text-black">{isOwner ? `$KILL ID: ${displayId}` : displayName}</h1>
+                                <h1 className="text-xl font-black text-black">{isOwner ? `SKILL ID: ${displayId}` : displayName}</h1>
                                 {(() => {
                                     const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
                                     if (!isSaccoConfirmed && profileData.isVerified) {

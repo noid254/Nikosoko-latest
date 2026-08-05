@@ -69,7 +69,7 @@ const OwnershipCheckView: React.FC<OwnershipCheckViewProps> = ({ allDocuments, o
                                 <p><strong>Item:</strong> {result.items?.[0]?.description || result.model}</p>
                                 <p><strong>Identifier:</strong> {result.registrationNumber || result.items?.[0]?.serial}</p>
                                 <p><strong>Registered Owner:</strong> {result.ownerPhone ? `****` + result.ownerPhone.slice(-4) : 'N/A'}</p>
-                                <p className="mt-3 text-xs text-gray-500">Owner's full contact details are masked for privacy. This item is confirmed to be registered on the $KILL platform.</p>
+                                <p className="mt-3 text-xs text-gray-500">Owner's full contact details are masked for privacy. This item is confirmed to be registered on the Nikosoko platform.</p>
                             </div>
                         </div>
                     )}
@@ -77,7 +77,7 @@ const OwnershipCheckView: React.FC<OwnershipCheckViewProps> = ({ allDocuments, o
                     {result === 'not_found' && (
                         <div className="bg-white p-4 rounded-xl shadow-md border-l-4 border-red-500 animate-fade-in">
                             <h3 className="font-bold text-lg text-red-800">Asset Not Found</h3>
-                            <p className="mt-2 text-sm text-gray-700">No asset with this identifier is registered in the $KILL database. The item may be unregistered or the identifier is incorrect. Proceed with caution.</p>
+                            <p className="mt-2 text-sm text-gray-700">No asset with this identifier is registered in the Nikosoko database. The item may be unregistered or the identifier is incorrect. Proceed with caution.</p>
                         </div>
                     )}
                 </div>

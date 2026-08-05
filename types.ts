@@ -185,7 +185,7 @@ export interface ServiceProvider {
   unitDetails?: UnitDetails;
   flagCount: number;
   views: number;
-  cta: ('call' | 'whatsapp' | 'book' | 'catalogue' | 'join' | 'menu' | 'save')[];
+  cta: ('call' | 'whatsapp' | 'book' | 'catalogue' | 'join' | 'menu' | 'save' | 'chat')[];
   selectedProfileButtons?: ('call' | 'book' | 'chat' | 'whatsapp' | 'catalogue' | 'location' | 'document')[];
   shopDetails?: ShopDetails;
   brandColors?: { primary: string, secondary: string };

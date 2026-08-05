@@ -9,12 +9,12 @@ interface AuthModalProps {
   initialMode?: 'nickname' | 'complete_signup';
 }
 
-const CTA_OPTIONS: { id: 'call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save'; label: string; icon: string }[] = [
+const CTA_OPTIONS: { id: 'call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save' | 'chat'; label: string; icon: string }[] = [
   { id: 'call', label: 'Call', icon: '📞' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
   { id: 'book', label: 'Book', icon: '📅' },
+  { id: 'chat', label: 'Chat', icon: '💬' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '📱' },
   { id: 'catalogue', label: 'Catalogue', icon: '🛍️' },
-  { id: 'menu', label: 'Menu', icon: '📋' },
   { id: 'save', label: 'Save', icon: '🔖' },
 ];
 
@@ -53,8 +53,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   const [about, setAbout] = useState('');
   const [hourlyRate, setHourlyRate] = useState<string>('1500');
   const [rateType, setRateType] = useState<ServiceProvider['rateType']>('per hour');
-  const [selectedCta, setSelectedCta] = useState<('call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save')[]>([
-    'call', 'whatsapp', 'book', 'save'
+  const [selectedCta, setSelectedCta] = useState<('call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save' | 'chat')[]>([
+    'call', 'book', 'chat'
   ]);
   const [referralCode, setReferralCode] = useState('');
 
@@ -137,7 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     }
   };
 
-  const toggleCtaOption = (id: 'call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save') => {
+  const toggleCtaOption = (id: 'call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save' | 'chat') => {
     if (selectedCta.includes(id)) {
       setSelectedCta(selectedCta.filter(item => item !== id));
     } else {
@@ -448,168 +448,192 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             </form>
           )}
 
-          {/* STEP 3 - COMPLETE SIGN UP FORM */}
+          {/* STEP 3 - COMPLETE SIGN UP FORM (MINIMALIST INTERIOR DESIGN MAGAZINE STYLE) */}
           {step === 3 && step3Mode === 'complete' && (
-            <form onSubmit={handleCompleteProfileSubmit} className="space-y-3 animate-fade-in text-neutral-900 text-xs">
+            <form onSubmit={handleCompleteProfileSubmit} className="space-y-2.5 animate-fade-in text-neutral-900 text-xs">
               
-              <div className="flex justify-between items-center pb-1 border-b border-dashed border-neutral-300">
-                <span className="text-[9px] font-extrabold uppercase text-neutral-400">Profile Details</span>
+              {/* Header section with category badge */}
+              <div className="flex justify-between items-center pb-2 border-b border-neutral-200">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-900 block">Registration Portfolio</span>
+                  <span className="text-[8px] text-neutral-400 font-medium tracking-wide">Architectural Service Details</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setStep3Mode('choice')}
-                  className="text-[9px] font-bold text-black underline cursor-pointer"
+                  className="text-[9px] font-bold text-neutral-500 hover:text-black uppercase tracking-wider cursor-pointer underline"
                 >
-                  &larr; Switch Option
+                  &larr; Switch
                 </button>
               </div>
 
-              {/* Avatar Upload & Name */}
-              <div className="flex items-center gap-3">
-                <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-black bg-neutral-100 overflow-hidden flex items-center justify-center">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[9px] font-bold text-neutral-400">Photo</span>
-                    )}
+              {/* Row 1: Profile Photo & Full Name */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-11 h-11 rounded-none border border-black bg-white overflow-hidden flex items-center justify-center">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Photo</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 bg-black text-white text-[8px] p-1 cursor-pointer hover:bg-neutral-800"
+                      title="Upload Avatar Photo"
+                    >
+                      📷
+                    </button>
+                    <input type="file" ref={avatarInputRef} onChange={handleAvatarFileSelect} accept="image/*" className="hidden" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-black text-white text-[8px] p-0.5 rounded-full cursor-pointer"
-                  >
-                    📷
-                  </button>
-                  <input type="file" ref={avatarInputRef} onChange={handleAvatarFileSelect} accept="image/*" className="hidden" />
-                </div>
 
-                <div className="flex-1 space-y-1">
-                  <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Full Name *</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={fullName} 
-                    onChange={e => setFullName(e.target.value)} 
-                    placeholder="e.g. Jane Wanjiku" 
-                    className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-xs font-bold text-black focus:outline-none focus:border-black" 
-                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
+                      Full Legal Name *
+                    </span>
+                    <input 
+                      type="text" 
+                      required
+                      value={fullName} 
+                      onChange={e => setFullName(e.target.value)} 
+                      placeholder="e.g. Jane Wanjiku" 
+                      className="w-full mt-0.5 bg-transparent border-b border-transparent group-hover:border-neutral-300 focus:border-black text-xs font-bold text-black focus:outline-none py-0.5 placeholder-neutral-400" 
+                    />
+                  </div>
                 </div>
-              </div>
+              </label>
 
-              {/* Service Title */}
-              <div className="space-y-1">
-                <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Profession / Skill *</label>
+              {/* Row 2: Profession / Skill */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
+                  Profession / Primary Skill *
+                </span>
                 <input 
                   type="text" 
                   required
                   value={serviceTitle} 
                   onChange={e => setServiceTitle(e.target.value)} 
-                  placeholder="e.g. Electrician, Carpenter, Welder" 
-                  className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-xs font-bold text-black focus:outline-none focus:border-black" 
+                  placeholder="e.g. Interior Architect, Electrician, Carpenter" 
+                  className="w-full mt-0.5 bg-transparent border-b border-transparent group-hover:border-neutral-300 focus:border-black text-xs font-bold text-black focus:outline-none py-0.5 placeholder-neutral-400" 
                 />
-              </div>
+              </label>
 
-              {/* Category & Account Type */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Category</label>
-                  <select 
-                    value={category} 
-                    onChange={e => setCategory(e.target.value)}
-                    className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-[11px] font-bold text-black focus:outline-none focus:border-black cursor-pointer"
-                  >
-                    <option value="PERSONAL">PERSONAL</option>
-                    <option value="TRADE">TRADE</option>
-                    <option value="PROFESSIONAL">PROFESSIONAL</option>
-                    <option value="CREATIVE">CREATIVE</option>
-                    <option value="HOME">HOME</option>
-                    <option value="EVENT">EVENT</option>
-                  </select>
-                </div>
+              {/* Row 3: Category Selection */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors mb-1">
+                  Service Category
+                </span>
+                <select 
+                  value={category} 
+                  onChange={e => setCategory(e.target.value)}
+                  className="w-full bg-white border border-neutral-300 p-2 text-xs font-bold text-black focus:outline-none focus:border-black cursor-pointer"
+                >
+                  <option value="PERSONAL">PERSONAL SERVICES</option>
+                  <option value="TRADE">TECHNICAL TRADE & REPAIRS</option>
+                  <option value="PROFESSIONAL">PROFESSIONAL CONSULTING</option>
+                  <option value="CREATIVE">CREATIVE & DESIGN</option>
+                  <option value="HOME">HOME & ESTATE</option>
+                  <option value="EVENT">EVENTS & PRODUCTION</option>
+                </select>
+              </label>
 
-                <div className="space-y-1">
-                  <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Account Type</label>
-                  <select 
-                    value={accountType} 
-                    onChange={e => setAccountType(e.target.value as any)}
-                    className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-[11px] font-bold text-black focus:outline-none focus:border-black cursor-pointer"
-                  >
-                    <option value="individual">Individual</option>
-                    <option value="organization">Organization / Sacco</option>
-                  </select>
-                </div>
-              </div>
+              {/* Row 4: Account Type */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors mb-1">
+                  Account Operating Type
+                </span>
+                <select 
+                  value={accountType} 
+                  onChange={e => setAccountType(e.target.value as any)}
+                  className="w-full bg-white border border-neutral-300 p-2 text-xs font-bold text-black focus:outline-none focus:border-black cursor-pointer"
+                >
+                  <option value="individual">Individual Professional</option>
+                  <option value="organization">Registered Organization / Sacco</option>
+                </select>
+              </label>
 
               {accountType === 'organization' && (
-                <div className="space-y-1 bg-neutral-50 p-2 rounded border border-neutral-300">
-                  <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">
-                    Sacco / Org Reg No.
-                  </label>
+                <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                  <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
+                    Sacco / Organization Registration No.
+                  </span>
                   <input 
                     type="text" 
                     value={saccoRegNo} 
                     onChange={e => setSaccoRegNo(e.target.value)} 
                     placeholder="e.g. REG-SOC/2026/09" 
-                    className="w-full p-1.5 bg-white border border-neutral-300 rounded text-xs font-mono font-bold text-black" 
+                    className="w-full mt-0.5 bg-white border border-neutral-300 p-2 text-xs font-mono font-bold text-black focus:outline-none focus:border-black" 
                   />
-                </div>
+                </label>
               )}
 
-              {/* Location & About */}
-              <div className="space-y-1">
-                <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Location / Estate</label>
+              {/* Row 5: Location & Estate */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
+                  Primary Location / Estate
+                </span>
                 <input 
                   type="text" 
                   value={location} 
                   onChange={e => setLocation(e.target.value)} 
                   placeholder="e.g. Ruaka, Kiambu County" 
-                  className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-xs font-bold text-black focus:outline-none focus:border-black" 
+                  className="w-full mt-0.5 bg-transparent border-b border-transparent group-hover:border-neutral-300 focus:border-black text-xs font-bold text-black focus:outline-none py-0.5 placeholder-neutral-400" 
                 />
-              </div>
+              </label>
 
-              <div className="space-y-1">
-                <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">Bio / Experience</label>
+              {/* Row 6: Experience & Portfolio Bio */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
+                  Experience & Portfolio Bio
+                </span>
                 <textarea 
                   value={about} 
                   onChange={e => setAbout(e.target.value)} 
-                  placeholder="Brief description of field experience and service..." 
+                  placeholder="Brief description of specialized expertise, work philosophy, or qualifications..." 
                   rows={2}
-                  className="w-full p-2 bg-neutral-50 border border-neutral-300 rounded text-xs font-normal text-black focus:outline-none focus:border-black resize-none" 
+                  className="w-full mt-1 bg-white border border-neutral-200 p-2 text-xs text-black focus:outline-none focus:border-black resize-none placeholder-neutral-400" 
                 />
-              </div>
+              </label>
 
-              {/* Rate Card */}
-              <div className="grid grid-cols-2 gap-2 bg-neutral-50 p-2 rounded border border-neutral-200">
-                <div>
-                  <span className="text-[8px] font-extrabold text-neutral-500 uppercase block mb-0.5">Rate (KES)</span>
-                  <input 
-                    type="number" 
-                    value={hourlyRate} 
-                    onChange={e => setHourlyRate(e.target.value)} 
-                    placeholder="1500" 
-                    className="w-full p-1.5 bg-white border border-neutral-300 rounded text-xs font-black text-black" 
-                  />
-                </div>
-                <div>
-                  <span className="text-[8px] font-extrabold text-neutral-500 uppercase block mb-0.5">Unit</span>
-                  <select 
-                    value={rateType} 
-                    onChange={e => setRateType(e.target.value as any)}
-                    className="w-full p-1.5 bg-white border border-neutral-300 rounded text-[11px] font-bold text-black"
-                  >
-                    {RATE_TYPE_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Action Buttons to Display */}
-              <div className="space-y-1">
-                <span className="text-[8.5px] font-extrabold text-black uppercase tracking-wider block">
-                  Profile Buttons
+              {/* Row 7: Rate Card (Full Row) */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors mb-1.5">
+                  Standard Service Rate & Billing Unit
                 </span>
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div>
+                    <span className="text-[7.5px] font-extrabold text-neutral-400 uppercase block mb-0.5">Rate Amount (KES)</span>
+                    <input 
+                      type="number" 
+                      value={hourlyRate} 
+                      onChange={e => setHourlyRate(e.target.value)} 
+                      placeholder="1500" 
+                      className="w-full p-2 bg-white border border-neutral-300 text-xs font-black text-black focus:outline-none focus:border-black" 
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[7.5px] font-extrabold text-neutral-400 uppercase block mb-0.5">Billing Unit</span>
+                    <select 
+                      value={rateType} 
+                      onChange={e => setRateType(e.target.value as any)}
+                      className="w-full p-2 bg-white border border-neutral-300 text-xs font-bold text-black focus:outline-none focus:border-black cursor-pointer"
+                    >
+                      {RATE_TYPE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </label>
+
+              {/* Row 8: Profile Buttons Offer */}
+              <div className="p-3 border border-neutral-200 bg-neutral-50/70 transition-all">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] mb-2">
+                  Active Profile Action Offers (Select Buttons to Offer)
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
                   {CTA_OPTIONS.map(opt => {
                     const isSelected = selectedCta.includes(opt.id);
                     return (
@@ -617,10 +641,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                         type="button" 
                         key={opt.id}
                         onClick={() => toggleCtaOption(opt.id)}
-                        className={`p-1 rounded text-[9.5px] font-bold transition-all border flex items-center justify-center gap-1 cursor-pointer ${
+                        className={`p-2 transition-all border flex items-center justify-center gap-1.5 cursor-pointer text-[10px] uppercase tracking-wider font-extrabold ${
                           isSelected 
-                            ? 'bg-black text-white border-black' 
-                            : 'bg-white text-neutral-600 border-neutral-300 hover:border-black'
+                            ? 'bg-black text-white border-black shadow-xs' 
+                            : 'bg-white text-neutral-600 border-neutral-200 hover:border-black'
                         }`}
                       >
                         <span>{opt.icon}</span>
@@ -631,25 +655,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 </div>
               </div>
 
-              {/* Referral Code */}
-              <div className="space-y-1">
-                <label className="block text-[8.5px] font-extrabold text-black uppercase tracking-wider">
+              {/* Row 9: Referral Code (Optional) */}
+              <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
+                <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
                   Referral Code (Optional)
-                </label>
+                </span>
                 <input 
                   type="text" 
                   value={referralCode} 
                   onChange={e => setReferralCode(e.target.value)} 
-                  placeholder="Code for verified badge" 
-                  className="w-full p-1.5 bg-neutral-50 border border-neutral-300 rounded text-xs font-bold text-black uppercase tracking-wider" 
+                  placeholder="Enter code for priority verification" 
+                  className="w-full mt-0.5 bg-transparent border-b border-transparent group-hover:border-neutral-300 focus:border-black text-xs font-bold text-black uppercase tracking-wider focus:outline-none py-0.5 placeholder-neutral-400" 
                 />
-              </div>
+              </label>
 
+              {/* Mandatory Non-Optional Save Button */}
               <button 
                 type="submit" 
-                className="w-full bg-black text-white hover:bg-neutral-800 font-bold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer active:scale-98 shadow-xs mt-1"
+                className="w-full py-3.5 bg-black text-white hover:bg-neutral-800 font-extrabold uppercase text-[10px] tracking-[0.2em] transition-all cursor-pointer shadow-md mt-4 active:scale-[0.99] flex items-center justify-center gap-2 border border-black"
               >
-                Save & Complete Registration &rarr;
+                <span>SAVE & COMPLETE REGISTRATION</span>
+                <span>&rarr;</span>
               </button>
             </form>
           )}
