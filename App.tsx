@@ -40,10 +40,35 @@ import SEOMapModal from './components/SEOMapModal';
 import DesktopBannerLayout from './components/DesktopBannerLayout';
 
 function App() {
-  const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [currentPage, setCurrentPage] = useState<CurrentPage>('home');
+  const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_cached_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(api.getToken() || localStorage.getItem('nikosoko_cached_user'));
+  });
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_cached_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.role === 'SuperAdmin' || parsed.phone === '254723119356' || parsed.phone === '0723119356';
+      }
+    } catch {}
+    return false;
+  });
+  const [currentPage, setCurrentPage] = useState<CurrentPage>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_current_page');
+      return (saved as CurrentPage) || 'home';
+    } catch {
+      return 'home';
+    }
+  });
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'nickname' | 'complete_signup'>('nickname');
@@ -118,11 +143,46 @@ function App() {
   const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>([]);
   const [premises, setPremises] = useState<Premise[]>([]);
 
-  const [viewingProvider, setViewingProvider] = useState<ServiceProvider | null>(null);
-  const [viewingCatalogueProvider, setViewingCatalogueProvider] = useState<ServiceProvider | null>(null);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [selectedPremise, setSelectedPremise] = useState<Premise | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<UnitKey | null>(null);
+  const [viewingProvider, setViewingProvider] = useState<ServiceProvider | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_viewing_provider');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [viewingCatalogueProvider, setViewingCatalogueProvider] = useState<ServiceProvider | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_viewing_catalogue_provider');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_selected_document');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedPremise, setSelectedPremise] = useState<Premise | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_selected_premise');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedUnit, setSelectedUnit] = useState<UnitKey | null>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_selected_unit');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [selectedTools, setSelectedTools] = useState<CurrentPage[]>(['home', 'journey', 'admin']);
   const [businessAssets, setBusinessAssets] = useState<BusinessAssets | null>(null);
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
@@ -184,6 +244,73 @@ function App() {
       return next;
     });
   };
+
+  // Sync core application states to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('nikosoko_current_page', currentPage);
+    } catch (e) { console.error(e); }
+  }, [currentPage]);
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('nikosoko_cached_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('nikosoko_cached_user');
+      }
+    } catch (e) { console.error(e); }
+  }, [currentUser]);
+
+  useEffect(() => {
+    try {
+      if (viewingProvider) {
+        localStorage.setItem('nikosoko_viewing_provider', JSON.stringify(viewingProvider));
+      } else {
+        localStorage.removeItem('nikosoko_viewing_provider');
+      }
+    } catch (e) { console.error(e); }
+  }, [viewingProvider]);
+
+  useEffect(() => {
+    try {
+      if (viewingCatalogueProvider) {
+        localStorage.setItem('nikosoko_viewing_catalogue_provider', JSON.stringify(viewingCatalogueProvider));
+      } else {
+        localStorage.removeItem('nikosoko_viewing_catalogue_provider');
+      }
+    } catch (e) { console.error(e); }
+  }, [viewingCatalogueProvider]);
+
+  useEffect(() => {
+    try {
+      if (selectedDocument) {
+        localStorage.setItem('nikosoko_selected_document', JSON.stringify(selectedDocument));
+      } else {
+        localStorage.removeItem('nikosoko_selected_document');
+      }
+    } catch (e) { console.error(e); }
+  }, [selectedDocument]);
+
+  useEffect(() => {
+    try {
+      if (selectedPremise) {
+        localStorage.setItem('nikosoko_selected_premise', JSON.stringify(selectedPremise));
+      } else {
+        localStorage.removeItem('nikosoko_selected_premise');
+      }
+    } catch (e) { console.error(e); }
+  }, [selectedPremise]);
+
+  useEffect(() => {
+    try {
+      if (selectedUnit) {
+        localStorage.setItem('nikosoko_selected_unit', JSON.stringify(selectedUnit));
+      } else {
+        localStorage.removeItem('nikosoko_selected_unit');
+      }
+    } catch (e) { console.error(e); }
+  }, [selectedUnit]);
 
   useEffect(() => {
     let isMounted = true;
@@ -351,6 +478,17 @@ function App() {
     setIsAuthenticated(false);
     setIsSuperAdmin(false);
     api.clearToken();
+    try {
+      localStorage.removeItem('nikosoko_cached_user');
+      localStorage.removeItem('nikosoko_viewing_provider');
+      localStorage.removeItem('nikosoko_viewing_catalogue_provider');
+      localStorage.removeItem('nikosoko_selected_document');
+      localStorage.removeItem('nikosoko_selected_premise');
+      localStorage.removeItem('nikosoko_selected_unit');
+      localStorage.setItem('nikosoko_current_page', 'home');
+    } catch (e) {
+      console.error(e);
+    }
     setCurrentPage('home');
   };
 
