@@ -260,6 +260,13 @@ export interface InboxMessage {
     sender: 'user' | 'team';
     text: string;
     timestamp: string;
+    type?: 'general' | 'cta_tap' | 'rating_reminder' | 'booking';
+    targetProviderId?: string;
+    targetProviderName?: string;
+    ctaType?: 'call' | 'whatsapp' | 'chat' | 'book' | 'save' | string;
+    tapperName?: string;
+    tapperPhone?: string;
+    isActionable?: boolean;
 }
 
 export type CatalogueCategory = 'Product' | 'Service' | 'Professional Service' | 'For Rent' | 'For Sale';

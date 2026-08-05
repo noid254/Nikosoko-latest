@@ -19,7 +19,7 @@ const DB_KEYS = {
     CATEGORIES: 'nikosoko_db_categories'
 };
 
-// Initialize DB with seed data if empty
+// Initialize DB with seed data
 const initDB = () => {
     if (typeof window === 'undefined') return;
     
@@ -42,26 +42,31 @@ const initDB = () => {
     seed(DB_KEYS.TICKETS, mockTickets);
     seed(DB_KEYS.CATEGORIES, mockCategories);
 
-    // Ensure Super Admin (0723119356) exists in stored providers list with skills
+    // Filter out old demo accounts to keep only Super Admin (or new user profiles created at runtime)
     try {
         const storedProviders: ServiceProvider[] = JSON.parse(localStorage.getItem(DB_KEYS.PROVIDERS) || '[]');
-        const existingSaIndex = storedProviders.findIndex(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
-        if (existingSaIndex === -1) {
-            storedProviders.unshift(SUPER_ADMIN_PROVIDER);
-            localStorage.setItem(DB_KEYS.PROVIDERS, JSON.stringify(storedProviders));
+        const filteredProviders = storedProviders.filter(p => 
+            p.id === SUPER_ADMIN_PROVIDER.id || 
+            p.phone === '254723119356' || 
+            p.phone === '0723119356' ||
+            p.id.startsWith('user-') ||
+            p.id.startsWith('custom-')
+        );
+        const saIndex = filteredProviders.findIndex(p => p.id === SUPER_ADMIN_PROVIDER.id || p.phone === '254723119356' || p.phone === '0723119356');
+        if (saIndex === -1) {
+            filteredProviders.unshift(SUPER_ADMIN_PROVIDER);
         } else {
-            // Update existing with complete skills and profile details
-            storedProviders[existingSaIndex] = {
+            filteredProviders[saIndex] = {
                 ...SUPER_ADMIN_PROVIDER,
-                ...storedProviders[existingSaIndex],
+                ...filteredProviders[saIndex],
                 role: 'SuperAdmin',
                 skills: SUPER_ADMIN_PROVIDER.skills,
                 isVerified: true
             };
-            localStorage.setItem(DB_KEYS.PROVIDERS, JSON.stringify(storedProviders));
         }
+        localStorage.setItem(DB_KEYS.PROVIDERS, JSON.stringify(filteredProviders));
     } catch (e) {
-        console.error("Error ensuring Super Admin seed", e);
+        localStorage.setItem(DB_KEYS.PROVIDERS, JSON.stringify([SUPER_ADMIN_PROVIDER]));
     }
 };
 
@@ -275,6 +280,18 @@ export const getSpecialBanners = async (): Promise<SpecialBanner[]> => {
 export const getInboxMessages = async (): Promise<InboxMessage[]> => {
     await delay();
     return getTable<InboxMessage>(DB_KEYS.MESSAGES);
+};
+
+export const addInboxMessage = async (messageData: Omit<InboxMessage, 'id'>): Promise<InboxMessage> => {
+    await delay(100);
+    const messages = getTable<InboxMessage>(DB_KEYS.MESSAGES);
+    const newMessage: InboxMessage = {
+        ...messageData,
+        id: Date.now()
+    };
+    messages.unshift(newMessage);
+    saveTable(DB_KEYS.MESSAGES, messages);
+    return newMessage;
 };
 
 export const getCategories = async (): Promise<string[]> => {

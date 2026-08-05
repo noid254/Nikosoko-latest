@@ -57,7 +57,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
     const renderPage = () => {
         switch (activePage) {
             case 'Dashboard':
-                return <DashboardPage providers={providers} onSwitchPage={setActivePage} />;
+                return <DashboardPage 
+                    providers={providers} 
+                    onSwitchPage={setActivePage} 
+                    onViewProvider={props.onViewProvider}
+                    onUpdateProvider={props.onUpdateProvider}
+                />;
             case 'Users':
                 return <UsersPage 
                     providers={props.providers} 
@@ -122,39 +127,86 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
     ];
 
     return (
-        <div className="bg-gray-100 min-h-screen font-sans flex flex-col md:flex-row">
-            {/* Sidebar */}
-            <aside className="w-full md:w-64 bg-brand-dark text-white flex-shrink-0">
-                <div className="p-4 flex items-center justify-between md:justify-center border-b border-gray-700">
-                    <h1 className="text-xl font-bold">Admin Panel</h1>
-                     <button onClick={onBack} className="md:hidden text-gray-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="bg-slate-100 min-h-screen font-sans flex flex-col md:flex-row">
+            {/* High-Contrast PC Sidebar */}
+            <aside className="w-full md:w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col justify-between border-r border-slate-800">
+                <div>
+                    <div className="p-5 flex items-center justify-between border-b border-slate-800 bg-slate-950">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm shadow-md">
+                                👑
+                            </span>
+                            <div>
+                                <h1 className="text-base font-black text-white tracking-tight leading-none">Admin Console</h1>
+                                <p className="text-[10px] text-slate-400 font-mono mt-1">v1.2 • Super Admin</p>
+                            </div>
+                        </div>
+                        <button onClick={onBack} className="md:hidden text-slate-400 hover:text-white p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <nav className="p-4 space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3 py-1.5">Navigation Hub</p>
+                        <ul>
+                            {navItems.map(item => {
+                                const isActive = activePage === item.page;
+                                return (
+                                    <li key={item.page} className="mb-1">
+                                        <button
+                                            onClick={() => setActivePage(item.page)}
+                                            className={`w-full text-left flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                                isActive
+                                                    ? 'bg-amber-400 text-slate-950 shadow-md transform translate-x-1'
+                                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                            }`}
+                                        >
+                                            <span className={isActive ? 'text-slate-950' : 'text-slate-400'}>{item.icon}</span>
+                                            <span>{item.page}</span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </nav>
+                </div>
+
+                <div className="p-4 border-t border-slate-800 bg-slate-950/50">
+                    <button
+                        onClick={onBack}
+                        className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                        <span>Exit Admin Console</span>
+                        <span>&rarr;</span>
                     </button>
                 </div>
-                <nav className="p-4">
-                    <ul>
-                        {navItems.map(item => (
-                            <li key={item.page}>
-                                <button onClick={() => setActivePage(item.page)} className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${activePage === item.page ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}>
-                                    {item.icon}
-                                    {item.page}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </nav>
             </aside>
 
-            {/* Main Content */}
+            {/* Main Content Viewport */}
             <div className="flex-1 flex flex-col min-w-0">
-                <header className="bg-white shadow-sm p-4 flex items-center justify-between">
-                     <h2 className="text-2xl font-bold text-gray-800">{activePage}</h2>
-                     <button onClick={onBack} className="hidden md:block text-sm font-medium text-gray-600 hover:text-brand-primary">
-                        Exit Dashboard &rarr;
-                    </button>
+                <header className="bg-white border-b-2 border-slate-200 px-6 py-4 flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Section:</span>
+                        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{activePage}</h2>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="hidden lg:flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            System Live • PC Interface
+                        </div>
+                        <button
+                            onClick={onBack}
+                            className="hidden md:flex items-center gap-2 text-xs font-black text-slate-700 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                        >
+                            Return to App &rarr;
+                        </button>
+                    </div>
                 </header>
-                <main className="flex-1 p-6 overflow-y-auto">
-                    {renderPage()}
+                <main className="flex-1 p-6 overflow-y-auto bg-slate-100">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        {renderPage()}
+                    </div>
                 </main>
             </div>
         </div>

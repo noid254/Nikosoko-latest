@@ -219,7 +219,7 @@ const RestaurantMenuModal: React.FC<RestaurantMenuModalProps> = ({ provider, onC
                 {/* Hero Section */}
                 <div className="relative h-72 w-full">
                     <img 
-                        src={provider.coverImageUrl} 
+                        src={provider.coverImageUrl || 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=800'} 
                         alt={provider.name} 
                         className="w-full h-full object-cover" 
                     />

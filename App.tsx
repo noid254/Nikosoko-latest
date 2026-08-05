@@ -555,13 +555,53 @@ function App() {
       onConfirmBack();
   };
 
-  const handleCtaInteraction = (provider: ServiceProvider, actionCallback?: () => void): boolean => {
+  const [ctaToast, setCtaToast] = useState<{ show: boolean; text: string; providerId?: string } | null>(null);
+
+  const handleCtaInteraction = (provider: ServiceProvider, actionType: string = 'contact', actionCallback?: () => void): boolean => {
       if (!provider || !provider.id) return false;
 
       // Record contact timestamp for post-service 2-3 hour follow-up reminder
       recordContact(provider.id);
-      if (actionCallback) actionCallback();
 
+      // Update provider view count
+      setProviders(prev => prev.map(p => p.id === provider.id ? { ...p, views: (p.views || 0) + 1 } : p));
+
+      // Dispatch notifications to inbox
+      const tapperName = currentUser?.name || 'A customer';
+      const providerMsg: Omit<InboxMessage, 'id'> = {
+          sender: 'team',
+          text: `🔔 ${tapperName} tapped your '${actionType.toUpperCase()}' button! Click here to send them a rating reminder.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'cta_tap',
+          targetProviderId: provider.id,
+          targetProviderName: provider.name,
+          ctaType: actionType,
+          tapperName,
+          isActionable: true
+      };
+
+      const tapperMsg: Omit<InboxMessage, 'id'> = {
+          sender: 'team',
+          text: `⭐ Thanks for contacting ${provider.name}! Click here to leave a quick 5-star rating for their service.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'rating_reminder',
+          targetProviderId: provider.id,
+          targetProviderName: provider.name,
+          isActionable: true
+      };
+
+      api.addInboxMessage(providerMsg);
+      api.addInboxMessage(tapperMsg);
+
+      // Trigger floating CTA Toast Notification
+      setCtaToast({
+          show: true,
+          text: `🔔 Notification sent! Tapped '${actionType.toUpperCase()}'. Click to remind client or rate!`,
+          providerId: provider.id
+      });
+      setTimeout(() => setCtaToast(prev => prev ? { ...prev, show: false } : null), 5000);
+
+      if (actionCallback) actionCallback();
       return true;
   };
 
@@ -727,7 +767,22 @@ function App() {
       case 'skill_id':
         return <SkillDashboard currentUser={currentUser} onBack={() => setCurrentPage('home')} onNavigate={handleNavigate} onUpdateUser={(u) => { setCurrentUser(u); setProviders(prev => prev.map(p => p.id === u.id ? u : p)); }} onBookProvider={(p) => setBookingTargetProvider(p)} />;
       case 'messages':
-        return <MessageCenterView onBack={() => setCurrentPage('home')} currentUser={currentUser} onOpenCompleteSignUp={handleOpenCompleteSignUp} />;
+        return (
+          <MessageCenterView 
+            onBack={() => setCurrentPage('home')} 
+            currentUser={currentUser} 
+            onOpenCompleteSignUp={handleOpenCompleteSignUp}
+            onOpenReviewModal={(providerId) => {
+              const found = providers.find(p => p.id === providerId);
+              if (found) {
+                setPendingReviews([found]);
+                setReviewModalSubtitle(`Rating request for ${found.name}`);
+                setIsForcedReview(false);
+                setShowReviewModal(true);
+              }
+            }}
+          />
+        );
       case 'journey':
         return <JourneyPage providers={providers} currentUser={currentUser} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => setCurrentPage('home')} />;
       case 'mycontacts':
@@ -965,6 +1020,29 @@ function App() {
       onOpenSignUp={handleOpenCompleteSignUp}
       onOpenLogin={handleOpenLogin}
     >
+      {/* Floating CTA Tap Notification Toast Banner */}
+      {ctaToast && ctaToast.show && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[120] w-full max-w-md px-3 animate-fade-in">
+          <div className="bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-xl shrink-0">🔔</span>
+              <p className="text-slate-100 font-bold text-xs leading-tight truncate">
+                {ctaToast.text}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setCtaToast(null);
+                setCurrentPage('messages');
+              }}
+              className="bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all uppercase text-[10px] tracking-wider shrink-0 cursor-pointer"
+            >
+              Open Messages &rarr;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 2-3 Hour Post-Service Notification Reminder Banner */}
       {active6HourProvider && active6HourItem && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-lg px-3 animate-fade-in">

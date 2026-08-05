@@ -6,6 +6,8 @@ import SkillDetailModal from './SkillDetailModal';
 import OrgDetailModal from './OrgDetailModal';
 import SEOHead from './SEOHead';
 
+const DEFAULT_PROFILE_COVER = 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=800';
+
 interface ProfileViewProps {
   profileData: ServiceProvider;
   isOwner: boolean;
@@ -210,7 +212,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     const [editService, setEditService] = useState(profileData.service);
     const [editAbout, setEditAbout] = useState(profileData.about || '');
     const [editAvatarUrl, setEditAvatarUrl] = useState(profileData.avatarUrl);
-    const [editCoverImageUrl, setEditCoverImageUrl] = useState(profileData.coverImageUrl || '');
+    const [editCoverImageUrl, setEditCoverImageUrl] = useState(profileData.coverImageUrl || DEFAULT_PROFILE_COVER);
     const [editButtons, setEditButtons] = useState<('call' | 'book' | 'chat' | 'whatsapp' | 'catalogue' | 'location' | 'document')[]>(
         (profileData.selectedProfileButtons?.length ? profileData.selectedProfileButtons : ['call', 'book', 'chat']) as any
     );
@@ -267,7 +269,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         setIsUploadingImages(true);
         try {
             let finalAvatarUrl = profileData.avatarUrl;
-            let finalCoverImageUrl = profileData.coverImageUrl || '';
+            let finalCoverImageUrl = profileData.coverImageUrl || DEFAULT_PROFILE_COVER;
 
             // 1. Upload Avatar File/Data URL to Firebase Storage if changed
             if (avatarFile) {
@@ -532,7 +534,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 {/* Profile Header Cover Image & Actions */}
                 <div className="relative">
                     <div className="h-28 bg-gray-300 overflow-hidden relative group">
-                        <img src={isEditing ? editCoverImageUrl : (profileData.coverImageUrl || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=800')} alt="Cover" className="w-full h-full object-cover" />
+                        <img src={isEditing ? (editCoverImageUrl || DEFAULT_PROFILE_COVER) : (profileData.coverImageUrl || DEFAULT_PROFILE_COVER)} alt="Cover" className="w-full h-full object-cover" />
                         {isOwner && (
                             <button 
                                 type="button"
@@ -1190,7 +1192,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                 setEditService(profileData.service);
                                 setEditAbout(profileData.about || '');
                                 setEditAvatarUrl(profileData.avatarUrl);
-                                setEditCoverImageUrl(profileData.coverImageUrl || '');
+                                setEditCoverImageUrl(profileData.coverImageUrl || DEFAULT_PROFILE_COVER);
                                 setEditButtons((profileData.selectedProfileButtons?.length ? profileData.selectedProfileButtons : ['call', 'book', 'chat']) as any);
                                 setIsEditing(false);
                             }}

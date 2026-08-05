@@ -1,136 +1,295 @@
-
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider } from '../../types';
 
 interface UsersPageProps {
-    providers: ServiceProvider[];
-    onViewProvider: (provider: ServiceProvider) => void;
-    onUpdateProvider: (provider: ServiceProvider) => void;
-    onDeleteProvider: (id: string) => void;
+  providers: ServiceProvider[];
+  onViewProvider: (provider: ServiceProvider) => void;
+  onUpdateProvider: (provider: ServiceProvider) => void;
+  onDeleteProvider: (id: string) => void;
 }
 
-const UsersPage: React.FC<UsersPageProps> = ({ providers, onViewProvider, onUpdateProvider, onDeleteProvider }) => {
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [userFilter, setUserFilter] = useState<'All' | 'Verified' | 'Unverified' | 'Flagged'>('All');
+const UsersPage: React.FC<UsersPageProps> = ({
+  providers,
+  onViewProvider,
+  onUpdateProvider,
+  onDeleteProvider,
+}) => {
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState<'All' | 'Verified' | 'Unverified' | 'Flagged'>('All');
+  const [sortBy, setSortBy] = useState<'newest' | 'views' | 'rating' | 'name'>('views');
 
-    const filteredProviders = useMemo(() => {
-        return providers.filter(p => {
-            const matchesFilter = 
-                userFilter === 'All' || 
-                (userFilter === 'Verified' && p.isVerified) || 
-                (userFilter === 'Unverified' && !p.isVerified) ||
-                (userFilter === 'Flagged' && (p.flagCount || 0) > 0);
-            const matchesSearch = p.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || p.service.toLowerCase().includes(userSearchTerm.toLowerCase()) || p.phone.includes(userSearchTerm);
-            return matchesFilter && matchesSearch;
-        });
-    }, [providers, userSearchTerm, userFilter]);
+  const filteredProviders = useMemo(() => {
+    const result = providers.filter(p => {
+      const matchesFilter =
+        userFilter === 'All' ||
+        (userFilter === 'Verified' && p.isVerified) ||
+        (userFilter === 'Unverified' && !p.isVerified) ||
+        (userFilter === 'Flagged' && (p.flagCount || 0) > 0);
+      const matchesSearch =
+        p.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        p.service.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        p.phone.includes(userSearchTerm) ||
+        p.location.toLowerCase().includes(userSearchTerm.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
 
-    const handleRoleChange = (provider: ServiceProvider, newRole: string) => {
-        const updated = { ...provider, role: newRole as any };
-        onUpdateProvider(updated);
-    };
+    return result.sort((a, b) => {
+      if (sortBy === 'views') return (b.views || 0) - (a.views || 0);
+      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      return b.id.localeCompare(a.id); // newest
+    });
+  }, [providers, userSearchTerm, userFilter, sortBy]);
 
-    const toggleVerification = (provider: ServiceProvider) => {
-        onUpdateProvider({ ...provider, isVerified: !provider.isVerified });
-    };
+  const handleRoleChange = (provider: ServiceProvider, newRole: string) => {
+    const updated = { ...provider, role: newRole as any };
+    onUpdateProvider(updated);
+  };
 
-    const toggleFlag = (provider: ServiceProvider) => {
-        const currentFlags = provider.flagCount || 0;
-        onUpdateProvider({ ...provider, flagCount: currentFlags > 0 ? 0 : 1 });
-    };
+  const toggleVerification = (provider: ServiceProvider) => {
+    onUpdateProvider({ ...provider, isVerified: !provider.isVerified });
+  };
 
-    return (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold text-gray-800">Global Registry Control</h2>
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <input 
-                        type="text" 
-                        placeholder="Search by name, service or phone..." 
-                        value={userSearchTerm} 
-                        onChange={e => setUserSearchTerm(e.target.value)} 
-                        className="flex-grow p-3 border rounded-xl bg-gray-50 focus:bg-white transition-all text-sm outline-none focus:ring-2 focus:ring-brand-gold"
-                    />
-                    <select 
-                        value={userFilter} 
-                        onChange={e => setUserFilter(e.target.value as any)} 
-                        className="p-3 border rounded-xl bg-white text-sm font-bold text-gray-700 outline-none"
-                    >
-                        <option value="All">All Status</option>
-                        <option value="Verified">Verified Only</option>
-                        <option value="Unverified">Unverified Only</option>
-                        <option value="Flagged">Flagged Only</option>
-                    </select>
-                </div>
-            </div>
+  const toggleFlag = (provider: ServiceProvider) => {
+    const currentFlags = provider.flagCount || 0;
+    onUpdateProvider({ ...provider, flagCount: currentFlags > 0 ? 0 : 1 });
+  };
 
-            <div className="space-y-4">
-                {filteredProviders.map(p => (
-                    <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-brand-gold transition-all group">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <div className="relative">
-                                <img src={p.avatarUrl} className="w-14 h-14 rounded-2xl object-cover shadow-sm" alt={p.name} />
-                                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${p.isOnline ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                    <p className="font-black text-brand-navy truncate uppercase tracking-tight italic">{p.name}</p>
-                                    {p.isVerified && <span className="text-blue-500 text-sm">✓</span>}
-                                    {(p.flagCount || 0) > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded font-black uppercase">Flagged</span>}
-                                </div>
-                                <div className="flex items-center gap-3 mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                    <span>{p.service}</span>
-                                    <span>•</span>
-                                    <span>{p.phone}</span>
-                                </div>
-                                <div className="mt-2 flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-gray-300 uppercase">System Role:</span>
-                                    <select 
-                                        value={p.role || 'Member'} 
-                                        onChange={(e) => handleRoleChange(p, e.target.value)}
-                                        className="bg-white border border-gray-200 text-[9px] font-black uppercase px-2 py-1 rounded-md outline-none"
-                                    >
-                                        <option value="Member">Member</option>
-                                        <option value="Staff">Staff / Admin</option>
-                                        <option value="BuildingManager">Building Manager</option>
-                                        <option value="Gateman">Gateman</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+  const counts = useMemo(() => ({
+    all: providers.length,
+    verified: providers.filter(p => p.isVerified).length,
+    unverified: providers.filter(p => !p.isVerified).length,
+    flagged: providers.filter(p => (p.flagCount || 0) > 0).length,
+  }), [providers]);
 
-                        <div className="flex items-center gap-2 mt-4 sm:mt-0 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-200">
-                            <button 
-                                onClick={() => toggleVerification(p)} 
-                                className={`flex-1 sm:flex-none text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all border ${p.isVerified ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-white text-gray-400 border-gray-100 hover:bg-blue-50 hover:text-blue-600'}`}
-                            >
-                                {p.isVerified ? 'Verified' : 'Verify'}
-                            </button>
-                            <button 
-                                onClick={() => toggleFlag(p)} 
-                                className={`flex-1 sm:flex-none text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all border ${(p.flagCount || 0) > 0 ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-400 border-gray-100 hover:bg-red-50 hover:text-red-600'}`}
-                            >
-                                Flag
-                            </button>
-                            <button 
-                                onClick={() => {if(window.confirm(`Permanently remove ${p.name} from the registry?`)) onDeleteProvider(p.id)}} 
-                                className="p-2.5 bg-gray-100 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                        </div>
-                    </div>
-                ))}
-                {filteredProviders.length === 0 && (
-                    <div className="py-24 text-center opacity-30 flex flex-col items-center">
-                        <div className="p-12 bg-gray-50 rounded-full mb-6 ring-1 ring-black/5">🔍</div>
-                        <p className="font-black text-xs uppercase tracking-[0.3em]">Registry Empty</p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Try adjusting your filters</p>
-                    </div>
-                )}
-            </div>
+  return (
+    <div className="space-y-6 font-sans">
+      {/* Header & Quick Filter Pills */}
+      <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <span>👥 User & Service Provider Registry</span>
+              <span className="bg-slate-100 text-slate-800 text-xs px-2.5 py-0.5 rounded-full font-bold">{filteredProviders.length} Users</span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">Manage accounts, change system roles, issue verification badges & audit flags.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {(['All', 'Verified', 'Unverified', 'Flagged'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setUserFilter(f)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  userFilter === f
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {f} ({f === 'All' ? counts.all : f === 'Verified' ? counts.verified : f === 'Unverified' ? counts.unverified : counts.flagged})
+              </button>
+            ))}
+          </div>
         </div>
-    );
+
+        {/* Search & Sort Controls */}
+        <div className="flex flex-col md:flex-row gap-3 pt-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-3 text-slate-400">🔍</span>
+            <input
+              type="text"
+              placeholder="Search by name, service, location, or phone number..."
+              value={userSearchTerm}
+              onChange={e => setUserSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 focus:border-indigo-600 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-extrabold text-slate-500 uppercase shrink-0">Sort By:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="px-3 py-2.5 bg-slate-50 border-2 border-slate-200 focus:border-indigo-600 rounded-xl text-xs font-black text-slate-800 outline-none cursor-pointer"
+            >
+              <option value="views">Most Viewed</option>
+              <option value="newest">Newest First</option>
+              <option value="rating">Highest Rated</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Grid / Data Table */}
+      <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider">
+                <th className="py-3 px-4">User Details</th>
+                <th className="py-3 px-4">Service & Category</th>
+                <th className="py-3 px-4">Role</th>
+                <th className="py-3 px-4 text-center">Engagement</th>
+                <th className="py-3 px-4">Verification</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {filteredProviders.map(user => (
+                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                  {/* User Details */}
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs"
+                        />
+                        <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p
+                            onClick={() => onViewProvider(user)}
+                            className="font-black text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
+                          >
+                            {user.name}
+                          </p>
+                          {(user.flagCount || 0) > 0 && (
+                            <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">Flagged</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-mono mt-0.5">📞 {user.phone} • 📍 {user.location}</p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Service & Category */}
+                  <td className="py-3.5 px-4">
+                    <span className="font-extrabold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg text-xs">
+                      {user.service}
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{user.category || 'General Service'}</p>
+                  </td>
+
+                  {/* Role Selector */}
+                  <td className="py-3.5 px-4">
+                    <select
+                      value={user.role || 'Member'}
+                      onChange={e => handleRoleChange(user, e.target.value)}
+                      className="bg-slate-50 border border-slate-300 text-[11px] font-black uppercase text-slate-800 px-2.5 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-600 cursor-pointer"
+                    >
+                      <option value="Member">Member</option>
+                      <option value="Staff">Staff / Admin</option>
+                      <option value="BuildingManager">Building Manager</option>
+                      <option value="Gateman">Gateman</option>
+                    </select>
+                  </td>
+
+                  {/* Engagement (Views & Rating) */}
+                  <td className="py-3.5 px-4 text-center">
+                    <span className="font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                      👀 {user.views || 0}
+                    </span>
+                    <div className="text-[10px] font-extrabold text-amber-600 mt-0.5">
+                      ★ {user.rating || '5.0'}
+                    </div>
+                  </td>
+
+                  {/* Verification Status */}
+                  <td className="py-3.5 px-4">
+                    <button
+                      onClick={() => toggleVerification(user)}
+                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                        user.isVerified
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                      }`}
+                    >
+                      {user.isVerified ? '✓ Verified' : 'Unverified'}
+                    </button>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-3.5 px-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => onViewProvider(user)}
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onClick={() => toggleFlag(user)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                          (user.flagCount || 0) > 0
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600'
+                        }`}
+                      >
+                        {(user.flagCount || 0) > 0 ? 'Unflag' : 'Flag'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Permanently remove ${user.name} from the system registry?`)) {
+                            onDeleteProvider(user.id);
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete User"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Responsive Cards */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {filteredProviders.map(user => (
+            <div key={user.id} className="p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-slate-900 truncate">{user.name}</h4>
+                  <p className="text-xs text-slate-500">{user.service} • {user.phone}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                <span className="font-bold text-slate-600">👀 {user.views || 0} views</span>
+                <button
+                  onClick={() => toggleVerification(user)}
+                  className={`px-3 py-1 rounded-full font-bold text-[10px] ${
+                    user.isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {user.isVerified ? 'Verified' : 'Verify'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredProviders.length === 0 && (
+          <div className="py-20 text-center text-slate-400 space-y-2">
+            <div className="text-4xl">🔍</div>
+            <p className="font-bold text-sm text-slate-700">No users found matching your filter parameters.</p>
+            <p className="text-xs">Try clearing search terms or selecting 'All' status filter.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default UsersPage;
