@@ -197,6 +197,11 @@ export interface ServiceProvider {
   saccoMember?: SaccoMembership;
   isSaccoVerified?: boolean;
   isProfileCompleted?: boolean;
+  idVerificationStatus?: 'Unverified' | 'Pending' | 'Verified';
+  idType?: 'National ID' | 'Passport' | 'Alien Card' | 'Driving License';
+  idNumber?: string;
+  idDocumentUrl?: string;
+  selfieUrl?: string;
   saccoDetails?: {
     description?: string;
     location?: string;
@@ -289,16 +294,44 @@ export interface CatalogueItem {
 
 export interface SpecialBanner {
   id: string;
+  title?: string;
+  subtitle?: string;
   imageUrl: string;
   targetCategory?: string;
   targetLocation?: string;
+  targetAgeGroup?: '18-24' | '25-34' | '35-50' | '50+' | 'All';
   minRating?: number;
   targetService?: string;
   isOnlineTarget?: boolean;
   isVerifiedTarget?: boolean;
   targetReferralCode?: string;
+  actionUrl?: string;
+  badgeText?: string;
   startDate?: string;
   endDate?: string;
+  isGlobalHero?: boolean;
+  priority?: number;
+}
+
+export interface AppBrandingConfig {
+  appName: string;
+  tagline: string;
+  appIconUrl?: string;
+  faviconUrl?: string;
+  primaryColor?: string;
+  supportPhone?: string;
+  supportEmail?: string;
+}
+
+export interface AppFeatureConfig {
+  enableTimeline: boolean;
+  enableQaRibuGatePass: boolean;
+  enableGigs: boolean;
+  enableEvents: boolean;
+  enableSaccos: boolean;
+  enableAssetVerification: boolean;
+  enableCourses: boolean;
+  enableCatalogue: boolean;
 }
 
 export interface Gig {

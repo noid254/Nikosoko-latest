@@ -44,16 +44,36 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
     : ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-end z-50 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex justify-center items-end sm:items-center z-50 animate-fade-in p-0 sm:p-4" onClick={onClose}>
       <div 
-        className="bg-gray-50 rounded-t-3xl shadow-2xl w-full max-w-sm h-[95vh] flex flex-col animate-slide-in-up" 
+        className="bg-gray-50 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md h-[92vh] sm:h-[88vh] flex flex-col animate-slide-in-up overflow-hidden relative border border-gray-200" 
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 flex-shrink-0 text-center relative cursor-grab" onTouchStart={onClose}>
-            <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto"></div>
+        {/* STICKY TOP HEADER WITH BACK & CANCEL VIEW BUTTONS */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0 z-30 shadow-2xs">
+          <button 
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-xs font-black text-gray-900 bg-gray-100 hover:bg-black hover:text-white px-3 py-2 rounded-xl transition-all cursor-pointer active:scale-95"
+            title="Go Back"
+          >
+            <span className="text-sm">←</span>
+            <span>Back</span>
+          </button>
+          
+          <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
+            Product Description
+          </span>
+
+          <button 
+            onClick={onClose}
+            className="text-xs font-bold text-gray-600 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-3 py-2 rounded-xl transition-all cursor-pointer active:scale-95"
+            title="Cancel View"
+          >
+            Cancel View ✕
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
             {/* MAIN WORK PHOTO DISPLAY WITH BADGE */}
             <div className="relative w-full h-72 bg-gray-900 group">
                 <img 
@@ -67,9 +87,9 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                 />
                 
                 {/* PHOTO COUNTER BADGE */}
-                <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-white/20">
+                <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border border-white/20 shadow-md">
                     <span>📷</span>
-                    <span>Work Photo {activeImageIndex + 1} of {images.length}</span>
+                    <span>Photo {activeImageIndex + 1} of {images.length}</span>
                 </div>
 
                 {/* NAVIGATION ARROWS */}
@@ -77,13 +97,13 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                     <>
                         <button
                             onClick={() => setActiveImageIndex(prev => (prev > 0 ? prev - 1 : images.length - 1))}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center font-bold text-sm hover:bg-black transition cursor-pointer"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 text-white flex items-center justify-center font-bold text-base hover:bg-black transition cursor-pointer shadow-md"
                         >
                             ‹
                         </button>
                         <button
                             onClick={() => setActiveImageIndex(prev => (prev < images.length - 1 ? prev + 1 : 0))}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center font-bold text-sm hover:bg-black transition cursor-pointer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 text-white flex items-center justify-center font-bold text-base hover:bg-black transition cursor-pointer shadow-md"
                         >
                             ›
                         </button>
@@ -111,88 +131,162 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                         </button>
                     ))}
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-auto flex-shrink-0">
-                        Work Portfolio ({images.length}/6)
+                        Gallery ({images.length}/6)
                     </span>
                 </div>
             )}
 
-            <div className="p-5 space-y-4">
-              <p className="text-sm font-bold text-brand-gold uppercase tracking-wider">{item.category}</p>
-              <h1 className="text-3xl font-bold text-gray-900 leading-tight">{item.title}</h1>
-              <p className="text-3xl font-bold text-brand-navy">{item.price}</p>
+            {/* E-COMMERCE PRODUCT DESCRIPTION CONTENT */}
+            <div className="p-4 space-y-4">
+              {/* Category & Badge Row */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black text-brand-gold uppercase tracking-widest bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                  {item.category || 'Service Listing'}
+                </span>
 
-              {item.serialNumber && (
-                <p className="text-sm text-gray-500 font-mono">SN: {item.serialNumber}</p>
-              )}
+                {item.isVerified ? (
+                  <span className="bg-emerald-100 text-emerald-800 text-[9.5px] font-black px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-300">
+                    <span>✓</span> Verified Listing
+                  </span>
+                ) : (
+                  <span className="bg-yellow-100 text-yellow-800 text-[9.5px] font-black px-2.5 py-1 rounded-md border border-yellow-300">
+                    Neighborhood Verified
+                  </span>
+                )}
+              </div>
 
-              <div className={`p-3 rounded-lg text-sm ${item.isVerified ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-yellow-50 border border-yellow-200 text-yellow-800'}`}>
-                <p className="font-semibold">
+              {/* Title & Price PDP Banner */}
+              <div className="space-y-1">
+                <h1 className="text-xl font-extrabold text-gray-900 leading-snug">{item.title}</h1>
+                <div className="flex items-baseline gap-2 pt-1">
+                  <span className="text-2xl font-black text-brand-navy font-mono">{item.price}</span>
+                  {item.discountInfo && (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {item.discountInfo}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Product Spec Highlights Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {item.duration && (
+                  <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+                      <ClockIcon />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase">Turnaround / Duration</p>
+                      <p className="font-extrabold text-gray-900 text-[11px]">{item.duration}</p>
+                    </div>
+                  </div>
+                )}
+
+                {item.serialNumber && (
+                  <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
+                    <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg shrink-0 text-xs font-mono font-bold">
+                      #
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase">Serial Ref</p>
+                      <p className="font-mono text-gray-900 text-[11px] font-bold">{item.serialNumber}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0 text-xs font-bold">
+                    🛡️
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Buyer Guarantee</p>
+                    <p className="font-extrabold text-gray-900 text-[11px]">NikoSoko Protected</p>
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
+                  <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg shrink-0 text-xs font-bold">
+                    ⚡
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Availability</p>
+                    <p className="font-extrabold text-gray-900 text-[11px]">In Stock / Direct Hire</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Verification Banner */}
+              <div className={`p-3 rounded-xl text-xs ${item.isVerified ? 'bg-emerald-50/90 border border-emerald-200 text-emerald-900' : 'bg-amber-50/90 border border-amber-200 text-amber-900'}`}>
+                <p className="font-bold flex items-center gap-1.5">
+                  <span>{item.isVerified ? '✓' : 'ℹ️'}</span>
+                  <span>
                     {item.isVerified
-                        ? "Verified Service Listing: Professional credentials & service verified."
-                        : "Unverified Service Listing: Contact service provider directly to confirm credentials."
+                        ? "Verified Service Listing: Provider credentials & work history verified."
+                        : "Neighborhood Listing: Contact provider directly to confirm appointment & scope."
                     }
+                  </span>
                 </p>
               </div>
-              
-              {item.duration && (
-                <div className="flex items-center gap-2 text-gray-600">
-                    <ClockIcon />
-                    <p className="text-sm font-semibold">{item.duration}</p>
-                </div>
-              )}
-              
-              {item.discountInfo && (
-                <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
-                  <p className="font-bold text-green-800">{item.discountInfo}</p>
-                </div>
-              )}
 
+              {/* Seller / Provider Card */}
               {provider && (
-                  <div className="pt-4 border-t border-gray-200">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Listed By</p>
-                      <div className="flex items-center justify-between bg-gray-100 p-3 rounded-xl border border-gray-200">
-                          <div className="flex items-center gap-2">
-                              <img src={provider.avatarUrl} alt={provider.name} className="w-9 h-9 rounded-full object-cover border border-white" />
+                  <div className="pt-2">
+                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1.5">Sold & Fulfilled By</p>
+                      <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                          <div className="flex items-center gap-2.5">
+                              <img src={provider.avatarUrl} alt={provider.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
                               <div>
-                                  <p className="text-sm font-bold text-black flex items-center gap-1">
+                                  <p className="text-xs font-black text-black flex items-center gap-1">
                                       <span>{provider.name}</span>
                                       {(provider.isVerified || item.isVerified) && (
                                           <svg className="w-4 h-4 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                                           </svg>
                                       )}
-                                      <span className="text-gray-600 font-mono text-xs font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                      <span className="text-gray-700 font-mono text-xs font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
                                   </p>
-                                  <p className="text-xs text-gray-500">{provider.service} • {provider.location}</p>
+                                  <p className="text-[10.5px] text-gray-500 font-medium">{provider.service} • {provider.location}</p>
                               </div>
                           </div>
                       </div>
                   </div>
               )}
 
-              <div className="pt-4 border-t border-gray-200">
-                  <h2 className="text-md font-semibold text-gray-800 mb-2">Description</h2>
-                  <p className="text-sm text-gray-700 leading-relaxed">{item.description}</p>
+              {/* Detailed Description */}
+              <div className="pt-3 border-t border-gray-200 space-y-1.5">
+                  <h2 className="text-xs font-black uppercase text-gray-500 tracking-wider">Product / Service Overview</h2>
+                  <p className="text-xs text-gray-800 leading-relaxed bg-white p-3.5 rounded-xl border border-gray-200 whitespace-pre-line font-medium">
+                    {item.description}
+                  </p>
               </div>
 
               {item.externalLink && (
-                    <div className="pt-4">
-                        <a href={item.externalLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-green-600 text-white font-bold py-3 px-4 rounded-xl text-center transition-colors hover:bg-green-700 active-scale">
-                            Visit Course Page
-                        </a>
-                    </div>
-                )}
+                  <div className="pt-2">
+                      <a href={item.externalLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-emerald-600 text-white font-extrabold py-3 px-4 rounded-xl text-center text-xs uppercase tracking-wider transition-colors hover:bg-emerald-700 active-scale shadow-md">
+                          Visit External Resource / Course Page &rarr;
+                      </a>
+                  </div>
+              )}
             </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex items-center gap-3">
+        {/* E-COMMERCE STICKY BOTTOM BAR WITH CALL / WHATSAPP / CANCEL VIEW */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] flex items-center gap-2 z-30">
+          <button 
+            onClick={onClose} 
+            className="py-3.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer active:scale-95 shrink-0"
+            title="Cancel View and close"
+          >
+            Cancel View
+          </button>
+          
           {provider?.phone && (
-              <button onClick={handleCall} className="flex-1 bg-gray-200 text-gray-800 font-bold py-4 px-4 rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center gap-2 active-scale">
+              <button onClick={handleCall} className="flex-1 bg-gray-900 text-white font-black py-3.5 px-3 rounded-xl hover:bg-black transition-colors flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider active-scale cursor-pointer shadow-md">
                   <CallIcon /> Call
               </button>
           )}
           {provider?.whatsapp && (
-              <button onClick={handleWhatsApp} className="flex-1 bg-brand-navy text-white font-bold py-4 px-4 rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-2 active-scale">
+              <button onClick={handleWhatsApp} className="flex-1 bg-brand-navy text-white font-black py-3.5 px-3 rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider active-scale cursor-pointer shadow-md">
                   <WhatsAppIcon /> WhatsApp
               </button>
           )}

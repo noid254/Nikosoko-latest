@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import * as api from './services/api';
 import { 
   ServiceProvider, CatalogueItem, Document, QaRibuRequest, SpecialBanner, 
-  InboxMessage, Gig, Premise, UnitDetails, SetupData, CurrentPage, OrderData, BusinessAssets, UnitKey, RatingDispute
+  InboxMessage, Gig, Premise, UnitDetails, SetupData, CurrentPage, OrderData, BusinessAssets, UnitKey, RatingDispute,
+  AppBrandingConfig, AppFeatureConfig
 } from './types';
 
 import AuthModal from './components/AuthModal';
@@ -140,7 +141,62 @@ function App() {
   const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [qaribuRequests, setQaRibuRequests] = useState<QaRibuRequest[]>([]);
-  const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>([]);
+  const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_special_banners');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_branding_config');
+      return saved ? JSON.parse(saved) : {
+        appName: 'NikoSoko',
+        tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
+        primaryColor: '#F59E0B',
+        supportPhone: '+254 723 119 356',
+        supportEmail: 'support@nikosoko.com'
+      };
+    } catch {
+      return {
+        appName: 'NikoSoko',
+        tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
+        primaryColor: '#F59E0B',
+        supportPhone: '+254 723 119 356',
+        supportEmail: 'support@nikosoko.com'
+      };
+    }
+  });
+
+  const [featureConfig, setFeatureConfig] = useState<AppFeatureConfig>(() => {
+    try {
+      const saved = localStorage.getItem('nikosoko_feature_config');
+      return saved ? JSON.parse(saved) : {
+        enableTimeline: true,
+        enableQaRibuGatePass: true,
+        enableGigs: true,
+        enableEvents: true,
+        enableSaccos: true,
+        enableAssetVerification: true,
+        enableCourses: true,
+        enableCatalogue: true
+      };
+    } catch {
+      return {
+        enableTimeline: true,
+        enableQaRibuGatePass: true,
+        enableGigs: true,
+        enableEvents: true,
+        enableSaccos: true,
+        enableAssetVerification: true,
+        enableCourses: true,
+        enableCatalogue: true
+      };
+    }
+  });
   const [premises, setPremises] = useState<Premise[]>([]);
 
   const [viewingProvider, setViewingProvider] = useState<ServiceProvider | null>(() => {
@@ -678,6 +734,52 @@ function App() {
       setCatalogueItems(prev => prev.filter(item => item.id !== itemId));
   };
 
+  const handleAddBannerAdmin = (newBannerData: Omit<SpecialBanner, 'id'>) => {
+    const banner: SpecialBanner = {
+      ...newBannerData,
+      id: `banner_${Date.now()}`
+    };
+    setSpecialBanners(prev => {
+      const updated = [banner, ...prev];
+      try {
+        localStorage.setItem('nikosoko_special_banners', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handleDeleteBannerAdmin = (bannerId: string) => {
+    setSpecialBanners(prev => {
+      const updated = prev.filter(b => b.id !== bannerId);
+      try {
+        localStorage.setItem('nikosoko_special_banners', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveBrandingAdmin = (config: AppBrandingConfig) => {
+    setBrandingConfig(config);
+    try {
+      localStorage.setItem('nikosoko_branding_config', JSON.stringify(config));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveFeatureAdmin = (config: AppFeatureConfig) => {
+    setFeatureConfig(config);
+    try {
+      localStorage.setItem('nikosoko_feature_config', JSON.stringify(config));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const recordContact = (providerId: string) => {
       setContactHistory(prev => {
           const existing = prev.find(c => c.providerId === providerId);
@@ -814,6 +916,7 @@ function App() {
           <NikoSoko 
             providers={providers} 
             catalogueItems={catalogueItems}
+            specialBanners={specialBanners}
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
             searchTerm={""} 
             setSearchTerm={() => {}} 
@@ -971,13 +1074,13 @@ function App() {
           onUpdateProvider={handleUpdateProviderAdmin} 
           onDeleteProvider={handleDeleteProviderAdmin} 
           onViewProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
-          categories={[]} 
+          categories={Array.from(new Set(providers.map(p => p.category))).filter(Boolean)} 
           onAddCategory={() => {}} 
           onDeleteCategory={() => {}} 
           onBroadcast={() => {}} 
-          specialBanners={[]} 
-          onAddBanner={() => {}} 
-          onDeleteBanner={() => {}} 
+          specialBanners={specialBanners} 
+          onAddBanner={handleAddBannerAdmin} 
+          onDeleteBanner={handleDeleteBannerAdmin} 
           onCreateOrganization={() => {}} 
           onApproveRequest={() => {}} 
           onRejectRequest={() => {}} 
@@ -986,6 +1089,10 @@ function App() {
           catalogueItems={catalogueItems}
           onVerifyCatalogueItem={handleVerifyCatalogueItem}
           onDeleteCatalogueItem={handleDeleteCatalogueItem}
+          brandingConfig={brandingConfig}
+          onSaveBrandingConfig={handleSaveBrandingAdmin}
+          featureConfig={featureConfig}
+          onSaveFeatureConfig={handleSaveFeatureAdmin}
         />;
       default:
         return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;

@@ -531,6 +531,27 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
             {/* Main Scrollable Profile Container */}
             <div className="flex-1 overflow-y-auto no-scrollbar relative">
+                {/* STICKY E-COMMERCE TOP BAR WITH BACK & CANCEL VIEW */}
+                <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-3 py-2 flex items-center justify-between shadow-2xs">
+                    <button 
+                        onClick={onBack} 
+                        className="flex items-center gap-1.5 text-xs font-black text-gray-900 bg-gray-100 hover:bg-black hover:text-white px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+                        title="Back to Service Listings"
+                    >
+                        <span className="text-sm font-bold">←</span>
+                        <span>Back to Services</span>
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button 
+                            onClick={onBack}
+                            className="text-[10.5px] font-bold text-gray-600 hover:text-red-600 bg-gray-50 hover:bg-red-50 border border-gray-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95"
+                            title="Cancel View"
+                        >
+                            Cancel View ✕
+                        </button>
+                    </div>
+                </div>
+
                 {/* Profile Header Cover Image & Actions */}
                 <div className="relative">
                     <div className="h-28 bg-gray-300 overflow-hidden relative group">
@@ -853,6 +874,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                         </div>
                     ) : (
                         <div className="flex items-center gap-2">
+                            <button
+                                onClick={onBack}
+                                className="py-3 px-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold transition flex items-center justify-center gap-1 text-[9.5px] uppercase tracking-wider active:scale-95 cursor-pointer shrink-0 border border-gray-200"
+                                title="Cancel View & Return to Services"
+                            >
+                                <span>← Cancel View</span>
+                            </button>
                             {activeButtons.map(btnKey => {
                                 const config = ctaConfig[btnKey];
                                 if (!config) return null;

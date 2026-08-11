@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { ServiceProvider, SpecialBanner, Premise, CatalogueItem } from '../types';
+import type { ServiceProvider, SpecialBanner, Premise, CatalogueItem, AppBrandingConfig, AppFeatureConfig } from '../types';
 
 import DashboardPage from './admin/DashboardPage';
 import UsersPage from './admin/UsersPage';
@@ -35,6 +35,10 @@ interface SuperAdminDashboardProps {
     catalogueItems?: CatalogueItem[];
     onVerifyCatalogueItem?: (itemId: string, isVerified: boolean) => void;
     onDeleteCatalogueItem?: (itemId: string) => void;
+    brandingConfig?: AppBrandingConfig;
+    onSaveBrandingConfig?: (config: AppBrandingConfig) => void;
+    featureConfig?: AppFeatureConfig;
+    onSaveFeatureConfig?: (config: AppFeatureConfig) => void;
 }
 
 export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Properties' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories';
@@ -97,6 +101,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                     specialBanners={props.specialBanners}
                     onAddBanner={props.onAddBanner}
                     onDeleteBanner={props.onDeleteBanner}
+                    brandingConfig={props.brandingConfig}
+                    onSaveBrandingConfig={props.onSaveBrandingConfig}
+                    featureConfig={props.featureConfig}
+                    onSaveFeatureConfig={props.onSaveFeatureConfig}
                 />;
             case 'Broadcast':
                 return <BroadcastPage 

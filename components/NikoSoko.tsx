@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner } from '../types';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -31,6 +31,7 @@ const StarIcon = () => (
 interface NikoSokoProps {
     providers: ServiceProvider[];
     catalogueItems?: CatalogueItem[];
+    specialBanners?: SpecialBanner[];
     onSelectProvider: (p: ServiceProvider) => void;
     searchTerm: string;
     setSearchTerm: (t: string) => void;
@@ -71,7 +72,7 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, catalogueItems = [], onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
+    providers, catalogueItems = [], specialBanners = [], onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
     hasNewMessages, onNavigate, currentUser, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
     const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
@@ -245,6 +246,58 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* HERO BANNERS CAROUSEL (IF ANY BANNERS CONFIGURED BY ADMIN) */}
+            {specialBanners && specialBanners.length > 0 && (
+                <div className="px-3 pt-2">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
+                        {specialBanners.map((banner, i) => (
+                            <div 
+                                key={banner.id || i}
+                                onClick={() => {
+                                    if (banner.actionUrl) {
+                                        if (banner.actionUrl.startsWith('http')) {
+                                            window.open(banner.actionUrl, '_blank');
+                                        } else {
+                                            onNavigate(banner.actionUrl.replace('/', '') as CurrentPage);
+                                        }
+                                    }
+                                }}
+                                className="relative flex-shrink-0 w-full snap-center rounded-xl overflow-hidden border border-black shadow-xs bg-slate-900 aspect-21/9 flex items-end p-3 cursor-pointer group hover:opacity-95 transition-all"
+                            >
+                                <img src={banner.imageUrl} alt={banner.title || 'Special Promotion'} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                                
+                                {banner.badgeText && (
+                                    <span className="absolute top-2 left-2 bg-amber-400 text-slate-950 font-black text-[8px] px-2 py-0.5 rounded uppercase tracking-wider shadow-xs">
+                                        {banner.badgeText}
+                                    </span>
+                                )}
+
+                                <div className="relative z-10 text-white w-full flex items-end justify-between gap-2">
+                                    <div>
+                                        {banner.title && (
+                                            <h4 className="font-extrabold text-xs leading-tight drop-shadow-md">
+                                                {banner.title}
+                                            </h4>
+                                        )}
+                                        {banner.subtitle && (
+                                            <p className="text-[9.5px] text-slate-200 line-clamp-1 drop-shadow-xs">
+                                                {banner.subtitle}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {banner.actionUrl && (
+                                        <span className="bg-white text-black hover:bg-amber-400 font-extrabold text-[9px] px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0 shadow-xs">
+                                            Explore &rarr;
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">
