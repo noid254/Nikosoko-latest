@@ -385,8 +385,8 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
                       No matching unassigned providers found.
                     </div>
                   ) : (
-                    nonMembers.map(prov => (
-                      <div key={prov.id} className="p-2 flex items-center justify-between hover:bg-white rounded-xl transition-all">
+                    nonMembers.map((prov, idx) => (
+                      <div key={prov.id ? `sacco_prov_${prov.id}_${idx}` : `sacco_prov_${idx}`} className="p-2 flex items-center justify-between hover:bg-white rounded-xl transition-all">
                         <div className="flex items-center gap-2 min-w-0">
                           <img src={prov.avatarUrl} className="w-8 h-8 rounded-full object-cover border" alt="" />
                           <div className="min-w-0">
@@ -415,8 +415,8 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
                 </h3>
                 
                 <div className="space-y-2">
-                  {pendingRequests.map((req: any) => (
-                    <div key={req.id} className="bg-white p-3 rounded-2xl border border-amber-200 flex items-center justify-between gap-2 shadow-xs">
+                  {pendingRequests.map((req: any, idx: number) => (
+                    <div key={req.id ? `sacco_req_${req.id}_${idx}` : `sacco_req_${idx}`} className="bg-white p-3 rounded-2xl border border-amber-200 flex items-center justify-between gap-2 shadow-xs">
                       <div>
                         <h4 className="font-black text-xs text-gray-900">{req.userName}</h4>
                         <p className="text-[10px] text-gray-500 font-medium">Phone: {req.userPhone || 'Registered'}</p>

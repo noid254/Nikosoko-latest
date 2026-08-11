@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import type { UnitKey, ServiceProvider, Premise, CatalogueItem, UnitDetails } from '../types';
-import RestaurantMenuModal from './RestaurantMenuModal';
 
 interface DoorProfileProps {
     unit: UnitKey;
@@ -70,12 +69,6 @@ const DoorProfile: React.FC<DoorProfileProps> = ({ unit, premise, tenant, onBack
 
     return (
         <div className="w-full max-w-sm mx-auto bg-gray-50 h-screen flex flex-col overflow-hidden font-sans relative">
-            {showMenu && tenant && (
-                <RestaurantMenuModal 
-                    provider={tenant} 
-                    onClose={() => setShowMenu(false)} 
-                />
-            )}
 
             {/* Header / Banner */}
             <div className="relative flex-shrink-0">

@@ -154,7 +154,7 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
         {/* Compact Phonebook Contact List */}
         {filteredContacts.length > 0 ? (
           <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
-            {filteredContacts.map(({ provider, label }) => {
+            {filteredContacts.map(({ provider, label }, idx) => {
               const isEditing = editingProviderId === provider.id;
               const serviceName = (provider.service || provider.category || 'Skill Expert').toLowerCase();
               const ratingVal = provider.rating || 4.7;
@@ -163,7 +163,7 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
 
               return (
                 <div 
-                  key={provider.id} 
+                  key={provider.id ? `contact_${provider.id}_${idx}` : `contact_${idx}`} 
                   className="p-2.5 hover:bg-neutral-50/80 transition-colors space-y-1.5"
                 >
                   <div className="flex items-center justify-between gap-2.5">

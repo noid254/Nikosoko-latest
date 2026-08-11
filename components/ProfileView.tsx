@@ -1042,7 +1042,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                                             </div>
                                             {sk.hourlyRate > 0 && (
                                                 <div className="text-right flex-shrink-0">
-                                                    <span className="text-xs font-black text-black block">{sk.currency || 'KES'} {sk.hourlyRate.toLocaleString()}</span>
+                                                    <span className="text-xs font-black text-black block">{sk.currency || 'KES'} {(sk.hourlyRate || 0).toLocaleString()}</span>
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase">Per {sk.rateType || 'hour'}</span>
                                                 </div>
                                             )}

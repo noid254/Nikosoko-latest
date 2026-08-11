@@ -200,13 +200,13 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({
         )}
 
         {/* Inbox items */}
-        {messages.map(msg => {
+        {messages.map((msg, idx) => {
           const isUser = msg.sender === 'user';
           const isCtaTap = msg.type === 'cta_tap';
           const isRatingReminder = msg.type === 'rating_reminder';
 
           return (
-            <div key={msg.id} className={`flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div key={msg.id ? `msg_${msg.id}_${idx}` : `msg_${idx}`} className={`flex items-end gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
               <div
                 className={`max-w-[90%] p-4 rounded-2xl transition-all shadow-sm ${
                   isUser

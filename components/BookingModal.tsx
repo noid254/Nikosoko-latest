@@ -101,7 +101,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ provider, onClose, o
 
             // 2. Save Booking to local messages DB
             const newMsg: InboxMessage = {
-                id: Date.now(),
+                id: Date.now() * 1000 + Math.floor(Math.random() * 1000),
                 sender: 'user',
                 text: `Confirmed Booking with ${provider.name} (${provider.service}) for ${date} at ${time}. Event synced to Google Calendar (${googleUser.email}). Notes: ${notes || 'None'}`,
                 timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

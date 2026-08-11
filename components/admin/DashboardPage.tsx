@@ -143,7 +143,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-wider text-slate-500">Total Profile Views</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{totalViewsCount.toLocaleString()}</h3>
+              <h3 className="text-3xl font-black text-slate-900 mt-1">{(totalViewsCount || 0).toLocaleString()}</h3>
             </div>
             <div className="p-3 bg-blue-50 text-blue-700 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <EyeIcon />

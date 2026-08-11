@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { ServiceProvider, SpecialBanner, Premise, CatalogueItem, AppBrandingConfig, AppFeatureConfig } from '../types';
+import type { ServiceProvider, SpecialBanner, CatalogueItem, AppBrandingConfig, AppFeatureConfig } from '../types';
 
 import DashboardPage from './admin/DashboardPage';
 import UsersPage from './admin/UsersPage';
@@ -9,7 +9,6 @@ import AppearancePage from './admin/AppearancePage';
 import BroadcastPage from './admin/BroadcastPage';
 import CategoriesPage from './admin/CategoriesPage';
 import OrganizationsPage from './admin/OrganizationsPage';
-import PropertiesPage from './admin/PropertiesPage';
 
 import CatalogueAdminPage from './admin/CatalogueAdminPage';
 
@@ -30,8 +29,6 @@ interface SuperAdminDashboardProps {
     onCreateOrganization: (orgData: any) => void;
     onApproveRequest: (orgId: string, userId: string) => void;
     onRejectRequest: (orgId: string, userId: string) => void;
-    premises: Premise[];
-    onUpdatePremise: (premise: Premise) => void;
     catalogueItems?: CatalogueItem[];
     onVerifyCatalogueItem?: (itemId: string, isVerified: boolean) => void;
     onDeleteCatalogueItem?: (itemId: string) => void;
@@ -41,7 +38,7 @@ interface SuperAdminDashboardProps {
     onSaveFeatureConfig?: (config: AppFeatureConfig) => void;
 }
 
-export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Properties' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories';
+export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories';
 
 // Icons
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
@@ -90,11 +87,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                     onApproveRequest={props.onApproveRequest}
                     onRejectRequest={props.onRejectRequest}
                 />;
-            case 'Properties':
-                return <PropertiesPage 
-                    premises={props.premises}
-                    onUpdatePremise={props.onUpdatePremise}
-                />;
             case 'Appearance':
                 return <AppearancePage 
                     categories={props.categories}
@@ -127,7 +119,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
         { page: 'Users', icon: <UsersIcon/> },
         { page: 'Catalogue', icon: <TagIcon/> },
         { page: 'Organizations', icon: <OrgIcon/> },
-        { page: 'Properties', icon: <BuildingIcon/> },
         { page: 'Analytics', icon: <ChartIcon/> },
         { page: 'Appearance', icon: <PaintIcon/> },
         { page: 'Broadcast', icon: <MegaphoneIcon/> },

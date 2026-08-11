@@ -239,7 +239,7 @@ export interface QaRibuRequest {
   isDigitalKey?: boolean;
 }
 
-export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'invoices' | 'invoiceGenerator' | 'quoteGenerator' | 'receiptGenerator' | 'brandKit' | 'myDocuments' | 'scanDocument' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'settings' | 'admin' | 'gigs' | 'createGig' | 'addService' | 'messages' | 'assetRegistry' | 'registerAsset' | 'ownershipCheck' | 'documentDetail' | 'createPost' | 'createProductPost' | 'mytoolkit' | 'workshopSetup' | 'login' | 'qrScan' | 'premiseLanding' | 'manage_order' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
+export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'settings' | 'admin' | 'addService' | 'messages' | 'createPost' | 'mytoolkit' | 'login' | 'qrScan' | 'premiseLanding' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
 
 export interface BusinessAssets {
   name: string;

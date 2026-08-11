@@ -122,7 +122,7 @@ export const PendingRatingsView: React.FC<PendingRatingsViewProps> = ({
               const isSelected = provider.id === selectedProvider?.id;
               return (
                 <button
-                  key={provider.id}
+                  key={provider.id ? `pending_${provider.id}_${index}` : `pending_${index}`}
                   type="button"
                   onClick={() => {
                     setSelectedProviderId(provider.id);

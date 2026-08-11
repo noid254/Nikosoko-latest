@@ -1256,7 +1256,7 @@ export const OrgDetailModal: React.FC<OrgDetailModalProps> = ({
                     <span className="text-lg">🎓</span>
                     <div>
                       <span className="text-[9px] font-mono text-neutral-400 uppercase block">Verified Graduates</span>
-                      <span className="text-xs font-bold text-emerald-400">{profile.verifiedGraduatesCount.toLocaleString()}+ Members</span>
+                      <span className="text-xs font-bold text-emerald-400">{(profile.verifiedGraduatesCount || 0).toLocaleString()}+ Members</span>
                     </div>
                   </div>
                 </div>

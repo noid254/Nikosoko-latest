@@ -2,33 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import * as api from './services/api';
 import { 
-  ServiceProvider, CatalogueItem, Document, QaRibuRequest, SpecialBanner, 
-  InboxMessage, Gig, Premise, UnitDetails, SetupData, CurrentPage, OrderData, BusinessAssets, UnitKey, RatingDispute,
+  ServiceProvider, CatalogueItem, Document, SpecialBanner, 
+  InboxMessage, UnitDetails, SetupData, CurrentPage, OrderData, UnitKey, RatingDispute,
   AppBrandingConfig, AppFeatureConfig
 } from './types';
 
 import AuthModal from './components/AuthModal';
 import SideMenu from './components/SideMenu';
-// Fix: Standardized to NikoSoko.tsx (uppercase 'S') to match component naming and resolve casing conflict.
 import NikoSoko from './components/NikoSoko';
 import ServiceMarketplace from './components/ServiceMarketplace';
 import JourneyPage from './components/JourneyPage';
-import MyDocumentsView from './components/MyDocumentsView';
-import ScanDocumentView from './components/ScanDocumentView';
 import Tukosoko from './components/Tukosoko';
 import PendingRatingsView from './components/PendingRatingsView';
 import MyContactsView, { SavedContactItem } from './components/MyContactsView';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
-import GigsPage from './components/GigsPage';
 import CreatePostView from './components/CreatePostView';
-import CreateProductPostView from './components/CreateProductPostView';
 import AddServiceCardView from './components/AddServiceCardView';
 import MessageCenterView from './components/MessageCenterView';
-import AssetRegistryView from './components/AssetRegistryView';
 import RegisterAssetView from './components/RegisterAssetView';
 import OwnershipCheckView from './components/OwnershipCheckView';
-import DocumentDetailView from './components/DocumentDetailView';
-import WorkshopSetup from './components/WorkshopSetup';
 import QRScannerView from './components/QRScannerView';
 import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
@@ -75,23 +67,9 @@ function App() {
   const [authModalMode, setAuthModalMode] = useState<'nickname' | 'complete_signup'>('nickname');
   const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const handleOpenCompleteSignUp = () => {
-    setAuthModalMode('complete_signup');
-    setIsAuthModalOpen(true);
-  };
-
-  const handleOpenLogin = () => {
-    setAuthModalMode('nickname');
-    setIsAuthModalOpen(true);
-  };
-  
-  const [isGatemanOnShift, setIsGatemanOnShift] = useState(localStorage.getItem('gateman_on_shift') === 'true');
-  
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isForcedReview, setIsForcedReview] = useState(false);
-
   const [contactHistory, setContactHistory] = useState<{ providerId: string; contactedAt: number; postponeCount: number }[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_contact_history_v2');
@@ -106,9 +84,6 @@ function App() {
       return [];
     }
   });
-
-  const contactedProviderIds = contactHistory.map(c => c.providerId);
-
   const [ratedProviderIds, setRatedProviderIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_rated_provider_ids');
@@ -122,7 +97,6 @@ function App() {
       return [];
     }
   });
-
   const [dismissedProviderIds, setDismissedProviderIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_dismissed_provider_ids');
@@ -131,16 +105,13 @@ function App() {
       return [];
     }
   });
-
   const [reviewModalSubtitle, setReviewModalSubtitle] = useState<string>('');
   const [reviewPostponeCount, setReviewPostponeCount] = useState<number>(0);
   const [pendingCtaAction, setPendingCtaAction] = useState<(() => void) | null>(null);
   const [simulated6HOverdueId, setSimulated6HOverdueId] = useState<string | null>(null);
-
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [qaribuRequests, setQaRibuRequests] = useState<QaRibuRequest[]>([]);
   const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_special_banners');
@@ -149,13 +120,12 @@ function App() {
       return [];
     }
   });
-
   const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_branding_config');
       return saved ? JSON.parse(saved) : {
         appName: 'NikoSoko',
-        tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
+        tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
         primaryColor: '#F59E0B',
         supportPhone: '+254 723 119 356',
         supportEmail: 'support@nikosoko.com'
@@ -163,20 +133,19 @@ function App() {
     } catch {
       return {
         appName: 'NikoSoko',
-        tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
+        tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
         primaryColor: '#F59E0B',
         supportPhone: '+254 723 119 356',
         supportEmail: 'support@nikosoko.com'
       };
     }
   });
-
   const [featureConfig, setFeatureConfig] = useState<AppFeatureConfig>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_feature_config');
       return saved ? JSON.parse(saved) : {
         enableTimeline: true,
-        enableQaRibuGatePass: true,
+        enableQaRibuGatePass: false,
         enableGigs: true,
         enableEvents: true,
         enableSaccos: true,
@@ -187,7 +156,7 @@ function App() {
     } catch {
       return {
         enableTimeline: true,
-        enableQaRibuGatePass: true,
+        enableQaRibuGatePass: false,
         enableGigs: true,
         enableEvents: true,
         enableSaccos: true,
@@ -197,8 +166,6 @@ function App() {
       };
     }
   });
-  const [premises, setPremises] = useState<Premise[]>([]);
-
   const [viewingProvider, setViewingProvider] = useState<ServiceProvider | null>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_viewing_provider');
@@ -223,27 +190,9 @@ function App() {
       return null;
     }
   });
-  const [selectedPremise, setSelectedPremise] = useState<Premise | null>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_selected_premise');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [selectedUnit, setSelectedUnit] = useState<UnitKey | null>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_selected_unit');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
   const [selectedTools, setSelectedTools] = useState<CurrentPage[]>(['home', 'journey', 'admin']);
-  const [businessAssets, setBusinessAssets] = useState<BusinessAssets | null>(null);
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
   const [isSEOMapOpen, setIsSEOMapOpen] = useState(false);
-
   const [savedContactsMap, setSavedContactsMap] = useState<Record<string, SavedContactItem>>(() => {
     try {
       const local = localStorage.getItem('nikosoko_saved_contacts_v2');
@@ -253,6 +202,21 @@ function App() {
     }
     return {};
   });
+  const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
+  const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
+  const [ctaToast, setCtaToast] = useState<{ show: boolean; text: string; providerId?: string } | null>(null);
+
+  const contactedProviderIds = contactHistory.map(c => c.providerId);
+
+  const handleOpenCompleteSignUp = () => {
+    setAuthModalMode('complete_signup');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleOpenLogin = () => {
+    setAuthModalMode('nickname');
+    setIsAuthModalOpen(true);
+  };
 
   const handleToggleSaveContact = (providerId: string, customLabel?: string) => {
     setSavedContactsMap(prev => {
@@ -349,26 +313,6 @@ function App() {
   }, [selectedDocument]);
 
   useEffect(() => {
-    try {
-      if (selectedPremise) {
-        localStorage.setItem('nikosoko_selected_premise', JSON.stringify(selectedPremise));
-      } else {
-        localStorage.removeItem('nikosoko_selected_premise');
-      }
-    } catch (e) { console.error(e); }
-  }, [selectedPremise]);
-
-  useEffect(() => {
-    try {
-      if (selectedUnit) {
-        localStorage.setItem('nikosoko_selected_unit', JSON.stringify(selectedUnit));
-      } else {
-        localStorage.removeItem('nikosoko_selected_unit');
-      }
-    } catch (e) { console.error(e); }
-  }, [selectedUnit]);
-
-  useEffect(() => {
     let isMounted = true;
 
     // Safety fallback: Ensure splash screen unmounts within 2 seconds max
@@ -381,8 +325,6 @@ function App() {
     const loadData = async () => {
       try {
         let token = api.getToken();
-        const savedAssets = localStorage.getItem('nikosoko_business_assets');
-        if (savedAssets && isMounted) setBusinessAssets(JSON.parse(savedAssets));
 
         if (token) {
             const user = await api.getMyProfile().catch(() => null);
@@ -390,26 +332,19 @@ function App() {
               setCurrentUser(user);
               setIsAuthenticated(true);
               if (user.phone === '254723119356' || user.phone === '0723119356') setIsSuperAdmin(true);
-              if (user.role === 'Gateman' && isGatemanOnShift) {
-                setCurrentPage('qaribu');
-              }
             }
         }
-        const [providersData, catalogueData, docsData, requestsData, bannersData, premisesData] = await Promise.all([
+        const [providersData, catalogueData, docsData, bannersData] = await Promise.all([
           api.getProviders().catch(() => []), 
           api.getCatalogueItems().catch(() => []), 
           api.getDocuments().catch(() => []), 
-          api.getQaRibuRequests().catch(() => []), 
-          api.getSpecialBanners().catch(() => []), 
-          api.getPremises().catch(() => [])
+          api.getSpecialBanners().catch(() => [])
         ]);
         if (isMounted) {
           if (providersData.length) setProviders(providersData);
           if (catalogueData.length) setCatalogueItems(catalogueData);
           if (docsData.length) setDocuments(docsData);
-          if (requestsData.length) setQaRibuRequests(requestsData);
           if (bannersData.length) setSpecialBanners(bannersData);
-          if (premisesData.length) setPremises(premisesData);
         }
       } catch (error) { 
         console.error("Failed to load data", error); 
@@ -426,7 +361,7 @@ function App() {
       isMounted = false;
       clearTimeout(safetyTimer);
     };
-  }, [isGatemanOnShift]);
+  }, []);
 
   const handleSaveAssets = (assets: BusinessAssets) => {
     setBusinessAssets(assets);
@@ -444,10 +379,12 @@ function App() {
 
   const handleLogin = (data: any, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => {
     if (data.success && data.user) {
-        setCurrentUser(data.user);
+        const userToSet = { ...data.user, ...(fullProfile || {}) };
+        setCurrentUser(userToSet);
         setIsAuthenticated(true);
         setIsSuperAdmin(data.isSuperAdmin);
         api.setToken(data.token);
+        api.updateProvider(userToSet).catch(() => {});
         setIsAuthModalOpen(false);
     } else if (data.success && !data.user) {
         setIsAuthenticated(true); 
@@ -463,6 +400,7 @@ function App() {
                 isVerified: fullProfile.isVerified ?? Boolean(fullProfile.referralCode && fullProfile.referralCode.trim().length > 0)
             };
             setCurrentUser(updatedUser);
+            api.updateProvider(updatedUser).catch(() => {});
             setProviders(prev => prev.map(p => p.id === updatedUser.id ? updatedUser : p));
             if (!providers.some(p => p.id === updatedUser.id)) {
                 setProviders(prev => [updatedUser, ...prev]);
@@ -473,7 +411,7 @@ function App() {
                 id: `usr_${Date.now()}`, 
                 name: fullProfile.name || nickname || 'Member', 
                 phone: fullProfile.phone || phone, 
-                service: fullProfile.service || 'Member', 
+                service: fullProfile.service || 'Trades Professional', 
                 avatarUrl: fullProfile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullProfile.name || nickname || 'U')}&background=random`,
                 coverImageUrl: fullProfile.coverImageUrl || 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=800', 
                 isVerified: fullProfile.isVerified ?? hasReferral, 
@@ -484,7 +422,7 @@ function App() {
                 currency: 'Ksh', 
                 about: fullProfile.about || '', 
                 works: [], 
-                category: fullProfile.category || 'PERSONAL', 
+                category: fullProfile.category || 'TECHNICAL', 
                 location: fullProfile.location || 'Nairobi, Kenya', 
                 isOnline: true,
                 accountType: fullProfile.accountType || 'individual', 
@@ -496,6 +434,7 @@ function App() {
                 isProfileCompleted: fullProfile.isProfileCompleted ?? true
             };
             setCurrentUser(newUser);
+            api.createProvider(newUser).catch(() => {});
             setProviders(prev => [newUser, ...prev]);
         } else {
             // Guest Mode
@@ -524,6 +463,7 @@ function App() {
                 isProfileCompleted: false
             };
             setCurrentUser(newUser);
+            api.createProvider(newUser).catch(() => {});
         }
         setIsAuthModalOpen(false);
     }
@@ -539,8 +479,6 @@ function App() {
       localStorage.removeItem('nikosoko_viewing_provider');
       localStorage.removeItem('nikosoko_viewing_catalogue_provider');
       localStorage.removeItem('nikosoko_selected_document');
-      localStorage.removeItem('nikosoko_selected_premise');
-      localStorage.removeItem('nikosoko_selected_unit');
       localStorage.setItem('nikosoko_current_page', 'home');
     } catch (e) {
       console.error(e);
@@ -667,31 +605,8 @@ function App() {
   };
 
   const handleNavigate = (page: CurrentPage) => {
-      if (currentUser?.role === 'Gateman' && isGatemanOnShift && page !== 'qaribu') {
-          alert("Please end your shift before navigating.");
-          return;
-      }
       if (page === 'login') {
           setIsAuthModalOpen(true);
-          return;
-      }
-      if (page === 'doorProfile') {
-          if (!currentUser?.premiseId) return;
-          const premise = premises.find(p => p.id === currentUser.premiseId);
-          if (premise) {
-              const unit: UnitKey = {
-                  id: currentUser.id,
-                  unitNumber: currentUser.unit || '?',
-                  tenantId: currentUser.id,
-                  status: 'Occupied' as const,
-                  floor: currentUser.floor || '?',
-                  type: 'Office', // Default fallback
-                  configuration: 'Assigned Unit'
-              };
-              setSelectedPremise(premise);
-              setSelectedUnit(unit);
-              setCurrentPage('doorProfile');
-          }
           return;
       }
       if (page === 'profile') {
@@ -705,7 +620,7 @@ function App() {
           gateAuth(() => setCurrentPage('skill_id'));
           return;
       }
-      if (['createPost', 'createProductPost', 'messages', 'assetRegistry'].includes(page)) {
+      if (['createPost', 'messages'].includes(page)) {
           gateAuth(() => setCurrentPage(page));
       } else {
           setCurrentPage(page);
@@ -721,9 +636,6 @@ function App() {
         alert("Scanned Code: " + data);
     }
   };
-
-  const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
-  const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
 
   const handleVerifyCatalogueItem = (itemId: string, isVerified: boolean) => {
       setCatalogueItems(prev => prev.map(item => item.id === itemId ? { ...item, isVerified } : item));
@@ -795,8 +707,6 @@ function App() {
       onConfirmBack();
   };
 
-  const [ctaToast, setCtaToast] = useState<{ show: boolean; text: string; providerId?: string } | null>(null);
-
   const handleCtaInteraction = (provider: ServiceProvider, actionType: string = 'contact', actionCallback?: () => void): boolean => {
       if (!provider || !provider.id) return false;
 
@@ -845,14 +755,6 @@ function App() {
       return true;
   };
 
-  const handleToggleShift = () => {
-    const nextStatus = !isGatemanOnShift;
-    localStorage.setItem('gateman_on_shift', String(nextStatus));
-    if (nextStatus) {
-      setCurrentPage('qaribu');
-    }
-  };
-
   const handleUpdateUnitDetails = async (details: Partial<UnitDetails>) => {
     if (!currentUser) return;
     const updatedUser = {
@@ -886,27 +788,6 @@ function App() {
 
   const renderContent = () => {
     if (isLoading) return <div className="flex items-center justify-center h-screen bg-brand-navy text-white font-bold animate-pulse italic uppercase tracking-tighter">NIKOSOKO...</div>;
-
-    if (isGatemanOnShift && currentUser?.role === 'Gateman') {
-        return (
-            <div className="fixed inset-0 bg-black z-[100] flex flex-col animate-fade-in">
-                <QRScannerView 
-                    onScanSuccess={handleScanSuccess} 
-                    onBack={() => {
-                      if (confirm("End Shift? This will close the scanner interface.")) {
-                        handleToggleShift();
-                      }
-                    }}
-                    overlay={(
-                        <div className="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none">
-                            <div className="bg-red-600 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest animate-pulse pointer-events-auto cursor-pointer shadow-lg" onClick={() => alert("PANIC ALARM SENT")}>Panic</div>
-                            <div className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest pointer-events-auto cursor-pointer border border-white/20" onClick={() => handleToggleShift()}>End Shift</div>
-                        </div>
-                    )}
-                />
-            </div>
-        );
-    }
 
     switch (currentPage) {
       case 'home':
@@ -1038,10 +919,6 @@ function App() {
             onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} 
           />
         );
-      case 'assetRegistry':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
-      case 'registerAsset':
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
       case 'pendingRatings': {
         const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
         const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
@@ -1084,8 +961,6 @@ function App() {
           onCreateOrganization={() => {}} 
           onApproveRequest={() => {}} 
           onRejectRequest={() => {}} 
-          premises={premises} 
-          onUpdatePremise={() => {}} 
           catalogueItems={catalogueItems}
           onVerifyCatalogueItem={handleVerifyCatalogueItem}
           onDeleteCatalogueItem={handleDeleteCatalogueItem}

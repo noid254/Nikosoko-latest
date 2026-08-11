@@ -86,7 +86,7 @@ const JourneyPage: React.FC<JourneyPageProps> = ({ currentUser, providers, onSel
                     
                     <div className="relative z-10 flex flex-col items-center">
                         <p className="text-brand-gold text-[10px] font-black uppercase tracking-[0.4em] mb-4">Current Steps</p>
-                        <span className="text-8xl font-black italic tracking-tighter mb-6">{userSteps.toLocaleString()}</span>
+                        <span className="text-8xl font-black italic tracking-tighter mb-6">{(userSteps || 0).toLocaleString()}</span>
                         
                         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-3">
                             <div 
@@ -96,7 +96,7 @@ const JourneyPage: React.FC<JourneyPageProps> = ({ currentUser, providers, onSel
                         </div>
                         
                         <div className="flex justify-between w-full text-[9px] font-black uppercase tracking-widest text-white/40">
-                            <span>Target: {stepTarget.toLocaleString()}</span>
+                            <span>Target: {(stepTarget || 0).toLocaleString()}</span>
                             <span>{Math.round(progressPercent)}%</span>
                         </div>
                     </div>
@@ -106,7 +106,7 @@ const JourneyPage: React.FC<JourneyPageProps> = ({ currentUser, providers, onSel
                 <section className="px-2">
                     <div className="space-y-1">
                         <p className="text-sm font-bold text-gray-800">
-                            You have <span className="text-brand-navy font-black">{userSteps.toLocaleString()} steps</span>
+                            You have <span className="text-brand-navy font-black">{(userSteps || 0).toLocaleString()} steps</span>
                         </p>
                         <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
                             Number <span className="text-brand-navy font-black">{localRank}</span> in <span className="uppercase text-brand-gold font-black">{locationName}</span> and <span className="text-brand-navy font-black">{professionRank}</span> amongst <span className="uppercase font-black">{profession}s</span> countrywide.
@@ -143,7 +143,7 @@ const JourneyPage: React.FC<JourneyPageProps> = ({ currentUser, providers, onSel
                                             {p.name} <span className={`text-[10px] font-medium opacity-60 ml-1`}>{p.service}</span>
                                         </p>
                                         <p className={`text-[11px] font-black italic ${isMe ? 'text-brand-gold' : 'text-gray-500'}`}>
-                                            {p.steps.toLocaleString()} steps
+                                            {(p.steps || 0).toLocaleString()} steps
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">

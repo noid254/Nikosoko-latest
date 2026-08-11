@@ -27,7 +27,7 @@ const CreatePostView: React.FC<CreatePostViewProps> = ({ onNavigate, onBack }) =
 
                 <div className="w-full space-y-5">
                     <button 
-                        onClick={() => onNavigate('createProductPost')}
+                        onClick={() => onNavigate('sellService')}
                         className="w-full bg-white p-6 rounded-2xl shadow-md border-2 border-transparent hover:border-brand-gold transition-all active-scale text-center"
                     >
                         <ProductIcon />

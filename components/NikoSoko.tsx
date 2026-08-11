@@ -253,7 +253,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
                         {specialBanners.map((banner, i) => (
                             <div 
-                                key={banner.id || i}
+                                key={banner.id ? `banner_${banner.id}_${i}` : `banner_${i}`}
                                 onClick={() => {
                                     if (banner.actionUrl) {
                                         if (banner.actionUrl.startsWith('http')) {
@@ -382,7 +382,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     /* SERVICE LISTINGS GRID - LISTINGS MADE BY PROFESSIONALS */
                     <div>
                         <div className="grid grid-cols-2 gap-2.5">
-                            {filteredAndSortedServices.map(item => {
+                            {filteredAndSortedServices.map((item, idx) => {
                                 const provider = providers.find(p => p.id === item.providerId);
                                 const photo = item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
                                 const isSaccoMember = provider?.isSaccoVerified || provider?.saccoMember?.status === 'Confirmed' || provider?.saccoMember?.status === 'Approved';
@@ -390,7 +390,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
                                 return (
                                     <div 
-                                        key={item.id}
+                                        key={item.id ? `item_${item.id}_${idx}` : `item_${idx}`}
                                         onClick={() => setSelectedCatalogueItem(item)}
                                         className="bg-white border border-gray-200 hover:border-black cursor-pointer group transition-all flex flex-col justify-between overflow-hidden relative z-0"
                                     >

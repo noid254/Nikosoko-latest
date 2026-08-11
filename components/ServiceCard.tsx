@@ -144,7 +144,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
                         </span>
                         {displayRate > 0 ? (
                             <p className="text-[10px] font-bold text-black font-mono flex-shrink-0 ml-1">
-                                {displayCurrency} {displayRate.toLocaleString()}
+                                {displayCurrency} {(displayRate || 0).toLocaleString()}
                                 <span className="text-[8px] text-gray-500 font-normal ml-0.5">/{rateSuffix[provider.rateType] || 'hr'}</span>
                             </p>
                         ) : (

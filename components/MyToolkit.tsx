@@ -19,10 +19,10 @@ interface MyToolkitProps {
 }
 
 const TOOLS: ToolAction[] = [
-    { label: 'Gate Pass', icon: '🔑', page: 'qaribu', color: 'bg-emerald-600' },
-    { label: 'Nikosoko', icon: '🏠', page: 'home', color: 'bg-brand-navy' },
-    { label: 'My Places', icon: '🏢', page: 'myplaces', color: 'bg-brand-navy' },
+    { label: 'Services', icon: '🛠️', page: 'home', color: 'bg-brand-navy' },
+    { label: '$kill Hub', icon: '⚡', page: 'skill_id', color: 'bg-amber-500' },
     { label: 'My Journey', icon: '🚀', page: 'journey', color: 'bg-brand-gold' },
+    { label: 'Saved Contacts', icon: '👥', page: 'mycontacts', color: 'bg-emerald-600' },
 ];
 
 const MyToolkit: React.FC<MyToolkitProps> = ({ onNavigate, onBack }) => {
