@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as api from '../services/api';
 import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
 import type { ServiceProvider } from '../types';
+import TermsAndConditionsModal from './TermsAndConditionsModal';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -37,6 +38,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   const [googleName, setGoogleName] = useState('');
   const [otpSentTarget, setOtpSentTarget] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [activeDevOtp, setActiveDevOtp] = useState<string>('');
+  const [resendTimer, setResendTimer] = useState<number>(30);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
+  const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
 
   // Steps: 1 = Auth Select / Input, 2 = OTP, 3 = Floating Prompt / Choice Form
   const [step, setStep] = useState<1 | 2 | 3>(initialMode === 'complete_signup' ? 3 : 1);
@@ -47,6 +52,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [tempAuthResponse, setTempAuthResponse] = useState<api.VerifyOtpResponse | null>(null);
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 2 && resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, resendTimer]);
 
   // Complete Profile Form State
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -90,22 +106,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError('');
     const input = e.target.value.replace(/\D/g, '');
-    if (input.length <= 4) {
+    if (input.length <= 6) {
       setOtp(input);
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (phone.length < 9) {
       setError("Please enter a valid 9-digit mobile number.");
+      return;
+    }
+    if (!termsAccepted) {
+      setError("Please accept the Terms & Conditions and Kenya DPA 2019 to continue.");
       return;
     }
     setIsLoading(true);
     setError('');
     try {
         const fullPhone = `254${phone}`;
-        await api.sendOtp(fullPhone);
+        const res = await api.sendOtp(fullPhone);
+        if (res.devCode) setActiveDevOtp(res.devCode);
+        setResendTimer(30);
         setPhoneNum(fullPhone);
         setMobileNumber(fullPhone);
         setOtpSentTarget(`+254 ${phone}`);
@@ -117,17 +139,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     }
   };
 
-  const handleSendEmailOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendEmailOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const cleanEmail = emailInput.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       setError("Please enter a valid Gmail or Email address.");
       return;
     }
+    if (!termsAccepted) {
+      setError("Please accept the Terms & Conditions and Kenya DPA 2019 to continue.");
+      return;
+    }
     setIsLoading(true);
     setError('');
     try {
-        await api.sendOtp(cleanEmail);
+        const res = await api.sendOtp(cleanEmail);
+        if (res.devCode) setActiveDevOtp(res.devCode);
+        setResendTimer(30);
         setPhoneNum(cleanEmail);
         setOtpSentTarget(cleanEmail);
         setStep(2);
@@ -543,12 +571,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 </div>
               )}
 
+              {/* TERMS & CONDITIONS MANDATORY CHECKBOX */}
+              <div className="pt-2 border-t border-neutral-200 space-y-1">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={e => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 rounded border-neutral-400 text-black focus:ring-black cursor-pointer"
+                  />
+                  <span className="text-[9px] text-neutral-600 leading-tight">
+                    I accept the{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="font-bold text-black underline hover:text-neutral-700 cursor-pointer"
+                    >
+                      Terms of Service & Kenya Data Protection Act 2019
+                    </button>
+                  </span>
+                </label>
+              </div>
+
             </div>
           )}
 
           {/* STEP 2: OTP Verification */}
           {step === 2 && (
             <form onSubmit={handleVerifyOtp} className="space-y-3">
+              {/* Generated OTP Code Notification Banner */}
+              {activeDevOtp && (
+                <div className="bg-amber-100 border border-amber-300 text-amber-950 p-2.5 rounded-lg text-center shadow-xs">
+                  <span className="text-[9px] font-black uppercase tracking-wider block text-amber-900">
+                    📨 Verification Code Dispatched
+                  </span>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="text-sm font-mono font-black tracking-widest bg-white text-black px-2 py-0.5 rounded border border-amber-400">
+                      {activeDevOtp}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOtp(activeDevOtp)}
+                      className="text-[9px] bg-black text-amber-300 font-extrabold px-2 py-1 rounded uppercase tracking-wider cursor-pointer"
+                    >
+                      Auto-Fill
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="text-center bg-neutral-50 p-2 rounded border border-dashed border-neutral-300">
                 <span className="text-[9px] text-neutral-600 font-bold uppercase block">
                   OTP Sent To: <strong className="text-black font-mono">{otpSentTarget || emailInput || (phone ? `+254 ${phone}` : '')}</strong>
@@ -564,21 +635,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
               <div className="space-y-1">
                 <label className="block text-[9.5px] font-extrabold text-black uppercase tracking-wider text-center">
-                  Enter 4-Digit OTP Code
+                  Enter Verification OTP Code
                 </label>
                 <input 
                   type="tel" 
-                  maxLength={4} 
+                  maxLength={6} 
                   value={otp} 
                   onChange={handleOtpChange} 
                   required 
                   autoFocus 
-                  placeholder="• • • •"
-                  className="w-full text-center tracking-[0.5em] text-xl font-black p-2.5 border border-black rounded bg-neutral-50 focus:outline-none focus:bg-white text-black font-mono" 
+                  placeholder="Enter Code"
+                  className="w-full text-center tracking-[0.3em] text-lg font-black p-2.5 border border-black rounded bg-neutral-50 focus:outline-none focus:bg-white text-black font-mono" 
                 />
-                <p className="text-[9px] text-neutral-500 font-medium text-center mt-1">
-                  💡 Hint: Enter code <span className="font-bold text-black font-mono">1234</span> or any 4 digits to verify
-                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-[9px] pt-1">
+                <span className="text-neutral-500 font-medium">
+                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Did not receive code?'}
+                </span>
+                <button
+                  type="button"
+                  disabled={resendTimer > 0 || isLoading}
+                  onClick={() => {
+                    if (authMethod === 'email') handleSendEmailOtp();
+                    else handleSendOtp();
+                  }}
+                  className="font-bold text-black underline disabled:text-neutral-400 cursor-pointer"
+                >
+                  Resend OTP Code
+                </button>
               </div>
 
               <button 
@@ -586,7 +671,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 disabled={isLoading} 
                 className="w-full bg-black text-white hover:bg-neutral-800 font-bold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer disabled:bg-neutral-300 flex items-center justify-center gap-1"
               >
-                {isLoading ? 'Verifying...' : 'Verify OTP \u2192'}
+                {isLoading ? 'Verifying Code...' : 'Verify Correct OTP \u2192'}
               </button>
             </form>
           )}
@@ -1025,6 +1110,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
         </div>
       </div>
+
+      {showTermsModal && (
+        <TermsAndConditionsModal
+          onClose={() => setShowTermsModal(false)}
+          onAccept={() => {
+            setTermsAccepted(true);
+            setShowTermsModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };

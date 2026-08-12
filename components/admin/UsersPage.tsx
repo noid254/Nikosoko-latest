@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider } from '../../types';
+import AdminUserProfileModal from './AdminUserProfileModal';
 
 interface UsersPageProps {
   providers: ServiceProvider[];
@@ -17,6 +18,7 @@ const UsersPage: React.FC<UsersPageProps> = ({
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userFilter, setUserFilter] = useState<'All' | 'Verified' | 'Unverified' | 'Flagged'>('All');
   const [sortBy, setSortBy] = useState<'newest' | 'views' | 'rating' | 'name'>('views');
+  const [selectedAdminUser, setSelectedAdminUser] = useState<ServiceProvider | null>(null);
 
   const filteredProviders = useMemo(() => {
     const result = providers.filter(p => {
@@ -63,7 +65,20 @@ const UsersPage: React.FC<UsersPageProps> = ({
   }), [providers]);
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans relative">
+      {/* Admin Profile Intelligence & Notes Modal */}
+      {selectedAdminUser && (
+        <AdminUserProfileModal
+          user={selectedAdminUser}
+          onClose={() => setSelectedAdminUser(null)}
+          onUpdateProvider={(updated) => {
+            onUpdateProvider(updated);
+            setSelectedAdminUser(updated);
+          }}
+          currentUserEmail="Noid254@gmail.com"
+        />
+      )}
+
       {/* Header & Quick Filter Pills */}
       <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -72,7 +87,7 @@ const UsersPage: React.FC<UsersPageProps> = ({
               <span>👥 User & Service Provider Registry</span>
               <span className="bg-slate-100 text-slate-800 text-xs px-2.5 py-0.5 rounded-full font-bold">{filteredProviders.length} Users</span>
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Manage accounts, change system roles, issue verification badges & audit flags.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Manage accounts, view system intelligence bios, attach signed admin notes & issue verification badges.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -146,20 +161,26 @@ const UsersPage: React.FC<UsersPageProps> = ({
                         <img
                           src={user.avatarUrl}
                           alt={user.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs"
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs cursor-pointer"
+                          onClick={() => setSelectedAdminUser(user)}
                         />
                         <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p
-                            onClick={() => onViewProvider(user)}
+                            onClick={() => setSelectedAdminUser(user)}
                             className="font-black text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
                           >
                             {user.name}
                           </p>
                           {(user.flagCount || 0) > 0 && (
                             <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">Flagged</span>
+                          )}
+                          {user.adminNotes && user.adminNotes.length > 0 && (
+                            <span className="bg-amber-100 text-amber-900 text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase border border-amber-300" title={`${user.adminNotes.length} Admin Notes Attached`}>
+                              ✍️ {user.adminNotes.length} Notes
+                            </span>
                           )}
                         </div>
                         <p className="text-[11px] text-slate-500 font-mono mt-0.5">📞 {user.phone} • 📍 {user.location}</p>
@@ -183,6 +204,7 @@ const UsersPage: React.FC<UsersPageProps> = ({
                       className="bg-slate-50 border border-slate-300 text-[11px] font-black uppercase text-slate-800 px-2.5 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-600 cursor-pointer"
                     >
                       <option value="Member">Member</option>
+                      <option value="Provider">Provider</option>
                       <option value="Staff">Staff / Admin</option>
                       <option value="BuildingManager">Building Manager</option>
                       <option value="Gateman">Gateman</option>
@@ -217,10 +239,10 @@ const UsersPage: React.FC<UsersPageProps> = ({
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => onViewProvider(user)}
-                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer"
+                        onClick={() => setSelectedAdminUser(user)}
+                        className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-black px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer shadow-xs"
                       >
-                        Profile
+                        🧠 View Bio & Notes
                       </button>
                       <button
                         onClick={() => toggleFlag(user)}
@@ -258,15 +280,30 @@ const UsersPage: React.FC<UsersPageProps> = ({
           {filteredProviders.map(user => (
             <div key={user.id} className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
+                <img 
+                  src={user.avatarUrl} 
+                  alt={user.name} 
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 cursor-pointer" 
+                  onClick={() => setSelectedAdminUser(user)}
+                />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-slate-900 truncate">{user.name}</h4>
+                  <h4 className="font-bold text-slate-900 truncate flex items-center gap-1.5" onClick={() => setSelectedAdminUser(user)}>
+                    {user.name}
+                    {user.adminNotes && user.adminNotes.length > 0 && (
+                      <span className="text-[8px] bg-amber-200 text-amber-900 px-1 rounded">✍️ {user.adminNotes.length}</span>
+                    )}
+                  </h4>
                   <p className="text-xs text-slate-500">{user.service} • {user.phone}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
-                <span className="font-bold text-slate-600">👀 {user.views || 0} views</span>
+                <button
+                  onClick={() => setSelectedAdminUser(user)}
+                  className="bg-slate-900 text-amber-400 font-bold text-[10px] px-2.5 py-1 rounded-lg"
+                >
+                  View Bio & Notes
+                </button>
                 <button
                   onClick={() => toggleVerification(user)}
                   className={`px-3 py-1 rounded-full font-bold text-[10px] ${

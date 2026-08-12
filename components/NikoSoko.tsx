@@ -173,8 +173,8 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             // 2. User Role Segment Filter
             if (banner.targetRole && banner.targetRole !== 'all') {
                 if (banner.targetRole === 'guest' && currentUser) return false;
-                if (banner.targetRole === 'provider' && (!currentUser || currentUser.role !== 'provider')) return false;
-                if (banner.targetRole === 'client' && (!currentUser || currentUser.role !== 'client')) return false;
+                if (banner.targetRole === 'provider' && (!currentUser || currentUser.role !== 'Provider')) return false;
+                if (banner.targetRole === 'client' && (!currentUser || currentUser.role !== 'Member')) return false;
             }
 
             // 3. Location / Area Targeting Filter
@@ -196,7 +196,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             // 4. Profession / Category Targeting Filter
             if (banner.targetCategory && banner.targetCategory.trim() !== '') {
                 const catTarget = banner.targetCategory.toLowerCase().trim();
-                const userProf = (currentUser?.profession || currentUser?.category || '').toLowerCase();
+                const userProf = ((currentUser as any)?.profession || currentUser?.service || currentUser?.category || '').toLowerCase();
                 const activeCat = (selectedCategory || '').toLowerCase();
                 const searchTxt = (localSearch || '').toLowerCase();
 
@@ -217,7 +217,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
             // 6. Member Tenure / Time of Joining Filter
             if (banner.targetJoiningTenure && banner.targetJoiningTenure !== 'all') {
-                const joinedAt = currentUser?.createdAt ? new Date(currentUser.createdAt).getTime() : Date.now();
+                const joinedAt = (currentUser as any)?.createdAt ? new Date((currentUser as any).createdAt).getTime() : Date.now();
                 const daysSinceJoining = (Date.now() - joinedAt) / (1000 * 60 * 60 * 24);
 
                 if (banner.targetJoiningTenure === 'new_members' && daysSinceJoining > 30 && currentUser) {

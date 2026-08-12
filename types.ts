@@ -147,11 +147,38 @@ export interface RatingDispute {
   resolutionNote?: string;
 }
 
+export interface AdminNote {
+  id: string;
+  authorName: string;
+  authorRole: string;
+  authorEmail?: string;
+  content: string;
+  createdAt: string;
+  signature: string; // E.g., "Signed by SuperAdmin (Noid254@gmail.com) on 2026-08-12 at 14:10"
+}
+
+export interface SystemProfileIntelligence {
+  createdAt: string;
+  lastLoginAt?: string;
+  authMethod?: 'google' | 'email' | 'phone';
+  otpVerifiedAt?: string;
+  loginCount?: number;
+  totalCatalogueItems?: number;
+  totalGigsPosted?: number;
+  ipAddress?: string;
+  deviceFingerprint?: string;
+  verificationAuditTrail?: string[];
+  systemFlags?: string[];
+  termsAcceptedAt?: string;
+  termsVersion?: string;
+}
+
 export interface ServiceProvider {
   id: string;
   name: string;
   phone: string;
   whatsapp?: string;
+  email?: string;
   service: string;
   avatarUrl: string;
   coverImageUrl: string;
@@ -174,7 +201,7 @@ export interface ServiceProvider {
   location: string;
   isOnline: boolean;
   accountType: 'individual' | 'organization';
-  role?: 'BuildingManager' | 'TenantAdmin' | 'Staff' | 'Gateman' | 'SuperAdmin';
+  role?: 'BuildingManager' | 'TenantAdmin' | 'Staff' | 'Gateman' | 'SuperAdmin' | 'Provider' | 'Member';
   tenantId?: string;
   premiseId?: string;
   coHosts?: string[];
@@ -214,6 +241,8 @@ export interface ServiceProvider {
   catalogueItems?: CatalogueItem[];
   joinRequests?: { id: string; userId: string; userName: string; userPhone?: string; status: 'Pending' | 'Approved' | 'Rejected' | 'pending' }[];
   ratingDisputes?: RatingDispute[];
+  adminNotes?: AdminNote[];
+  systemIntelligence?: SystemProfileIntelligence;
 }
 
 export interface QaRibuRequest {
