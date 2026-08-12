@@ -1095,9 +1095,9 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
       {/* MODAL: VERIFY SKILL CERTIFICATE                            */}
       {/* ========================================================= */}
       {verifyingSkill && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto">
-            <div className="bg-slate-950 text-white p-3.5 flex items-center justify-between border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <div className="bg-slate-950 text-white p-3.5 flex items-center justify-between border-b border-slate-800 shrink-0">
               <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400">
                 Verify Accreditation Badge
               </h3>
@@ -1109,7 +1109,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleVerifySubmit} className="p-4 space-y-3 text-xs">
+            <form onSubmit={handleVerifySubmit} className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
               <p className="text-slate-300 font-medium">
                 Uploading verification for: <strong className="text-white">{verifyingSkill.skillTitle}</strong>
               </p>
@@ -1166,9 +1166,9 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
       {/* MODAL: BOOK 1-ON-1 JUA KALI MENTOR SESSION                 */}
       {/* ========================================================= */}
       {selectedMentorForBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto">
-            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-black text-base">🛠️</span>
                 <h3 className="text-xs font-black uppercase tracking-wider">Book Mentorship Session</h3>
@@ -1181,17 +1181,17 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
               </button>
             </div>
 
-            <div className="p-4 space-y-3 text-xs">
+            <div className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
               <div className="flex items-center gap-3 bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
                 <img
                   src={selectedMentorForBooking.avatarUrl}
                   alt={selectedMentorForBooking.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-emerald-500/50"
+                  className="w-10 h-10 rounded-xl object-cover border border-emerald-500/50 shrink-0"
                 />
-                <div>
-                  <h4 className="font-black text-white text-xs">{selectedMentorForBooking.name}</h4>
-                  <p className="text-[10px] text-emerald-400 font-bold">{selectedMentorForBooking.craftTitle}</p>
-                  <p className="text-[9px] text-slate-400">Rate: KES {selectedMentorForBooking.hourlyRate}/hr &bull; {selectedMentorForBooking.location}</p>
+                <div className="min-w-0">
+                  <h4 className="font-black text-white text-xs truncate">{selectedMentorForBooking.name}</h4>
+                  <p className="text-[10px] text-emerald-400 font-bold truncate">{selectedMentorForBooking.craftTitle}</p>
+                  <p className="text-[9px] text-slate-400 truncate">Rate: KES {selectedMentorForBooking.hourlyRate}/hr &bull; {selectedMentorForBooking.location}</p>
                 </div>
               </div>
 
@@ -1215,7 +1215,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                 />
               </div>
 
-              <div className="bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-500/40 text-[10px] text-emerald-300 font-medium">
+              <div className="bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-500/40 text-[10px] text-emerald-300 font-medium leading-relaxed">
                 💡 Mentorship fees are held in escrow and released directly to the artisan upon completion of your 1-on-1 session.
               </div>
 
@@ -1247,9 +1247,9 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
       {/* MODAL: BECOME A JUA KALI MENTOR                            */}
       {/* ========================================================= */}
       {showMentorApplyModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto">
-            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-black text-base">⭐</span>
                 <h3 className="text-xs font-black uppercase tracking-wider">Become a Jua Kali Mentor</h3>
@@ -1268,7 +1268,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                 setShowMentorApplyModal(false);
                 showToast('✓ Mentor application submitted! Verification badge active.');
               }}
-              className="p-4 space-y-3 text-xs"
+              className="p-4 space-y-3 text-xs overflow-y-auto flex-1"
             >
               <p className="text-slate-300 font-medium leading-relaxed">
                 Pass on your practical craft skills to upcoming artisans and earn extra hourly revenue.
@@ -1285,7 +1285,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Years of Practical Exp</label>
                   <input
