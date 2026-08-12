@@ -17,6 +17,9 @@ const DEFAULT_BRANDING: AppBrandingConfig = {
   tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
   appIconUrl: '',
   faviconUrl: '',
+  heroBannerUrl: '',
+  heroTitle: 'NIKOSOKO',
+  heroSubtitle: 'Neighborhood Skilled Marketplace',
   primaryColor: '#F59E0B',
   supportPhone: '+254 723 119 356',
   supportEmail: 'support@nikosoko.com'
@@ -73,10 +76,13 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
     isOnlineTarget: undefined,
     isVerifiedTarget: undefined,
     targetReferralCode: '',
+    targetJoiningTenure: 'all',
+    targetRole: 'all',
+    isHeaderHero: true,
+    priority: 1,
     startDate: '',
     endDate: '',
-    isGlobalHero: true,
-    priority: 1
+    isGlobalHero: true
   });
 
   const showNotification = (msg: string) => {
@@ -114,10 +120,13 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
       isOnlineTarget: undefined,
       isVerifiedTarget: undefined,
       targetReferralCode: '',
+      targetJoiningTenure: 'all',
+      targetRole: 'all',
+      isHeaderHero: true,
+      priority: 1,
       startDate: '',
       endDate: '',
-      isGlobalHero: true,
-      priority: 1
+      isGlobalHero: true
     });
   };
 
@@ -337,29 +346,76 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Target Category
+                      Target Area / Location
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Nairobi, Eldoret, Westlands"
+                      value={newBanner.targetLocation || ''}
+                      onChange={e => setNewBanner(p => ({ ...p, targetLocation: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
+                      Target Profession / Category
                     </label>
                     <select
                       value={newBanner.targetCategory || ''}
                       onChange={e => setNewBanner(p => ({ ...p, targetCategory: e.target.value }))}
                       className={selectClass}
                     >
-                      <option value="">All Categories (Global)</option>
+                      <option value="">All Professions / Categories</option>
                       {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Target Location / Area
+                      Min User / Provider Rating
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Nairobi, Westlands, Mombasa"
-                      value={newBanner.targetLocation || ''}
-                      onChange={e => setNewBanner(p => ({ ...p, targetLocation: e.target.value }))}
-                      className={inputClass}
-                    />
+                    <select
+                      value={newBanner.minRating || ''}
+                      onChange={e => setNewBanner(p => ({ ...p, minRating: e.target.value ? Number(e.target.value) : undefined }))}
+                      className={selectClass}
+                    >
+                      <option value="">Any Rating (0 - 5 ★)</option>
+                      <option value="4.5">4.5+ Rating (Top Tier)</option>
+                      <option value="4.0">4.0+ Rating (Highly Rated)</option>
+                      <option value="3.5">3.5+ Rating</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
+                      Member Joining Tenure
+                    </label>
+                    <select
+                      value={newBanner.targetJoiningTenure || 'all'}
+                      onChange={e => setNewBanner(p => ({ ...p, targetJoiningTenure: e.target.value as any }))}
+                      className={selectClass}
+                    >
+                      <option value="all">All Members (New & Existing)</option>
+                      <option value="new_members">New Members (Joined &lt;30 Days)</option>
+                      <option value="tenured">Tenured Members (Joined &gt;30 Days)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
+                      Target User Role / Segment
+                    </label>
+                    <select
+                      value={newBanner.targetRole || 'all'}
+                      onChange={e => setNewBanner(p => ({ ...p, targetRole: e.target.value as any }))}
+                      className={selectClass}
+                    >
+                      <option value="all">All Users (Browsers & Members)</option>
+                      <option value="provider">Skilled Artisans & Service Pros</option>
+                      <option value="client">Clients & Service Seekers</option>
+                      <option value="guest">Guests / Unauthenticated</option>
+                    </select>
                   </div>
 
                   <div>
@@ -381,56 +437,11 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
 
                   <div>
                     <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Min Provider Rating
-                    </label>
-                    <select
-                      value={newBanner.minRating || ''}
-                      onChange={e => setNewBanner(p => ({ ...p, minRating: e.target.value ? Number(e.target.value) : undefined }))}
-                      className={selectClass}
-                    >
-                      <option value="">Any Rating</option>
-                      <option value="4.5">4.5+ Rating</option>
-                      <option value="4.0">4.0+ Rating</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Verification Status
-                    </label>
-                    <select
-                      value={newBanner.isVerifiedTarget === undefined ? '' : String(newBanner.isVerifiedTarget)}
-                      onChange={e => setNewBanner(p => ({ ...p, isVerifiedTarget: e.target.value === '' ? undefined : e.target.value === 'true' }))}
-                      className={selectClass}
-                    >
-                      <option value="">All Profiles</option>
-                      <option value="true">Verified Profiles Only</option>
-                      <option value="false">Unverified Profiles Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Online Status Filter
-                    </label>
-                    <select
-                      value={newBanner.isOnlineTarget === undefined ? '' : String(newBanner.isOnlineTarget)}
-                      onChange={e => setNewBanner(p => ({ ...p, isOnlineTarget: e.target.value === '' ? undefined : e.target.value === 'true' }))}
-                      className={selectClass}
-                    >
-                      <option value="">All Statuses</option>
-                      <option value="true">Online Now Only</option>
-                      <option value="false">Offline Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
                       Target Service Keyword
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Plumber, Carpenter"
+                      placeholder="e.g. Electrician, Plumbing, Boda"
                       value={newBanner.targetService || ''}
                       onChange={e => setNewBanner(p => ({ ...p, targetService: e.target.value }))}
                       className={inputClass}
@@ -439,13 +450,15 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
 
                   <div>
                     <label className="block text-[9px] font-bold text-slate-700 uppercase mb-1">
-                      Target Partner Referral Code
+                      Display Priority (1 - 100)
                     </label>
                     <input
-                      type="text"
-                      placeholder="e.g. SACCO2026"
-                      value={newBanner.targetReferralCode || ''}
-                      onChange={e => setNewBanner(p => ({ ...p, targetReferralCode: e.target.value }))}
+                      type="number"
+                      min="1"
+                      max="100"
+                      placeholder="e.g. 10 (Higher = Preferred)"
+                      value={newBanner.priority || 1}
+                      onChange={e => setNewBanner(p => ({ ...p, priority: Number(e.target.value) }))}
                       className={inputClass}
                     />
                   </div>
@@ -557,19 +570,14 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
 
                       {/* Targeting Badges */}
                       <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        {banner.targetCategory && (
-                          <span className="bg-blue-100 text-blue-800 text-[8px] font-black px-1.5 py-0.5 rounded">
-                            Cat: {banner.targetCategory}
-                          </span>
-                        )}
                         {banner.targetLocation && (
                           <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded">
-                            Area: {banner.targetLocation}
+                            📍 Area: {banner.targetLocation}
                           </span>
                         )}
-                        {banner.targetAgeGroup && banner.targetAgeGroup !== 'All' && (
-                          <span className="bg-purple-100 text-purple-800 text-[8px] font-black px-1.5 py-0.5 rounded">
-                            Age: {banner.targetAgeGroup}
+                        {banner.targetCategory && (
+                          <span className="bg-blue-100 text-blue-800 text-[8px] font-black px-1.5 py-0.5 rounded">
+                            🛠️ Prof: {banner.targetCategory}
                           </span>
                         )}
                         {banner.minRating && (
@@ -577,14 +585,29 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
                             ★ {banner.minRating}+ Rating
                           </span>
                         )}
-                        {banner.isVerifiedTarget && (
-                          <span className="bg-teal-100 text-teal-900 text-[8px] font-black px-1.5 py-0.5 rounded">
-                            Verified Only
+                        {banner.targetJoiningTenure && banner.targetJoiningTenure !== 'all' && (
+                          <span className="bg-indigo-100 text-indigo-800 text-[8px] font-black px-1.5 py-0.5 rounded">
+                            ⏱️ {banner.targetJoiningTenure === 'new_members' ? 'New Members (<30d)' : 'Tenured Members (>30d)'}
                           </span>
                         )}
-                        {!banner.targetCategory && !banner.targetLocation && (
+                        {banner.targetRole && banner.targetRole !== 'all' && (
+                          <span className="bg-cyan-100 text-cyan-900 text-[8px] font-black px-1.5 py-0.5 rounded">
+                            👤 Segment: {banner.targetRole.toUpperCase()}
+                          </span>
+                        )}
+                        {banner.targetAgeGroup && banner.targetAgeGroup !== 'All' && (
+                          <span className="bg-purple-100 text-purple-800 text-[8px] font-black px-1.5 py-0.5 rounded">
+                            Age: {banner.targetAgeGroup}
+                          </span>
+                        )}
+                        {banner.priority && banner.priority > 1 && (
+                          <span className="bg-slate-200 text-slate-800 text-[8px] font-black px-1.5 py-0.5 rounded">
+                            Priority: P{banner.priority}
+                          </span>
+                        )}
+                        {!banner.targetCategory && !banner.targetLocation && (!banner.targetJoiningTenure || banner.targetJoiningTenure === 'all') && (
                           <span className="bg-slate-200 text-slate-700 text-[8px] font-black px-1.5 py-0.5 rounded">
-                            Global (All Users)
+                            🌐 Global (All Users)
                           </span>
                         )}
                       </div>
@@ -704,31 +727,90 @@ const AppearancePage: React.FC<AppearancePageProps> = ({
             </div>
           </div>
 
-          {/* Platform Text Settings */}
+          {/* Platform Text & Header Settings */}
+          <div className="md:col-span-2 bg-black text-white p-3 rounded-xl border border-slate-800 flex items-center justify-between mb-1">
+            <div>
+              <span className="text-xs font-black uppercase tracking-wider block">Top Hero Header Banner Settings</span>
+              <span className="text-[9.5px] text-slate-300">Customize the top main marketplace banner box (Title, Tagline, Background Image)</span>
+            </div>
+            <span className="text-lg">🖼️</span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 mb-1">
-                Platform Name *
+                Top Hero Header Title *
               </label>
               <input
                 type="text"
                 required
-                value={branding.appName}
-                onChange={e => setBranding(p => ({ ...p, appName: e.target.value }))}
+                value={branding.heroTitle || branding.appName}
+                onChange={e => setBranding(p => ({ ...p, appName: e.target.value, heroTitle: e.target.value }))}
                 className={inputClass}
+                placeholder="e.g. NIKOSOKO"
               />
+              <span className="text-[9px] text-slate-500 block mt-1">Main title inside top hero banner box.</span>
             </div>
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 mb-1">
-                Primary Tagline / Slogan
+                Top Hero Header Subtitle / Tagline
               </label>
               <input
                 type="text"
-                value={branding.tagline}
-                onChange={e => setBranding(p => ({ ...p, tagline: e.target.value }))}
+                value={branding.heroSubtitle || branding.tagline}
+                onChange={e => setBranding(p => ({ ...p, tagline: e.target.value, heroSubtitle: e.target.value }))}
                 className={inputClass}
+                placeholder="e.g. NEIGHBORHOOD SKILLED MARKETPLACE"
               />
+              <span className="text-[9px] text-slate-500 block mt-1">Subtitle text under main title in top hero banner box.</span>
+            </div>
+
+            <div className="md:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700">
+                Top Hero Header Background Image
+              </label>
+              <div className="flex items-center gap-3">
+                {branding.heroBannerUrl ? (
+                  <div className="relative shrink-0">
+                    <img src={branding.heroBannerUrl} alt="Top Hero Banner Background" className="w-24 h-14 object-cover rounded-lg border border-slate-300 shadow-xs" />
+                    <button
+                      type="button"
+                      onClick={() => setBranding(p => ({ ...p, heroBannerUrl: '' }))}
+                      className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shadow-xs hover:bg-red-700"
+                      title="Remove background image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-14 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center text-[9.5px] text-slate-500 font-bold shrink-0">
+                    Solid Black
+                  </div>
+                )}
+                <div className="flex-1 space-y-1.5">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (reader.result) {
+                            setBranding(p => ({ ...p, heroBannerUrl: reader.result as string }));
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className={inputClass}
+                  />
+                  <span className="text-[9px] text-slate-500 block">
+                    Upload custom image to set as the background for the top hero header box.
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig } from '../types';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -32,6 +32,7 @@ interface NikoSokoProps {
     providers: ServiceProvider[];
     catalogueItems?: CatalogueItem[];
     specialBanners?: SpecialBanner[];
+    brandingConfig?: AppBrandingConfig;
     onSelectProvider: (p: ServiceProvider) => void;
     searchTerm: string;
     setSearchTerm: (t: string) => void;
@@ -72,7 +73,7 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, catalogueItems = [], specialBanners = [], onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
+    providers, catalogueItems = [], specialBanners = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
     hasNewMessages, onNavigate, currentUser, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
     const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
@@ -160,15 +161,127 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         ? providers.find(p => p.id === selectedCatalogueItem.providerId) || null 
         : null;
 
+    // DYNAMIC TARGETED HEADER HERO BANNER ENGINE
+    const targetedHeaderBanner = useMemo(() => {
+        if (!specialBanners || specialBanners.length === 0) return null;
+
+        const candidates = specialBanners.filter(banner => {
+            // 1. Date range filter
+            if (banner.startDate && new Date(banner.startDate).getTime() > Date.now()) return false;
+            if (banner.endDate && new Date(banner.endDate).getTime() < Date.now()) return false;
+
+            // 2. User Role Segment Filter
+            if (banner.targetRole && banner.targetRole !== 'all') {
+                if (banner.targetRole === 'guest' && currentUser) return false;
+                if (banner.targetRole === 'provider' && (!currentUser || currentUser.role !== 'provider')) return false;
+                if (banner.targetRole === 'client' && (!currentUser || currentUser.role !== 'client')) return false;
+            }
+
+            // 3. Location / Area Targeting Filter
+            if (banner.targetLocation && banner.targetLocation.trim() !== '') {
+                const locTarget = banner.targetLocation.toLowerCase().trim();
+                const userLoc = (currentUser?.location || '').toLowerCase();
+                const searchLoc = (localSearch || '').toLowerCase();
+                const selCategory = (selectedCategory || '').toLowerCase();
+
+                const matchesUserLoc = userLoc.includes(locTarget) || locTarget.includes(userLoc);
+                const matchesSearchLoc = searchLoc.includes(locTarget);
+                const matchesCategoryLoc = selCategory.includes(locTarget);
+
+                if (!matchesUserLoc && !matchesSearchLoc && !matchesCategoryLoc && locTarget !== 'all') {
+                    return false;
+                }
+            }
+
+            // 4. Profession / Category Targeting Filter
+            if (banner.targetCategory && banner.targetCategory.trim() !== '') {
+                const catTarget = banner.targetCategory.toLowerCase().trim();
+                const userProf = (currentUser?.profession || currentUser?.category || '').toLowerCase();
+                const activeCat = (selectedCategory || '').toLowerCase();
+                const searchTxt = (localSearch || '').toLowerCase();
+
+                const matchesUserProf = userProf.includes(catTarget) || catTarget.includes(userProf);
+                const matchesSelectedCat = activeCat.includes(catTarget) || catTarget.includes(activeCat);
+                const matchesSearchTxt = searchTxt.includes(catTarget);
+
+                if (!matchesUserProf && !matchesSelectedCat && !matchesSearchTxt && catTarget !== 'all') {
+                    return false;
+                }
+            }
+
+            // 5. Min Rating Filter
+            if (banner.minRating && banner.minRating > 0) {
+                const userRating = currentUser?.rating || 0;
+                if (userRating < banner.minRating) return false;
+            }
+
+            // 6. Member Tenure / Time of Joining Filter
+            if (banner.targetJoiningTenure && banner.targetJoiningTenure !== 'all') {
+                const joinedAt = currentUser?.createdAt ? new Date(currentUser.createdAt).getTime() : Date.now();
+                const daysSinceJoining = (Date.now() - joinedAt) / (1000 * 60 * 60 * 24);
+
+                if (banner.targetJoiningTenure === 'new_members' && daysSinceJoining > 30 && currentUser) {
+                    return false;
+                }
+                if (banner.targetJoiningTenure === 'tenured' && daysSinceJoining <= 30) {
+                    return false;
+                }
+            }
+
+            // 7. Verified Profile Filter
+            if (banner.isVerifiedTarget !== undefined) {
+                if (banner.isVerifiedTarget && !currentUser?.isVerified) return false;
+                if (!banner.isVerifiedTarget && currentUser?.isVerified) return false;
+            }
+
+            return true;
+        });
+
+        if (candidates.length === 0) return null;
+
+        // Sort candidates by priority descending
+        candidates.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+        return candidates[0];
+    }, [specialBanners, currentUser, selectedCategory, localSearch]);
+
+    const handleBannerClick = (banner: SpecialBanner) => {
+        if (banner.actionUrl) {
+            if (banner.actionUrl.startsWith('http')) {
+                window.open(banner.actionUrl, '_blank');
+            } else if (banner.actionUrl.startsWith('/')) {
+                const route = banner.actionUrl.replace('/', '') as CurrentPage;
+                onNavigate(route);
+            } else {
+                setLocalSearch(banner.actionUrl);
+            }
+        } else if (banner.targetCategory) {
+            setSelectedCategory(banner.targetCategory);
+        } else if (banner.targetLocation) {
+            setLocalSearch(banner.targetLocation);
+        }
+    };
+
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
-            {/* MINIMALIST HEADER - STRICT BLACK & WHITE */}
-            <header className="bg-black text-white min-h-[160px] p-0 border-b border-gray-800 relative flex flex-col justify-center items-center overflow-hidden">
+            {/* DYNAMIC TARGETED TOP HERO HEADER BANNER */}
+            <header className="bg-black text-white min-h-[170px] p-0 border-b border-gray-800 relative flex flex-col justify-center items-center overflow-hidden">
+                {/* Custom Background Image (From Targeted Banner or Global Branding) */}
+                {(targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl) && (
+                    <>
+                        <img 
+                            src={targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl} 
+                            alt={targetedHeaderBanner?.title || 'Hero Banner Background'} 
+                            className="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-black/40 z-0" />
+                    </>
+                )}
+
                 {/* Burger Menu Button - Top Left Corner Direct */}
                 <button 
                     onClick={onBack} 
                     aria-label="Open Menu"
-                    className="absolute top-1.5 left-1.5 p-1 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer z-20"
+                    className="absolute top-2 left-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-xs border border-white/10 hover:bg-black/60 cursor-pointer z-20"
                 >
                     <MenuIcon />
                 </button>
@@ -180,18 +293,29 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         <button 
                             onClick={onMessagesClick} 
                             aria-label="Notifications"
-                            className="absolute top-1.5 right-1.5 p-1 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer z-20"
+                            className="absolute top-2 right-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-black/40 backdrop-blur-xs border border-white/10 hover:bg-black/60 cursor-pointer z-20"
                         >
                             <BellIcon />
-                            {isUnread && <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-white rounded-full"></div>}
+                            {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>}
                         </button>
                     );
                 })()}
 
-                {/* Centered Logo & Subtitle */}
-                <div className="text-center cursor-pointer z-10 py-2 px-8" onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}>
-                    <h1 className="text-2xl font-black uppercase tracking-[0.25em] text-white leading-none">NIKOSOKO</h1>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-400 mt-2">Neighborhood Skilled Marketplace</p>
+                {/* Clean Hero Banner Area (No text overlay) */}
+                <div 
+                    className="text-center cursor-pointer z-10 py-8 px-6 flex flex-col items-center justify-center select-none w-full min-h-[140px]" 
+                    onClick={() => {
+                        if (targetedHeaderBanner) {
+                            handleBannerClick(targetedHeaderBanner);
+                        } else {
+                            setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null);
+                        }
+                    }}
+                >
+                    {/* Optional App Logo Image if configured, otherwise clean banner image */}
+                    {brandingConfig?.appIconUrl && (
+                        <img src={brandingConfig.appIconUrl} alt="Logo" className="w-10 h-10 rounded-xl object-cover border border-white/30 shadow-md" />
+                    )}
                 </div>
             </header>
 
@@ -246,58 +370,6 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     </div>
                 </div>
             </div>
-
-            {/* HERO BANNERS CAROUSEL (IF ANY BANNERS CONFIGURED BY ADMIN) */}
-            {specialBanners && specialBanners.length > 0 && (
-                <div className="px-3 pt-2">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-1">
-                        {specialBanners.map((banner, i) => (
-                            <div 
-                                key={banner.id ? `banner_${banner.id}_${i}` : `banner_${i}`}
-                                onClick={() => {
-                                    if (banner.actionUrl) {
-                                        if (banner.actionUrl.startsWith('http')) {
-                                            window.open(banner.actionUrl, '_blank');
-                                        } else {
-                                            onNavigate(banner.actionUrl.replace('/', '') as CurrentPage);
-                                        }
-                                    }
-                                }}
-                                className="relative flex-shrink-0 w-full snap-center rounded-xl overflow-hidden border border-black shadow-xs bg-slate-900 aspect-21/9 flex items-end p-3 cursor-pointer group hover:opacity-95 transition-all"
-                            >
-                                <img src={banner.imageUrl} alt={banner.title || 'Special Promotion'} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                                
-                                {banner.badgeText && (
-                                    <span className="absolute top-2 left-2 bg-amber-400 text-slate-950 font-black text-[8px] px-2 py-0.5 rounded uppercase tracking-wider shadow-xs">
-                                        {banner.badgeText}
-                                    </span>
-                                )}
-
-                                <div className="relative z-10 text-white w-full flex items-end justify-between gap-2">
-                                    <div>
-                                        {banner.title && (
-                                            <h4 className="font-extrabold text-xs leading-tight drop-shadow-md">
-                                                {banner.title}
-                                            </h4>
-                                        )}
-                                        {banner.subtitle && (
-                                            <p className="text-[9.5px] text-slate-200 line-clamp-1 drop-shadow-xs">
-                                                {banner.subtitle}
-                                            </p>
-                                        )}
-                                    </div>
-                                    {banner.actionUrl && (
-                                        <span className="bg-white text-black hover:bg-amber-400 font-extrabold text-[9px] px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0 shadow-xs">
-                                            Explore &rarr;
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">

@@ -24,6 +24,7 @@ interface NearbyAcquireSkill {
   title: string;
   institution: string;
   institutionShort: string;
+  institutionUrl: string;
   location: string;
   distanceKm: number;
   earningBoost: string;
@@ -43,6 +44,7 @@ const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
     title: 'Master Cabinetry, Wood Jointing & Finishing',
     institution: 'National Industrial Training Authority (NITA)',
     institutionShort: 'NITA',
+    institutionUrl: 'https://www.nita.go.ke',
     location: 'Industrial Area, Nairobi (3.2 km)',
     distanceKm: 3.2,
     earningBoost: '+KES 2,500/day',
@@ -60,6 +62,7 @@ const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
     title: 'EPRA Class T3 Solar PV & Inverter License',
     institution: 'Energy & Petroleum Regulatory Authority / NITA',
     institutionShort: 'EPRA',
+    institutionUrl: 'https://www.epra.go.ke',
     location: 'Upper Hill (4.5 km)',
     distanceKm: 4.5,
     earningBoost: '+KES 2,000/day',
@@ -77,6 +80,7 @@ const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
     title: 'MIG & Arc Welding for Structural Steel',
     institution: 'Kenya Industrial Training Institute (KITI)',
     institutionShort: 'KITI',
+    institutionUrl: 'https://www.kiti.ac.ke',
     location: 'Industrial Grounds (12 km)',
     distanceKm: 12.0,
     earningBoost: '+KES 1,800/day',
@@ -94,6 +98,7 @@ const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
     title: 'Commercial Apiary & Honey Extraction',
     institution: 'Kenya Agricultural & Livestock Research Org (KALRO)',
     institutionShort: 'KALRO',
+    institutionUrl: 'https://www.kalro.org',
     location: 'Loresho Station (8.0 km)',
     distanceKm: 8.0,
     earningBoost: '+KES 1,800/day',
@@ -111,6 +116,7 @@ const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
     title: 'Solar Water Heater & Thermosiphon Piping',
     institution: 'Technical & Vocational Education Authority (TVETA)',
     institutionShort: 'TVETA',
+    institutionUrl: 'https://www.tveta.go.ke',
     location: 'Kabete National Polytechnic (5.0 km)',
     distanceKm: 5.0,
     earningBoost: '+KES 1,400/day',
@@ -820,7 +826,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1 mt-auto">
+                  <div className="flex flex-wrap items-center gap-2 pt-1 mt-auto">
                     <button
                       onClick={() => {
                         if (isSaved) {
@@ -831,7 +837,7 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                           showToast(`✓ Registered interest in ${course.institutionShort}`);
                         }
                       }}
-                      className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                         isSaved
                           ? 'bg-emerald-600 text-white'
                           : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-[0_0_10px_rgba(16,185,129,0.3)]'
@@ -840,9 +846,19 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
                       {isSaved ? '✓ Enrolled / Interested' : '🎓 Register Interest'}
                     </button>
 
+                    <a
+                      href={course.institutionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-2 bg-emerald-950/90 hover:bg-emerald-900/90 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border border-emerald-500/50 flex items-center gap-1 shrink-0"
+                      title={`Visit official ${course.institutionShort} website`}
+                    >
+                      <span>🌐 Visit Website</span>
+                    </a>
+
                     <button
                       onClick={() => setSelectedOrgForModal({ orgName: course.institutionShort })}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold uppercase transition-all cursor-pointer border border-slate-700 shrink-0"
+                      className="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold uppercase transition-all cursor-pointer border border-slate-700 shrink-0"
                     >
                       Campus Info
                     </button>

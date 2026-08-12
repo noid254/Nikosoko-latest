@@ -5,6 +5,7 @@ interface PendingRatingsViewProps {
   unratedProviders: ServiceProvider[];
   onRateProvider: (providerId: string, rating: number, comment: string) => void;
   onFlagProvider: (providerId: string, reason: string) => void;
+  onSnoozeProvider?: (providerId: string) => void;
   onBack: () => void;
   targetProvider?: ServiceProvider | null;
   onContinueAction?: () => void;
@@ -26,6 +27,7 @@ export const PendingRatingsView: React.FC<PendingRatingsViewProps> = ({
   unratedProviders,
   onRateProvider,
   onFlagProvider,
+  onSnoozeProvider,
   onBack,
   targetProvider,
   onContinueAction
@@ -164,17 +166,29 @@ export const PendingRatingsView: React.FC<PendingRatingsViewProps> = ({
         {selectedProvider ? (
           <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-4 animate-fade-in">
             {/* Header profile info */}
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-              <img
-                src={selectedProvider.avatarUrl}
-                alt={selectedProvider.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-brand-navy"
-              />
-              <div>
-                <h3 className="font-extrabold text-sm text-gray-900">{selectedProvider.name}</h3>
-                <p className="text-xs text-brand-navy font-bold">{selectedProvider.service}</p>
-                <p className="text-[10px] text-gray-500 font-medium">{selectedProvider.location || 'Nairobi, Kenya'}</p>
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={selectedProvider.avatarUrl}
+                  alt={selectedProvider.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-brand-navy shrink-0"
+                />
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-sm text-gray-900 truncate">{selectedProvider.name}</h3>
+                  <p className="text-xs text-brand-navy font-bold truncate">{selectedProvider.service}</p>
+                  <p className="text-[10px] text-gray-500 font-medium truncate">{selectedProvider.location || 'Nairobi, Kenya'}</p>
+                </div>
               </div>
+              {onSnoozeProvider && (
+                <button
+                  type="button"
+                  onClick={() => onSnoozeProvider(selectedProvider.id)}
+                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors cursor-pointer"
+                  title="Prompt window will disappear and return in 6 hours"
+                >
+                  ⏰ Snooze 6h
+                </button>
+              )}
             </div>
 
             <form onSubmit={handleRatingSubmit} className="space-y-4">

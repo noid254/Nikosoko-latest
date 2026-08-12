@@ -200,10 +200,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                                             onClick={handleSkipOrPostpone} 
                                             className="text-gray-500 font-bold hover:text-black underline tracking-wide cursor-pointer"
                                         >
-                                            Remind Later ({maxPostpones - postponeCount} left)
+                                            Remind Later in 6h ({maxPostpones - postponeCount} left)
                                         </button>
                                     )}
                                 </div>
+                                <p className="text-[9.5px] text-gray-500 text-center mt-2 font-medium">
+                                    💡 Closing or postponing snoozes this prompt for 6 hours if action remains unfulfilled.
+                                </p>
                             </div>
                         </div>
                     ) : (

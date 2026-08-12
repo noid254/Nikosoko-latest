@@ -70,7 +70,7 @@ function App() {
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isForcedReview, setIsForcedReview] = useState(false);
-  const [contactHistory, setContactHistory] = useState<{ providerId: string; contactedAt: number; postponeCount: number }[]>(() => {
+  const [contactHistory, setContactHistory] = useState<{ providerId: string; contactedAt: number; postponeCount: number; snoozedUntil?: number }[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_contact_history_v2');
       if (saved) return JSON.parse(saved);
@@ -115,10 +115,55 @@ function App() {
   const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_special_banners');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
     }
+    return [
+      {
+        id: 'banner_nairobi',
+        title: 'NAIROBI SKILLED PROS',
+        subtitle: 'Connecting you with verified electricians, boda & plumbers in Nairobi',
+        imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200',
+        targetLocation: 'Nairobi',
+        isHeaderHero: true,
+        badgeText: 'NAIROBI HUBS',
+        priority: 10
+      },
+      {
+        id: 'banner_electrician',
+        title: 'POWER & WIRING EXPERTS',
+        subtitle: 'Certified electrical contractors & solar installers in your area',
+        imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1200',
+        targetCategory: 'Electrician',
+        isHeaderHero: true,
+        badgeText: 'ELECTRICIAN PROMO',
+        priority: 9
+      },
+      {
+        id: 'banner_new_member',
+        title: 'WELCOME TO NIKOSOKO!',
+        subtitle: 'Complete your profile & publish your service listing to start earning',
+        imageUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1200',
+        targetJoiningTenure: 'new_members',
+        isHeaderHero: true,
+        badgeText: 'NEW MEMBER',
+        priority: 8
+      },
+      {
+        id: 'banner_top_rated',
+        title: '★ 4.0+ VIP EXPERTS',
+        subtitle: 'Featured showcase for top-rated artisans & professionals',
+        imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200',
+        minRating: 4.0,
+        isHeaderHero: true,
+        badgeText: '★ TOP RATED',
+        priority: 7
+      }
+    ];
   });
   const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
     try {
@@ -205,6 +250,37 @@ function App() {
   const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
   const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
   const [ctaToast, setCtaToast] = useState<{ show: boolean; text: string; providerId?: string } | null>(null);
+
+  // Dynamic Favicon, App Icon, and Document Title synchronization
+  useEffect(() => {
+    if (brandingConfig.appName) {
+      document.title = `${brandingConfig.appName} - ${brandingConfig.tagline || 'Marketplace'}`;
+    }
+
+    const faviconUrl = brandingConfig.faviconUrl || brandingConfig.appIconUrl;
+    if (faviconUrl) {
+      let iconLink = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+      if (!iconLink) {
+        iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        document.head.appendChild(iconLink);
+      }
+      iconLink.href = faviconUrl;
+
+      let appleIconLink = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
+      if (!appleIconLink) {
+        appleIconLink = document.createElement('link');
+        appleIconLink.rel = 'apple-touch-icon';
+        document.head.appendChild(appleIconLink);
+      }
+      appleIconLink.href = brandingConfig.appIconUrl || faviconUrl;
+    }
+  }, [brandingConfig]);
+
+  const showCtaToast = (text: string) => {
+    setCtaToast({ show: true, text });
+    setTimeout(() => setCtaToast(null), 4000);
+  };
 
   const contactedProviderIds = contactHistory.map(c => c.providerId);
 
@@ -362,11 +438,6 @@ function App() {
       clearTimeout(safetyTimer);
     };
   }, []);
-
-  const handleSaveAssets = (assets: BusinessAssets) => {
-    setBusinessAssets(assets);
-    localStorage.setItem('nikosoko_business_assets', JSON.stringify(assets));
-  };
 
   const gateAuth = (action: () => void) => {
     if (!isAuthenticated) handleOpenLogin();
@@ -862,7 +933,7 @@ function App() {
             isFlaggedByUser={false} 
             onFlag={(reason) => profileToView && handleFlagProvider(profileToView.id, reason)} 
             allDocuments={documents} 
-            onViewDocument={(d) => { setSelectedDocument(d); setCurrentPage('documentDetail'); }} 
+            onViewDocument={(d) => { setSelectedDocument(d); }} 
             onNavigate={handleNavigate}
             onViewSaccoModal={(p) => setSaccoModalProvider(p)}
             onApproveSaccoMember={handleApproveSaccoRequest}
@@ -894,9 +965,11 @@ function App() {
             onBack={() => setCurrentPage('home')} 
             currentUser={currentUser} 
             onOpenCompleteSignUp={handleOpenCompleteSignUp}
+            onSnoozePrompt={(providerId) => snoozeRatingPrompt(providerId, 6)}
             onOpenReviewModal={(providerId) => {
               const found = providers.find(p => p.id === providerId);
               if (found) {
+                snoozeRatingPrompt(found.id, 6);
                 setPendingReviews([found]);
                 setReviewModalSubtitle(`Rating request for ${found.name}`);
                 setIsForcedReview(false);
@@ -931,6 +1004,10 @@ function App() {
             }}
             onFlagProvider={(providerId, reason) => {
               handleFlagProvider(providerId, reason);
+            }}
+            onSnoozeProvider={(providerId) => {
+              snoozeRatingPrompt(providerId, 6);
+              showCtaToast("⏰ Prompt snoozed. Will return in 6 hours if unrated.");
             }}
             onBack={() => {
               setCurrentPage('home');
@@ -970,11 +1047,34 @@ function App() {
           onSaveFeatureConfig={handleSaveFeatureAdmin}
         />;
       default:
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} specialBanners={specialBanners} brandingConfig={brandingConfig} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
     }
   };
 
+  const snoozeRatingPrompt = (providerId: string, snoozeHours: number = 6) => {
+      const now = Date.now();
+      const snoozedUntil = now + snoozeHours * 3600 * 1000;
+      setContactHistory(prev => {
+          const existing = prev.find(c => c.providerId === providerId);
+          let updated;
+          if (existing) {
+              updated = prev.map(c => c.providerId === providerId ? { ...c, contactedAt: now, snoozedUntil, postponeCount: Math.min(3, (c.postponeCount || 0) + 1) } : c);
+          } else {
+              updated = [{ providerId, contactedAt: now, snoozedUntil, postponeCount: 1 }, ...prev];
+          }
+          localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
+          return updated;
+      });
+      if (simulated6HOverdueId === providerId) {
+          setSimulated6HOverdueId(null);
+      }
+  };
+
   const handleCloseReviewModal = () => {
+      const currentPending = pendingReviews[0];
+      if (currentPending) {
+          snoozeRatingPrompt(currentPending.id, 6);
+      }
       setIsForcedReview(false);
       setShowReviewModal(false);
       if (pendingCtaAction) {
@@ -991,16 +1091,8 @@ function App() {
   const handlePostponeReview = () => {
       const currentPending = pendingReviews[0];
       if (currentPending) {
-          setContactHistory(prev => {
-              const updated = prev.map(item => {
-                  if (item.providerId === currentPending.id) {
-                      return { ...item, postponeCount: Math.min(3, (item.postponeCount || 0) + 1) };
-                  }
-                  return item;
-              });
-              localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
-              return updated;
-          });
+          snoozeRatingPrompt(currentPending.id, 6);
+          showCtaToast("⏰ Prompt snoozed for 6 hours. Will return if rating action remains uncompleted.");
       }
 
       setShowReviewModal(false);
@@ -1017,19 +1109,8 @@ function App() {
   };
 
   const handleSmsPostpone = (providerId: string) => {
-      setContactHistory(prev => {
-          const updated = prev.map(item => {
-              if (item.providerId === providerId) {
-                  return { ...item, postponeCount: Math.min(3, (item.postponeCount || 0) + 1) };
-              }
-              return item;
-          });
-          localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
-          return updated;
-      });
-      if (simulated6HOverdueId === providerId) {
-          setSimulated6HOverdueId(null);
-      }
+      snoozeRatingPrompt(providerId, 6);
+      showCtaToast("⏰ Prompt window snoozed. Will return in 6 hours if rating action remains uncompleted.");
   };
 
   const handleRateProvider = (providerId: string, rating: number, comment: string) => {
@@ -1128,8 +1209,10 @@ function App() {
       if (ratedProviderIds.includes(c.providerId)) return false;
       if (dismissedProviderIds.includes(c.providerId)) return false;
       if (simulated6HOverdueId === c.providerId) return true;
-      const hoursPassed = (Date.now() - c.contactedAt) / (1000 * 3600);
-      return hoursPassed >= 2;
+      const now = Date.now();
+      if (c.snoozedUntil && now < c.snoozedUntil) return false;
+      const hoursPassed = (now - c.contactedAt) / (1000 * 3600);
+      return hoursPassed >= 6;
   });
 
   const active6HourProvider = active6HourItem ? providers.find(p => p.id === active6HourItem.providerId) : null;
@@ -1163,15 +1246,16 @@ function App() {
         </div>
       )}
 
-      {/* 2-3 Hour Post-Service Notification Reminder Banner */}
+      {/* 6-Hour Post-Service Notification Reminder Banner */}
       {active6HourProvider && active6HourItem && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-lg px-3 animate-fade-in">
           <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2.5 w-full sm:w-auto min-w-0">
               <span className="text-xl shrink-0 p-1.5 bg-amber-400/20 rounded-xl">📱</span>
               <div className="min-w-0 flex-1">
-                <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider">
-                  Post-Service Reminder
+                <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Post-Service Reminder</span>
+                  <span className="bg-amber-400/20 text-amber-300 text-[8px] px-1.5 py-0.5 rounded-md font-bold">Returns in 6h if unacted</span>
                 </div>
                 <p className="text-gray-100 font-bold text-xs leading-tight truncate">
                   Rate your service with <span className="text-amber-400 font-extrabold">{active6HourProvider.name}</span>?
@@ -1181,6 +1265,7 @@ function App() {
             <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-2 sm:pt-0">
               <button
                 onClick={() => {
+                  snoozeRatingPrompt(active6HourProvider.id, 6);
                   setPendingReviews([active6HourProvider]);
                   setReviewModalSubtitle(`Reminder to rate your service with ${active6HourProvider.name}`);
                   setReviewPostponeCount(active6HourItem.postponeCount || 0);
@@ -1200,10 +1285,20 @@ function App() {
               </button>
               <button
                 onClick={() => handleSmsPostpone(active6HourProvider.id)}
-                className="bg-white/10 text-gray-400 hover:text-white font-bold px-2 py-1.5 rounded-xl hover:bg-white/20 text-[10px] cursor-pointer"
-                title="Remind me later"
+                className="bg-white/10 text-gray-300 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
+                title="Snooze prompt for 6 hours"
               >
-                Later
+                Later (6h)
+              </button>
+              <button
+                onClick={() => {
+                  setSimulated6HOverdueId(active6HourProvider.id);
+                  showCtaToast("⚡ Simulated 6h trigger active!");
+                }}
+                className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 font-black px-2 py-1.5 rounded-xl text-[9px] uppercase tracking-wide cursor-pointer"
+                title="Fast-forward test simulation"
+              >
+                ⚡ Test
               </button>
             </div>
           </div>

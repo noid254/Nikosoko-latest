@@ -19,6 +19,7 @@ interface MessageCenterViewProps {
   currentUser?: ServiceProvider | null;
   onOpenCompleteSignUp?: () => void;
   onOpenReviewModal?: (providerId: string) => void;
+  onSnoozePrompt?: (providerId: string) => void;
 }
 
 const MessageCenterView: React.FC<MessageCenterViewProps> = ({
@@ -26,10 +27,11 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({
   currentUser,
   onOpenCompleteSignUp,
   onOpenReviewModal,
+  onSnoozePrompt,
 }) => {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [sentReminders, setSentReminders] = useState<Record<number, boolean>>({});
+  const [sentReminders, setSentReminders] = useState<Record<number, number>>({});
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -127,9 +129,14 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({
   };
 
   const handleSendRatingReminder = async (msg: InboxMessage) => {
-    setSentReminders(prev => ({ ...prev, [msg.id]: true }));
-    showToast(`Rating reminder sent to ${msg.tapperName || 'customer'}!`);
+    const snoozedUntil = Date.now() + 6 * 3600 * 1000;
+    setSentReminders(prev => ({ ...prev, [msg.id]: snoozedUntil }));
+    showToast(`Rating reminder sent! Prompt window snoozed. Re-prompts in 6 hrs if unacted.`);
     playNotificationSound();
+
+    if (msg.targetProviderId && onSnoozePrompt) {
+      onSnoozePrompt(msg.targetProviderId);
+    }
 
     // Create rating prompt for tapper
     const reminderMsg: Omit<InboxMessage, 'id'> = {
@@ -242,21 +249,25 @@ const MessageCenterView: React.FC<MessageCenterViewProps> = ({
                 </p>
 
                 {/* Interactive Action Buttons */}
-                {isCtaTap && (
-                  <div className="mt-3 pt-2 border-t border-amber-300/60">
-                    <button
-                      onClick={() => handleSendRatingReminder(msg)}
-                      disabled={sentReminders[msg.id]}
-                      className={`w-full font-black py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer ${
-                        sentReminders[msg.id]
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-900 text-amber-400 hover:bg-slate-800 active:scale-95'
-                      }`}
-                    >
-                      {sentReminders[msg.id] ? '✓ Reminder Sent' : `📩 Send Rating Reminder to ${msg.tapperName || 'Customer'}`}
-                    </button>
-                  </div>
-                )}
+                {isCtaTap && (() => {
+                  const reminderSnoozeTime = sentReminders[msg.id];
+                  const isSnoozed = Boolean(reminderSnoozeTime && Date.now() < reminderSnoozeTime);
+                  return (
+                    <div className="mt-3 pt-2 border-t border-amber-300/60">
+                      <button
+                        onClick={() => handleSendRatingReminder(msg)}
+                        disabled={isSnoozed}
+                        className={`w-full font-black py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer ${
+                          isSnoozed
+                            ? 'bg-emerald-700 text-emerald-100 opacity-90'
+                            : 'bg-slate-900 text-amber-400 hover:bg-slate-800 active:scale-95'
+                        }`}
+                      >
+                        {isSnoozed ? '✓ Reminder Sent (Will re-prompt in 6h if unacted)' : `📩 Send Rating Reminder to ${msg.tapperName || 'Customer'}`}
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {isRatingReminder && (
                   <div className="mt-3 pt-2 border-t border-indigo-200">

@@ -305,6 +305,12 @@ export interface SpecialBanner {
   isOnlineTarget?: boolean;
   isVerifiedTarget?: boolean;
   targetReferralCode?: string;
+  targetJoiningTenure?: 'all' | 'new_members' | 'tenured';
+  maxDaysJoined?: number;
+  minDaysJoined?: number;
+  targetRole?: 'all' | 'client' | 'provider' | 'guest';
+  isHeaderHero?: boolean;
+  ctaText?: string;
   actionUrl?: string;
   badgeText?: string;
   startDate?: string;
@@ -318,6 +324,9 @@ export interface AppBrandingConfig {
   tagline: string;
   appIconUrl?: string;
   faviconUrl?: string;
+  heroBannerUrl?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
   primaryColor?: string;
   supportPhone?: string;
   supportEmail?: string;

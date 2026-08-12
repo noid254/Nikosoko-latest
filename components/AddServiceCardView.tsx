@@ -83,6 +83,7 @@ const AddServiceCardView: React.FC<AddServiceCardViewProps> = ({ onBack, onSave,
     
     // Form State
     const [name, setName] = useState(currentUser?.name || '');
+    const [phone, setPhone] = useState(currentUser?.phone || '');
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [service, setService] = useState('');
     const [charge, setCharge] = useState('');
@@ -164,8 +165,8 @@ const AddServiceCardView: React.FC<AddServiceCardViewProps> = ({ onBack, onSave,
 
         const finalCategory = category === 'other' ? customCategory : category;
 
-        if (!name || !service || !charge || !location || !about || !finalCategory) {
-            alert("Please fill in all fields to create your profile.");
+        if (!name || !service || !phone || !charge || !location || !about || !finalCategory) {
+            alert("Please fill in all fields including your Phone Number to create your listing.");
             return;
         }
         if (ctas.length === 0) {
@@ -179,6 +180,7 @@ const AddServiceCardView: React.FC<AddServiceCardViewProps> = ({ onBack, onSave,
         const hourlyRate = parseInt(charge, 10) || 0;
         const profileData = {
             service,
+            phone: phone.trim(),
             location,
             rating: 0, 
             distanceKm: Math.round(Math.random() * 5 * 10)/10, 
@@ -255,6 +257,7 @@ const AddServiceCardView: React.FC<AddServiceCardViewProps> = ({ onBack, onSave,
                     </div>
 
                     <FormInput label={selectedType.nameLabel} value={name} onChange={e => setName(e.target.value)} />
+                    <FormInput label="Phone Number (Mobile / M-Pesa) *" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 0712345678 or 254712345678" />
                     <FormInput label={selectedType.serviceLabel} value={service} onChange={e => setService(e.target.value)} placeholder="e.g. Electrician, Bakery, Sacco..." />
                     
                     <div>
@@ -342,8 +345,7 @@ const AddServiceCardView: React.FC<AddServiceCardViewProps> = ({ onBack, onSave,
                                 </select>
                             ) : (
                                 <div className="text-sm text-red-500 bg-red-50 p-3 rounded-lg border border-red-200">
-                                    No registered vehicles found. Please go to 'Garage' to register your vehicle first.
-                                    <button onClick={() => onNavigate('registerAsset')} className="block mt-2 font-bold underline">Register Vehicle</button>
+                                    No registered vehicles found. Please register your vehicle in your profile settings.
                                 </div>
                             )}
                         </div>

@@ -66,10 +66,10 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
 
           <button 
             onClick={onClose}
-            className="text-xs font-bold text-gray-600 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-3 py-2 rounded-xl transition-all cursor-pointer active:scale-95"
-            title="Cancel View"
+            className="text-xs font-bold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl transition-all cursor-pointer active:scale-95"
+            title="Close"
           >
-            Cancel View ✕
+            Close ✕
           </button>
         </div>
 
@@ -270,14 +270,14 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
             </div>
         </div>
 
-        {/* E-COMMERCE STICKY BOTTOM BAR WITH CALL / WHATSAPP / CANCEL VIEW */}
+        {/* E-COMMERCE STICKY BOTTOM BAR WITH CALL / WHATSAPP / CLOSE */}
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] flex items-center gap-2 z-30">
           <button 
             onClick={onClose} 
             className="py-3.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer active:scale-95 shrink-0"
-            title="Cancel View and close"
+            title="Close"
           >
-            Cancel View
+            Close
           </button>
           
           {provider?.phone && (

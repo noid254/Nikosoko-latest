@@ -531,7 +531,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
             {/* Main Scrollable Profile Container */}
             <div className="flex-1 overflow-y-auto no-scrollbar relative">
-                {/* STICKY E-COMMERCE TOP BAR WITH BACK & CANCEL VIEW */}
+                {/* STICKY E-COMMERCE TOP BAR WITH BACK BUTTON */}
                 <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-3 py-2 flex items-center justify-between shadow-2xs">
                     <button 
                         onClick={onBack} 
@@ -544,10 +544,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     <div className="flex items-center gap-1.5">
                         <button 
                             onClick={onBack}
-                            className="text-[10.5px] font-bold text-gray-600 hover:text-red-600 bg-gray-50 hover:bg-red-50 border border-gray-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95"
-                            title="Cancel View"
+                            className="text-[10.5px] font-bold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 border border-gray-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95"
+                            title="Close View"
                         >
-                            Cancel View ✕
+                            Close ✕
                         </button>
                     </div>
                 </div>
@@ -873,22 +873,15 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={onBack}
-                                className="py-3 px-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold transition flex items-center justify-center gap-1 text-[9.5px] uppercase tracking-wider active:scale-95 cursor-pointer shrink-0 border border-gray-200"
-                                title="Cancel View & Return to Services"
-                            >
-                                <span>← Cancel View</span>
-                            </button>
-                            {activeButtons.map(btnKey => {
+                        <div className="grid grid-cols-3 gap-2 w-full">
+                            {['call', 'book', 'chat'].map(btnKey => {
                                 const config = ctaConfig[btnKey];
                                 if (!config) return null;
                                 return (
                                     <button 
                                         key={btnKey} 
                                         onClick={config.action} 
-                                        className="flex-1 font-black py-3 px-3 rounded-xl bg-brand-navy text-white hover:bg-black transition flex items-center justify-center gap-1.5 text-[9.5px] uppercase tracking-wider shadow-md active:scale-95"
+                                        className="w-full font-black py-3 px-2 rounded-xl bg-brand-navy text-white hover:bg-black transition flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider shadow-md active:scale-95 cursor-pointer"
                                     >
                                         {config.icon}
                                         <span>{config.label}</span>
