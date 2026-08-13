@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider } from '../../types';
+import type { ServiceProvider, AdminNote } from '../../types';
 import AdminUserProfileModal from './AdminUserProfileModal';
 
 interface UsersPageProps {
@@ -7,6 +7,7 @@ interface UsersPageProps {
   onViewProvider: (provider: ServiceProvider) => void;
   onUpdateProvider: (provider: ServiceProvider) => void;
   onDeleteProvider: (id: string) => void;
+  isSuperAdmin?: boolean;
 }
 
 const UsersPage: React.FC<UsersPageProps> = ({
@@ -14,19 +15,26 @@ const UsersPage: React.FC<UsersPageProps> = ({
   onViewProvider,
   onUpdateProvider,
   onDeleteProvider,
+  isSuperAdmin = true,
 }) => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [userFilter, setUserFilter] = useState<'All' | 'Verified' | 'Unverified' | 'Flagged'>('All');
+  const [userFilter, setUserFilter] = useState<'All' | 'Verified' | 'Unverified' | 'Suspended'>('All');
   const [sortBy, setSortBy] = useState<'newest' | 'views' | 'rating' | 'name'>('views');
   const [selectedAdminUser, setSelectedAdminUser] = useState<ServiceProvider | null>(null);
 
+  // Suspension Modal State
+  const [suspendingUser, setSuspendingUser] = useState<ServiceProvider | null>(null);
+  const [suspensionReason, setSuspensionReason] = useState('');
+  const [suspensionError, setSuspensionError] = useState('');
+
   const filteredProviders = useMemo(() => {
     const result = providers.filter(p => {
+      const isSuspendedOrFlagged = p.isSuspended || (p.flagCount || 0) > 0;
       const matchesFilter =
         userFilter === 'All' ||
         (userFilter === 'Verified' && p.isVerified) ||
         (userFilter === 'Unverified' && !p.isVerified) ||
-        (userFilter === 'Flagged' && (p.flagCount || 0) > 0);
+        (userFilter === 'Suspended' && isSuspendedOrFlagged);
       const matchesSearch =
         p.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         p.service.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -52,16 +60,83 @@ const UsersPage: React.FC<UsersPageProps> = ({
     onUpdateProvider({ ...provider, isVerified: !provider.isVerified });
   };
 
-  const toggleFlag = (provider: ServiceProvider) => {
-    const currentFlags = provider.flagCount || 0;
-    onUpdateProvider({ ...provider, flagCount: currentFlags > 0 ? 0 : 1 });
+  const initiateSuspend = (provider: ServiceProvider) => {
+    setSuspendingUser(provider);
+    setSuspensionReason('');
+    setSuspensionError('');
+  };
+
+  const handleConfirmSuspension = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!suspendingUser) return;
+    if (!suspensionReason.trim()) {
+      setSuspensionError('A valid note/reason for suspension is required.');
+      return;
+    }
+
+    const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const newNote: AdminNote = {
+      id: `suspend_note_${Date.now()}`,
+      authorName: isSuperAdmin ? 'Super Admin' : 'Admin',
+      authorRole: isSuperAdmin ? 'SuperAdmin' : 'Admin',
+      authorEmail: 'Noid254@gmail.com',
+      content: `🛑 ACCOUNT SUSPENDED & FLAGGED:\nReason: "${suspensionReason.trim()}"`,
+      createdAt: new Date().toISOString(),
+      signature: `Signed by Admin (Noid254@gmail.com) on ${timestamp}`
+    };
+
+    const updatedProvider: ServiceProvider = {
+      ...suspendingUser,
+      isSuspended: true,
+      flagCount: (suspendingUser.flagCount || 0) + 1,
+      suspendedReason: suspensionReason.trim(),
+      suspendedBy: isSuperAdmin ? 'Super Admin' : 'Admin',
+      suspendedAt: new Date().toISOString(),
+      adminNotes: [newNote, ...(suspendingUser.adminNotes || [])]
+    };
+
+    onUpdateProvider(updatedProvider);
+    setSuspendingUser(null);
+    setSuspensionReason('');
+  };
+
+  const handleUnsuspend = (provider: ServiceProvider) => {
+    if (!isSuperAdmin) {
+      alert('🔒 Permission Denied: Only a Super Admin can unflag or unsuspend an account.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to unsuspend and unflag ${provider.name}'s account?`)) return;
+
+    const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const newNote: AdminNote = {
+      id: `unsuspend_note_${Date.now()}`,
+      authorName: 'Super Admin',
+      authorRole: 'SuperAdmin',
+      authorEmail: 'Noid254@gmail.com',
+      content: '✅ ACCOUNT UNSUSPENDED & UNFLAGGED BY SUPER ADMIN.',
+      createdAt: new Date().toISOString(),
+      signature: `Signed by Super Admin (Noid254@gmail.com) on ${timestamp}`
+    };
+
+    const updatedProvider: ServiceProvider = {
+      ...provider,
+      isSuspended: false,
+      flagCount: 0,
+      suspendedReason: undefined,
+      suspendedBy: undefined,
+      suspendedAt: undefined,
+      adminNotes: [newNote, ...(provider.adminNotes || [])]
+    };
+
+    onUpdateProvider(updatedProvider);
   };
 
   const counts = useMemo(() => ({
     all: providers.length,
     verified: providers.filter(p => p.isVerified).length,
     unverified: providers.filter(p => !p.isVerified).length,
-    flagged: providers.filter(p => (p.flagCount || 0) > 0).length,
+    suspended: providers.filter(p => p.isSuspended || (p.flagCount || 0) > 0).length,
   }), [providers]);
 
   return (
@@ -79,6 +154,61 @@ const UsersPage: React.FC<UsersPageProps> = ({
         />
       )}
 
+      {/* SUSPENSION REASON MODAL */}
+      {suspendingUser && (
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border-2 border-rose-300 shadow-2xl p-6 w-full max-w-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-rose-600 font-black text-base">
+                <span>🛑 Suspend & Flag Account</span>
+              </div>
+              <button onClick={() => setSuspendingUser(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-950 font-medium space-y-1">
+              <p className="font-bold">Warning: Suspending {suspendingUser.name}</p>
+              <p>Suspended accounts are hidden from public view/search and blocked from platform access. **Only a Super Admin can lift this suspension.**</p>
+            </div>
+
+            <form onSubmit={handleConfirmSuspension} className="space-y-3">
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-700 mb-1">
+                  Reason / Note for Suspension <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Provide explicit reasons for suspending this account (e.g. fraudulent activity, unresolved disputes, violation of terms)..."
+                  value={suspensionReason}
+                  onChange={e => {
+                    setSuspensionReason(e.target.value);
+                    setSuspensionError('');
+                  }}
+                  className="w-full p-3 bg-slate-50 border-2 border-slate-200 focus:border-rose-600 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                />
+                {suspensionError && <p className="text-rose-600 text-[11px] font-bold mt-1">{suspensionError}</p>}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSuspendingUser(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md"
+                >
+                  Confirm Account Suspension
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header & Quick Filter Pills */}
       <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -87,11 +217,11 @@ const UsersPage: React.FC<UsersPageProps> = ({
               <span>👥 User & Service Provider Registry</span>
               <span className="bg-slate-100 text-slate-800 text-xs px-2.5 py-0.5 rounded-full font-bold">{filteredProviders.length} Users</span>
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Manage accounts, view system intelligence bios, attach signed admin notes & issue verification badges.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Manage accounts, suspend/flag accounts with notes, inspect intelligence bios & issue verification badges.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(['All', 'Verified', 'Unverified', 'Flagged'] as const).map(f => (
+            {(['All', 'Verified', 'Unverified', 'Suspended'] as const).map(f => (
               <button
                 key={f}
                 onClick={() => setUserFilter(f)}
@@ -101,7 +231,7 @@ const UsersPage: React.FC<UsersPageProps> = ({
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {f} ({f === 'All' ? counts.all : f === 'Verified' ? counts.verified : f === 'Unverified' ? counts.unverified : counts.flagged})
+                {f} ({f === 'All' ? counts.all : f === 'Verified' ? counts.verified : f === 'Unverified' ? counts.unverified : counts.suspended})
               </button>
             ))}
           </div>
@@ -147,18 +277,21 @@ const UsersPage: React.FC<UsersPageProps> = ({
                 <th className="py-3 px-4">Service & Category</th>
                 <th className="py-3 px-4">Role</th>
                 <th className="py-3 px-4 text-center">Engagement</th>
-                <th className="py-3 px-4">Verification</th>
+                <th className="py-3 px-4">Status & Verification</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {filteredProviders.map(user => {
                 const disputeCount = user.ratingDisputes?.length || 0;
+                const isSuspended = user.isSuspended || (user.flagCount || 0) > 0;
                 return (
                   <tr 
                     key={user.id} 
                     onClick={() => setSelectedAdminUser(user)}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                    className={`transition-colors cursor-pointer group ${
+                      isSuspended ? 'bg-rose-50/50 hover:bg-rose-50' : 'hover:bg-slate-50'
+                    }`}
                   >
                     {/* User Details */}
                     <td className="py-3.5 px-4">
@@ -169,28 +302,37 @@ const UsersPage: React.FC<UsersPageProps> = ({
                             alt={user.name}
                             className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs"
                           />
-                          <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                          <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                            isSuspended ? 'bg-rose-600' : user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                          }`}></span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
                               {user.name}
                             </p>
-                            {(user.flagCount || 0) > 0 && (
-                              <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">Flagged</span>
+                            {isSuspended && (
+                              <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase" title={user.suspendedReason || 'Account suspended'}>
+                                🛑 Suspended / Flagged
+                              </span>
                             )}
                             {disputeCount > 0 && (
-                              <span className="bg-amber-400 text-slate-950 text-[8.5px] font-black px-1.5 py-0.2 rounded uppercase border border-amber-500" title={`${disputeCount} Cases Raised`}>
+                              <span className="bg-amber-400 text-slate-950 text-[8.5px] font-black px-1.5 py-0.2 rounded uppercase border border-amber-500">
                                 ⚖️ {disputeCount} Cases
                               </span>
                             )}
                             {user.adminNotes && user.adminNotes.length > 0 && (
-                              <span className="bg-amber-100 text-amber-900 text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase border border-amber-300" title={`${user.adminNotes.length} Admin Notes Attached`}>
+                              <span className="bg-amber-100 text-amber-900 text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase border border-amber-300">
                                 ✍️ {user.adminNotes.length} Notes
                               </span>
                             )}
                           </div>
                           <p className="text-[11px] text-slate-500 font-mono mt-0.5">📞 {user.phone} • 📍 {user.location}</p>
+                          {isSuspended && user.suspendedReason && (
+                            <p className="text-[10px] text-rose-700 font-semibold mt-0.5 bg-rose-100 px-1.5 py-0.5 rounded">
+                              Reason: {user.suspendedReason}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -249,18 +391,32 @@ const UsersPage: React.FC<UsersPageProps> = ({
                           onClick={() => setSelectedAdminUser(user)}
                           className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-black px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer shadow-xs"
                         >
-                          🧠 Inspect Profile
+                          🧠 Bio
                         </button>
-                        <button
-                          onClick={() => toggleFlag(user)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            (user.flagCount || 0) > 0
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600'
-                          }`}
-                        >
-                          {(user.flagCount || 0) > 0 ? 'Unflag' : 'Flag'}
-                        </button>
+
+                        {/* SUSPEND / UNSUSPEND BUTTON */}
+                        {isSuspended ? (
+                          <button
+                            onClick={() => handleUnsuspend(user)}
+                            disabled={!isSuperAdmin}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                              isSuperAdmin
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            }`}
+                            title={!isSuperAdmin ? 'Only a Super Admin can unsuspend accounts' : 'Unsuspend Account'}
+                          >
+                            {isSuperAdmin ? '✓ Unsuspend' : '🔒 SuperAdmin Only'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => initiateSuspend(user)}
+                            className="bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            🛑 Suspend / Flag
+                          </button>
+                        )}
+
                         <button
                           onClick={() => {
                             if (window.confirm(`Permanently remove ${user.name} from the system registry?`)) {
@@ -285,44 +441,58 @@ const UsersPage: React.FC<UsersPageProps> = ({
 
         {/* Mobile Responsive Cards */}
         <div className="block md:hidden divide-y divide-slate-100">
-          {filteredProviders.map(user => (
-            <div key={user.id} className="p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={user.avatarUrl} 
-                  alt={user.name} 
-                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 cursor-pointer" 
-                  onClick={() => setSelectedAdminUser(user)}
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-slate-900 truncate flex items-center gap-1.5" onClick={() => setSelectedAdminUser(user)}>
-                    {user.name}
-                    {user.adminNotes && user.adminNotes.length > 0 && (
-                      <span className="text-[8px] bg-amber-200 text-amber-900 px-1 rounded">✍️ {user.adminNotes.length}</span>
+          {filteredProviders.map(user => {
+            const isSuspended = user.isSuspended || (user.flagCount || 0) > 0;
+            return (
+              <div key={user.id} className={`p-4 space-y-3 ${isSuspended ? 'bg-rose-50/60' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={user.avatarUrl} 
+                    alt={user.name} 
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 cursor-pointer" 
+                    onClick={() => setSelectedAdminUser(user)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-slate-900 truncate flex items-center gap-1.5" onClick={() => setSelectedAdminUser(user)}>
+                      {user.name}
+                      {isSuspended && <span className="text-[8px] bg-rose-600 text-white px-1 rounded">SUSPENDED</span>}
+                    </h4>
+                    <p className="text-xs text-slate-500">{user.service} • {user.phone}</p>
+                    {isSuspended && user.suspendedReason && (
+                      <p className="text-[10px] text-rose-700 mt-0.5">Note: {user.suspendedReason}</p>
                     )}
-                  </h4>
-                  <p className="text-xs text-slate-500">{user.service} • {user.phone}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => setSelectedAdminUser(user)}
+                    className="bg-slate-900 text-amber-400 font-bold text-[10px] px-2.5 py-1 rounded-lg"
+                  >
+                    View Bio & Notes
+                  </button>
+                  {isSuspended ? (
+                    <button
+                      onClick={() => handleUnsuspend(user)}
+                      disabled={!isSuperAdmin}
+                      className={`px-3 py-1 rounded-full font-bold text-[10px] ${
+                        isSuperAdmin ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'
+                      }`}
+                    >
+                      {isSuperAdmin ? 'Unsuspend' : '🔒 SuperAdmin'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => initiateSuspend(user)}
+                      className="bg-rose-600 text-white px-3 py-1 rounded-full font-bold text-[10px]"
+                    >
+                      Suspend
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
-                <button
-                  onClick={() => setSelectedAdminUser(user)}
-                  className="bg-slate-900 text-amber-400 font-bold text-[10px] px-2.5 py-1 rounded-lg"
-                >
-                  View Bio & Notes
-                </button>
-                <button
-                  onClick={() => toggleVerification(user)}
-                  className={`px-3 py-1 rounded-full font-bold text-[10px] ${
-                    user.isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {user.isVerified ? 'Verified' : 'Verify'}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {filteredProviders.length === 0 && (

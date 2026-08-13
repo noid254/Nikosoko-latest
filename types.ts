@@ -211,6 +211,10 @@ export interface ServiceProvider {
   unit?: string;
   unitDetails?: UnitDetails;
   flagCount: number;
+  isSuspended?: boolean;
+  suspendedReason?: string;
+  suspendedBy?: string;
+  suspendedAt?: string;
   views: number;
   cta: ('call' | 'whatsapp' | 'book' | 'catalogue' | 'join' | 'menu' | 'save' | 'chat')[];
   selectedProfileButtons?: ('call' | 'book' | 'chat' | 'whatsapp' | 'catalogue' | 'location' | 'document')[];

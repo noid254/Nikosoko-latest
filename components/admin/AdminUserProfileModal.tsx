@@ -160,11 +160,47 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
   };
 
   const toggleFlag = () => {
-    const updatedProvider: ServiceProvider = {
-      ...user,
-      flagCount: user.flagCount > 0 ? 0 : 1
-    };
-    onUpdateProvider(updatedProvider);
+    const isCurrentlySuspended = user.isSuspended || (user.flagCount || 0) > 0;
+    if (isCurrentlySuspended) {
+      if (adminAuthorRole !== 'SuperAdmin' && currentUserEmail !== 'Noid254@gmail.com') {
+        alert('🔒 Only a Super Admin can unsuspend or unflag an account.');
+        return;
+      }
+      if (!window.confirm(`Unsuspend and unflag ${user.name}?`)) return;
+      const updatedProvider: ServiceProvider = {
+        ...user,
+        flagCount: 0,
+        isSuspended: false,
+        suspendedReason: undefined
+      };
+      onUpdateProvider(updatedProvider);
+    } else {
+      const reason = window.prompt(`Enter note/reason for suspending ${user.name}'s account:`);
+      if (!reason || !reason.trim()) {
+        alert('Account suspension requires a valid reason.');
+        return;
+      }
+      const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const newNote: AdminNote = {
+        id: `suspend_note_${Date.now()}`,
+        authorName: adminAuthorName,
+        authorRole: adminAuthorRole,
+        authorEmail: currentUserEmail,
+        content: `🛑 ACCOUNT SUSPENDED & FLAGGED:\nReason: "${reason.trim()}"`,
+        createdAt: new Date().toISOString(),
+        signature: `Signed by ${adminAuthorName} (${currentUserEmail}) on ${timestamp}`
+      };
+      const updatedProvider: ServiceProvider = {
+        ...user,
+        flagCount: (user.flagCount || 0) + 1,
+        isSuspended: true,
+        suspendedReason: reason.trim(),
+        suspendedBy: adminAuthorName,
+        suspendedAt: new Date().toISOString(),
+        adminNotes: [newNote, ...(user.adminNotes || [])]
+      };
+      onUpdateProvider(updatedProvider);
+    }
   };
 
   const publicBioText = (user.about || user.bio || '').trim();

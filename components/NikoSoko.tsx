@@ -436,6 +436,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                 <ServiceCard 
                                     key={provider.id} 
                                     provider={provider} 
+                                    cardType="professional"
                                     searchTerm={localSearch || searchTerm}
                                     onClick={() => onSelectProvider(provider)} 
                                     onViewSacco={onViewSacco}
@@ -458,96 +459,44 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                             {filteredAndSortedServices.map((item, idx) => {
                                 const provider = providers.find(p => p.id === item.providerId);
                                 const photo = item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
-                                const isSaccoMember = provider?.isSaccoVerified || provider?.saccoMember?.status === 'Confirmed' || provider?.saccoMember?.status === 'Approved';
-                                const saccoName = provider?.saccoMember?.saccoName || 'Sacco Member';
 
                                 return (
-                                    <div 
+                                    <ServiceCard 
                                         key={item.id ? `item_${item.id}_${idx}` : `item_${idx}`}
-                                        onClick={() => setSelectedCatalogueItem(item)}
-                                        className="bg-white border border-gray-200 hover:border-black cursor-pointer group transition-all flex flex-col justify-between overflow-hidden relative z-0"
-                                    >
-                                        <div className="relative h-28 bg-gray-100 overflow-hidden border-b border-gray-200 flex-shrink-0 z-0">
-                                            <img 
-                                                src={photo} 
-                                                alt={item.title} 
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                onError={(e) => {
-                                                    e.currentTarget.onerror = null;
-                                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
-                                                }}
-                                            />
-
-
-                                            {/* Distance/Proximity Badge in Black space and green text */}
-                                            {provider && (
-                                                <div className="absolute bottom-1.5 left-1.5 bg-black text-emerald-400 font-mono text-[8.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 z-10 border border-emerald-500/30">
-                                                    {provider.distanceKm}km away
-                                                </div>
-                                            )}
-
-                                            {/* Online Indicator Badge on Thumbnail */}
-                                            {Boolean(provider?.isOnline) && (
-                                                <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                                    <span>ONLINE</span>
-                                                </div>
-                                            )}
-
-                                            {/* BADGE PRIORITY RULE: Sacco Preferred Over Verified */}
-                                            {isSaccoMember ? (
-                                                <div className="absolute top-1.5 right-1.5 bg-black text-white text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 border border-white/20 z-10">
-                                                    ● {saccoName}
-                                                </div>
-                                            ) : item.isVerified ? (
-                                                <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white w-5 h-5 rounded-full font-bold text-xs flex items-center justify-center border border-white shadow-xs z-10">
-                                                    ✓
-                                                </div>
-                                            ) : null}
-                                        </div>
-
-                                        <div className="p-2.5 space-y-1 flex-1 flex flex-col justify-between bg-white relative z-0">
-                                            <div>
-                                                <div className="text-[8.5px] font-extrabold uppercase tracking-widest text-gray-400 flex items-center gap-1 mb-0.5">
-                                                    <span className="w-1 h-1 rounded-full bg-gray-400 inline-block"></span>
-                                                    <span className="truncate">{item.category || 'Service Listing'}</span>
-                                                </div>
-
-                                                <div className="flex justify-between items-start gap-1">
-                                                    <h3 className="font-bold text-xs text-black leading-snug line-clamp-2 break-words flex-1">{item.title}</h3>
-                                                    {provider && (
-                                                        <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
-                                                            <StarIcon />
-                                                            <span>{provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="text-[9.5px] text-gray-500 line-clamp-2 break-words leading-tight mt-1">{item.description}</p>
-                                            </div>
-
-                                            <div className="pt-2 mt-auto border-t border-dashed border-gray-200 flex items-center justify-between min-w-0">
-                                                {provider ? (
-                                                    <div className="min-w-0 pr-1 flex-1">
-                                                        <span className="text-[9.5px] font-bold text-black truncate flex items-center gap-1 min-w-0">
-                                                            <span className="truncate">{provider.name}</span>
-                                                            {(provider.isVerified || item.isVerified) && (
-                                                                <svg className="w-3.5 h-3.5 text-blue-500 inline-block flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-                                                                </svg>
-                                                            )}
-                                                            <span className="text-gray-600 font-mono text-[8.5px] font-bold flex-shrink-0">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
-                                                        </span>
-                                                        <span className="text-[8.5px] text-gray-600 truncate block">{provider.location} • <span className="font-mono font-bold text-black">{provider.distanceKm}km away</span></span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[9px] text-gray-400">Professional Service</span>
-                                                )}
-                                                <span className="text-[10px] font-black text-black font-mono flex-shrink-0 ml-1">
-                                                    {item.price}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        provider={provider || {
+                                            id: item.providerId || `p_${idx}`,
+                                            name: 'Artisan Specialist',
+                                            phone: '',
+                                            service: item.title,
+                                            avatarUrl: photo,
+                                            coverImageUrl: photo,
+                                            rating: 5.0,
+                                            distanceKm: 4,
+                                            hourlyRate: 0,
+                                            rateType: 'per day',
+                                            currency: 'KES',
+                                            isVerified: Boolean(item.isVerified),
+                                            about: item.description,
+                                            works: item.imageUrls || [],
+                                            category: item.category || 'Trade Service',
+                                            location: 'Nairobi',
+                                            isOnline: false,
+                                            accountType: 'individual',
+                                            flagCount: 0,
+                                            views: 10,
+                                            cta: ['call', 'chat']
+                                        }}
+                                        cardType="service"
+                                        serviceTitle={item.title}
+                                        serviceImage={photo}
+                                        servicePrice={item.price}
+                                        serviceDescription={item.description}
+                                        serviceCategory={item.category}
+                                        isItemVerified={item.isVerified}
+                                        onClick={() => setSelectedCatalogueItem(item)} 
+                                        onViewSacco={onViewSacco}
+                                        onViewOrg={(orgName, cert) => setSelectedOrgModal({ orgName, cert })}
+                                    />
                                 );
                             })}
                         </div>

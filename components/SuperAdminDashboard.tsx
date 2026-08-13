@@ -71,6 +71,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                     onViewProvider={props.onViewProvider} 
                     onUpdateProvider={props.onUpdateProvider} 
                     onDeleteProvider={props.onDeleteProvider} 
+                    isSuperAdmin={true}
                 />;
             case 'Catalogue':
                 return <CatalogueAdminPage

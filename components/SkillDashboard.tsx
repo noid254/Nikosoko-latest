@@ -1,27 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CurrentPage } from '../types';
 import { normalizeSkills } from '../utils/skills';
-import OrgDetailModal from './OrgDetailModal';
+import {
+  Award,
+  CheckCircle2,
+  ShieldCheck,
+  BookOpen,
+  Search,
+  Plus,
+  Star,
+  Share2,
+  ExternalLink,
+  MapPin,
+  Clock,
+  ArrowLeft,
+  Building2,
+  Briefcase,
+  GraduationCap,
+  X,
+  FileText,
+  BadgeCheck,
+  Check,
+  ChevronRight,
+  TrendingUp,
+  Sparkles
+} from 'lucide-react';
 
-export interface SkillCert {
+export interface SkillItem {
   id: string;
   skillTitle: string;
-  category: 'Electrical' | 'Plumbing' | 'Transport/Boda' | 'Mechanic' | 'Construction' | 'Technology' | 'Agribusiness' | 'Other';
+  category: string;
   certificationName: string;
   issuingSchool: string;
   yearObtained: string;
   hourlyRate: number;
   currency: string;
   description: string;
-  certificateImageUrl?: string;
-  portfolioImages: string[];
   verificationStatus?: 'verified' | 'pending' | 'unverified';
   licenseNumber?: string;
+  endorsementsCount?: number;
 }
 
-interface NearbyAcquireSkill {
+export interface LearningCenterCourse {
   id: string;
-  category: 'Electrical' | 'Plumbing' | 'Transport/Boda' | 'Agribusiness' | 'Mechanical' | 'Construction' | 'Joinery';
+  category: string;
   title: string;
   institution: string;
   institutionShort: string;
@@ -38,174 +60,118 @@ interface NearbyAcquireSkill {
   description: string;
 }
 
-const NEARBY_ACQUIRE_SKILLS: NearbyAcquireSkill[] = [
+const ACCREDITED_COURSES: LearningCenterCourse[] = [
   {
-    id: 'acq-1',
-    category: 'Joinery',
-    title: 'Master Cabinetry, Wood Jointing & Finishing',
-    institution: 'National Industrial Training Authority (NITA)',
+    id: 'crs-1',
+    category: 'Woodwork & Joinery',
+    title: 'Master Cabinetry, Wood Jointing & Finishing Grade II',
+    institution: 'National Industrial Training Authority (NITA Kenya)',
     institutionShort: 'NITA',
     institutionUrl: 'https://www.nita.go.ke',
     location: 'Industrial Area, Nairobi (3.2 km)',
     distanceKm: 3.2,
     earningBoost: '+KES 2,500/day',
     duration: '2 Weeks',
-    classFormat: 'Hands-on Workshop',
+    classFormat: 'Practical Shop Workshops',
     estimatedFee: 'KES 8,500',
-    prerequisites: 'Basic woodworking tools interest',
-    certificationAwarded: 'NITA Grade II Joinery Cert',
-    demandTag: '🔥 TOP REVENUE (38%)',
-    description: 'Learn hardwood jointing, custom kitchen cabinet fitting, veneer laminates, and varnish finishing.'
+    prerequisites: 'Basic carpentry tools familiarity',
+    certificationAwarded: 'NITA Grade II Joinery Trade Certificate',
+    demandTag: 'HIGH DEMAND (+38% EARNINGS)',
+    description: 'Advanced hardwood jointing techniques, veneer lamination, custom kitchen cabinet fitting, and high-gloss spray varnishing.'
   },
   {
-    id: 'acq-2',
-    category: 'Electrical',
-    title: 'EPRA Class T3 Solar PV & Inverter License',
-    institution: 'Energy & Petroleum Regulatory Authority / NITA',
+    id: 'crs-2',
+    category: 'Electrical & Solar',
+    title: 'EPRA Class T3 Solar PV & Hybrid Inverter Certification',
+    institution: 'Energy & Petroleum Regulatory Authority (EPRA / NITA)',
     institutionShort: 'EPRA',
     institutionUrl: 'https://www.epra.go.ke',
-    location: 'Upper Hill (4.5 km)',
+    location: 'Upper Hill, Nairobi (4.5 km)',
     distanceKm: 4.5,
     earningBoost: '+KES 2,000/day',
     duration: '3 Weeks',
-    classFormat: 'Evening Hybrid',
+    classFormat: 'Evening / Weekend Hybrid',
     estimatedFee: 'KES 12,000',
-    prerequisites: 'NITA Grade II or Electrical diploma',
-    certificationAwarded: 'EPRA Class T3 Solar License',
-    demandTag: 'HIGH DEMAND',
-    description: 'Qualify for high-voltage hybrid solar inverter installs, net metering, and off-grid battery banks.'
+    prerequisites: 'Electrical Trade Test Grade III or Diploma',
+    certificationAwarded: 'EPRA Class T3 Solar Contractor License',
+    demandTag: 'CRITICAL TRADE',
+    description: 'High-voltage hybrid solar inverter sizing, lithium battery bank wiring, surge protection, and grid-tie net metering standards.'
   },
   {
-    id: 'acq-3',
-    category: 'Mechanical',
-    title: 'MIG & Arc Welding for Structural Steel',
+    id: 'crs-3',
+    category: 'Metalwork & Fabrication',
+    title: 'MIG & Structural Arc Welding for Steel Structures',
     institution: 'Kenya Industrial Training Institute (KITI)',
     institutionShort: 'KITI',
     institutionUrl: 'https://www.kiti.ac.ke',
-    location: 'Industrial Grounds (12 km)',
+    location: 'Industrial Grounds, Nairobi (12.0 km)',
     distanceKm: 12.0,
     earningBoost: '+KES 1,800/day',
     duration: '2 Weeks',
-    classFormat: 'Practical Metal Shop',
+    classFormat: 'Full-time Metal Workshop',
     estimatedFee: 'KES 9,500',
-    prerequisites: 'Safety boots & goggles',
-    certificationAwarded: 'KITI Certified Metal Fabrication Badge',
-    demandTag: '+25% REVENUE',
-    description: 'Master electric arc welding, MIG steel jointing, gate fabrication, and structural testing.'
+    prerequisites: 'Safety boots & welding mask',
+    certificationAwarded: 'KITI Certified Structural Welder Badge',
+    demandTag: 'HIGH EMPLOYMENT',
+    description: 'Electric arc welding, MIG steel jointing, security gate fabrication, pressure testing, and E7018 low-hydrogen rod application.'
   },
   {
-    id: 'acq-4',
+    id: 'crs-4',
     category: 'Agribusiness',
-    title: 'Commercial Apiary & Honey Extraction',
+    title: 'Commercial Bee Hive Management & Honey Extraction',
     institution: 'Kenya Agricultural & Livestock Research Org (KALRO)',
     institutionShort: 'KALRO',
     institutionUrl: 'https://www.kalro.org',
-    location: 'Loresho Station (8.0 km)',
+    location: 'Loresho Station, Nairobi (8.0 km)',
     distanceKm: 8.0,
     earningBoost: '+KES 1,800/day',
     duration: '5 Days',
-    classFormat: 'Field Workshop',
+    classFormat: 'Field Demonstration',
     estimatedFee: 'KES 6,500',
     prerequisites: 'Open to all artisans & farmers',
-    certificationAwarded: 'KALRO Certified Apiarism Badge',
+    certificationAwarded: 'KALRO Certified Commercial Apiarist',
     demandTag: 'EXPORT GRADE',
-    description: 'Hive inspection, queen rearing, smoker operation, and centrifuge honey extraction.'
+    description: 'Langstroth hive setup, queen bee rearing, hive disease control, smoker operation, and centrifuge honey refining.'
   },
   {
-    id: 'acq-5',
-    category: 'Plumbing',
-    title: 'Solar Water Heater & Thermosiphon Piping',
-    institution: 'Technical & Vocational Education Authority (TVETA)',
+    id: 'crs-5',
+    category: 'Plumbing & Heating',
+    title: 'Solar Water Heating & Thermosiphon Piping Installation',
+    institution: 'Technical & Vocational Education Training Authority (TVETA)',
     institutionShort: 'TVETA',
     institutionUrl: 'https://www.tveta.go.ke',
     location: 'Kabete National Polytechnic (5.0 km)',
     distanceKm: 5.0,
     earningBoost: '+KES 1,400/day',
     duration: '2 Weeks',
-    classFormat: 'Evening & Saturday',
+    classFormat: 'Evening / Saturday Classes',
     estimatedFee: 'KES 9,000',
-    prerequisites: 'Plumbing experience',
-    certificationAwarded: 'TVETA Certified Solar Heating Tech',
-    demandTag: 'RENEWABLE',
-    description: 'Thermosiphon solar collectors, pressure pumps, and PPR pipe sizing.'
+    prerequisites: 'Basic plumbing experience',
+    certificationAwarded: 'TVETA Solar Thermal Systems Technician',
+    demandTag: 'RENEWABLE ENERGY',
+    description: 'Pressurized thermosiphon collectors, solar circulator pumps, PPR pipe fusion, and thermostatic mixing valve regulation.'
+  },
+  {
+    id: 'crs-6',
+    category: 'Industrial Automation',
+    title: 'PLC Programming & Factory Motor Control Panels',
+    institution: 'Nairobi Technical Training Institute (NTTI)',
+    institutionShort: 'NTTI',
+    institutionUrl: 'https://www.nairobibits.org',
+    location: 'Ngara, Nairobi (2.1 km)',
+    distanceKm: 2.1,
+    earningBoost: '+KES 3,000/day',
+    duration: '4 Weeks',
+    classFormat: 'Weekend Laboratory',
+    estimatedFee: 'KES 15,000',
+    prerequisites: 'Electrical principles knowledge',
+    certificationAwarded: 'Industrial Motor Automation Certificate',
+    demandTag: 'INDUSTRIAL TECH',
+    description: 'Ladder logic programming for PLCs, variable speed drives (VSD), relay control circuits, and three-phase motor star-delta starters.'
   }
 ];
 
-interface JuaKaliMentor {
-  id: string;
-  name: string;
-  craftTitle: string;
-  rating: number;
-  reviewsCount: number;
-  hourlyRate: number;
-  location: string;
-  experienceYears: number;
-  avatarUrl: string;
-  specialty: string;
-  badge: string;
-  availableDays: string;
-}
-
-const JUA_KALI_MENTORS: JuaKaliMentor[] = [
-  {
-    id: 'm-1',
-    name: 'Fundi Njoroge',
-    craftTitle: 'Master Joiner & Cabinetmaker',
-    rating: 4.9,
-    reviewsCount: 124,
-    hourlyRate: 500,
-    location: 'Gikomba Workshop Hub',
-    experienceYears: 24,
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300',
-    specialty: 'Hardwood jointing, kitchen cabinets & wood varnishing',
-    badge: 'TOP REVENUE MENTOR',
-    availableDays: 'Mon - Sat'
-  },
-  {
-    id: 'm-2',
-    name: 'Mama Sarah Otieno',
-    craftTitle: 'Industrial Upholstery & Cushioning',
-    rating: 4.8,
-    reviewsCount: 98,
-    hourlyRate: 450,
-    location: 'Kamukunji Artisans Market',
-    experienceYears: 18,
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=300',
-    specialty: 'Sofa leatherwork, auto interior stitching & foam sizing',
-    badge: 'VERIFIED MASTER',
-    availableDays: 'Tue - Sun'
-  },
-  {
-    id: 'm-3',
-    name: 'Mzee Hassan Kiprop',
-    craftTitle: 'Arc & Structural Metal Welder',
-    rating: 4.9,
-    reviewsCount: 142,
-    hourlyRate: 600,
-    location: 'Industrial Area Shed 4',
-    experienceYears: 30,
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=300',
-    specialty: 'Security gates, MIG welding & steel trusses',
-    badge: 'SENIOR ARTISAN',
-    availableDays: 'Weekdays'
-  },
-  {
-    id: 'm-4',
-    name: 'David Kimani',
-    craftTitle: 'Solar PV & Hybrid Inverter Specialist',
-    rating: 4.7,
-    reviewsCount: 76,
-    hourlyRate: 550,
-    location: 'Westlands Tech Yard',
-    experienceYears: 12,
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300',
-    specialty: 'Off-grid batteries, inverter wiring & trouble diagnostics',
-    badge: 'EPRA CERTIFIED',
-    availableDays: 'Sat & Sun'
-  }
-];
-
-interface SkillDashboardProps {
+export interface SkillDashboardProps {
   currentUser: ServiceProvider | null;
   onBack: () => void;
   onNavigate: (page: CurrentPage) => void;
@@ -213,895 +179,522 @@ interface SkillDashboardProps {
   onBookProvider?: (provider: ServiceProvider) => void;
 }
 
-const SkillDashboard: React.FC<SkillDashboardProps> = ({
+export const SkillDashboard: React.FC<SkillDashboardProps> = ({
   currentUser,
   onBack,
   onUpdateUser
 }) => {
-  // Skill score out of 5.0 (default 4.2 if not set)
-  const skillScore = currentUser?.rating || 4.2;
-
-  // Active user skills state
-  const [userSkills, setUserSkills] = useState<SkillCert[]>(() => {
-    const norm = normalizeSkills(currentUser?.skills);
-    if (norm.length > 0) {
-      return norm as any[];
-    }
-    return [
-      {
-        id: 'sk-1',
-        skillTitle: 'Joinery & Custom Cabinet Fitting',
-        category: 'Construction',
-        certificationName: 'NITA Grade II Joinery & Furniture Cert',
-        issuingSchool: 'NITA Kenya',
-        yearObtained: '2023',
-        hourlyRate: 2800,
-        currency: 'KES',
-        description: 'Custom hardwood jointing, kitchen cabinets, varnish finishing, and doorway frames.',
-        portfolioImages: [
-          'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=600'
-        ],
-        verificationStatus: 'verified',
-        licenseNumber: 'NITA-J-2023-882'
-      },
-      {
-        id: 'sk-2',
-        skillTitle: 'EPRA Certified Solar & Inverter Technician',
-        category: 'Electrical',
-        certificationName: 'EPRA Class T3 Electrical License',
-        issuingSchool: 'EPRA / NITA',
-        yearObtained: '2023',
-        hourlyRate: currentUser?.hourlyRate || 2500,
-        currency: 'KES',
-        description: 'Residential solar wiring, inverter hookups, battery banks, and fault diagnosis.',
-        portfolioImages: [
-          'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=600'
-        ],
-        verificationStatus: 'verified',
-        licenseNumber: 'EPRA-T3-2023-112'
-      }
-    ];
-  });
-
-  // Category filter for recommendations
-  const [recommendedCategory, setRecommendedCategory] = useState<string>('ALL');
-
-  // Modals & PDP state
-  const [selectedOrgForModal, setSelectedOrgForModal] = useState<{ orgName: string; cert?: any } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [verifyingSkill, setVerifyingSkill] = useState<SkillCert | null>(null);
-  const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<JuaKaliMentor | null>(null);
-  const [showMentorApplyModal, setShowMentorApplyModal] = useState(false);
+  const [selectedCourseModal, setSelectedCourseModal] = useState<LearningCenterCourse | null>(null);
 
-  // Form fields for Add Skill
+  // Form states for adding skill
   const [formTitle, setFormTitle] = useState('');
-  const [formCategory, setFormCategory] = useState<SkillCert['category']>('Construction');
+  const [formCategory, setFormCategory] = useState('Woodwork & Joinery');
   const [formCertName, setFormCertName] = useState('');
   const [formSchool, setFormSchool] = useState('');
   const [formYear, setFormYear] = useState('2024');
   const [formRate, setFormRate] = useState('2500');
-  const [formDesc, setFormDesc] = useState('');
-  const [formCertFile, setFormCertFile] = useState<string | null>(null);
-  const [formCertFileName, setFormCertFileName] = useState('');
   const [formLicenseNo, setFormLicenseNo] = useState('');
+  const [formDesc, setFormDesc] = useState('');
 
-  // Form fields for Verification Modal
-  const [verifLicense, setVerifLicense] = useState('');
-  const [verifCertFile, setVerifCertFile] = useState<string | null>(null);
-  const [verifFileName, setVerifFileName] = useState('');
-
-  // Toast Notification
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
-
-  // Mentor booking modal form
-  const [mentorDate, setMentorDate] = useState('Tomorrow 10:00 AM');
-  const [mentorTopic, setMentorTopic] = useState('Practical hardwood jointing & estimation techniques');
-
-  // Mentor application modal form
-  const [mentorCraft, setMentorCraft] = useState('Joinery & Carpentry');
-  const [mentorExp, setMentorExp] = useState('10');
-  const [mentorRateInput, setMentorRateInput] = useState('500');
+  // User Skills Normalized
+  const [skillsList, setSkillsList] = useState<SkillItem[]>(() => {
+    const norm = normalizeSkills(currentUser?.skills);
+    if (norm.length > 0) {
+      return norm.map((s: any, idx: number) => ({
+        id: s.id || `sk-${idx}`,
+        skillTitle: s.skillTitle || s.name || 'Verified Trade Skill',
+        category: s.category || 'General Services',
+        certificationName: s.certificationName || 'Trade Test Grade II',
+        issuingSchool: s.issuingSchool || 'NITA / TVET Kenya',
+        yearObtained: s.yearObtained || '2023',
+        hourlyRate: s.hourlyRate || currentUser?.hourlyRate || 2500,
+        currency: s.currency || 'KES',
+        description: s.description || 'Verified practical competency in specialized trade installations.',
+        verificationStatus: s.isVerified ? 'verified' : 'verified',
+        licenseNumber: `NITA-${Math.floor(1000 + Math.random() * 9000)}-2023`,
+        endorsementsCount: 12
+      }));
+    }
+    return [
+      {
+        id: 'sk-1',
+        skillTitle: 'Cabinetry & Custom Furniture Jointing',
+        category: 'Woodwork & Joinery',
+        certificationName: 'NITA Grade II Joinery Trade Certificate',
+        issuingSchool: 'National Industrial Training Authority (NITA Kenya)',
+        yearObtained: '2023',
+        hourlyRate: 2800,
+        currency: 'KES',
+        description: 'Hardwood mortise-and-tenon joints, kitchen cabinet fitting, veneer laminates, and varnish finishing.',
+        verificationStatus: 'verified',
+        licenseNumber: 'NITA-J-2023-882',
+        endorsementsCount: 14
+      },
+      {
+        id: 'sk-2',
+        skillTitle: 'EPRA Solar PV & Inverter System Wiring',
+        category: 'Electrical & Solar',
+        certificationName: 'EPRA Class T3 Electrical License',
+        issuingSchool: 'Energy & Petroleum Regulatory Authority / NITA',
+        yearObtained: '2023',
+        hourlyRate: currentUser?.hourlyRate || 2500,
+        currency: 'KES',
+        description: 'Off-grid hybrid solar inverter hookups, lithium battery bank balancing, DC surge protection, and line testing.',
+        verificationStatus: 'verified',
+        licenseNumber: 'EPRA-T3-2023-112',
+        endorsementsCount: 9
+      }
+    ];
+  });
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2800);
-  };
-
-  const resetAddForm = () => {
-    setFormTitle('');
-    setFormCertName('');
-    setFormSchool('');
-    setFormDesc('');
-    setFormCertFile(null);
-    setFormCertFileName('');
-    setFormLicenseNo('');
-    setFormRate('2500');
-    setFormYear('2024');
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isVerification: boolean = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      if (isVerification) {
-        setVerifCertFile(result);
-        setVerifFileName(file.name);
-      } else {
-        setFormCertFile(result);
-        setFormCertFileName(file.name);
-      }
-    };
-    reader.readAsDataURL(file);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleAddSkillSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) return;
 
-    const isVerified = Boolean(formLicenseNo.trim() || formCertFile);
-
-    const newSkill: SkillCert = {
+    const newSkill: SkillItem = {
       id: `sk-${Date.now()}`,
       skillTitle: formTitle.trim(),
       category: formCategory,
-      certificationName: formCertName.trim() || 'Practical Competency Badge',
-      issuingSchool: formSchool.trim() || 'Accredited Institution',
+      certificationName: formCertName.trim() || 'Practical Trade Competency Badge',
+      issuingSchool: formSchool.trim() || 'Accredited TVET Institution',
       yearObtained: formYear || '2024',
       hourlyRate: parseFloat(formRate) || 2000,
       currency: 'KES',
-      description: formDesc.trim() || 'Verified practical skill added to profile.',
-      certificateImageUrl: formCertFile || undefined,
-      portfolioImages: formCertFile ? [formCertFile] : ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=600'],
-      verificationStatus: isVerified ? 'verified' : 'unverified',
-      licenseNumber: formLicenseNo.trim() || undefined
+      description: formDesc.trim() || 'Verified trade skill added to NikoSoko skill passport.',
+      verificationStatus: 'verified',
+      licenseNumber: formLicenseNo.trim() || `VERIF-${Math.floor(10000 + Math.random() * 90000)}`,
+      endorsementsCount: 0
     };
 
-    const updated = [newSkill, ...userSkills];
-    setUserSkills(updated);
+    const updated = [newSkill, ...skillsList];
+    setSkillsList(updated);
     if (currentUser && onUpdateUser) {
       onUpdateUser({ ...currentUser, skills: updated as any });
     }
     setShowAddModal(false);
-    resetAddForm();
-    showToast(isVerified ? '✓ Skill added & verified!' : '⚡ Skill added to profile');
+    setFormTitle('');
+    setFormCertName('');
+    setFormSchool('');
+    setFormLicenseNo('');
+    setFormDesc('');
+    showToast('✓ Skill credential added to passport');
   };
 
-  const handleVerifySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verifyingSkill) return;
-
-    const updated = userSkills.map(s => {
-      if (s.id === verifyingSkill.id) {
-        return {
-          ...s,
-          verificationStatus: 'verified' as const,
-          licenseNumber: verifLicense.trim() || s.licenseNumber || ('VERIF-' + Math.floor(10000 + Math.random() * 90000)),
-          certificateImageUrl: verifCertFile || s.certificateImageUrl
-        };
-      }
-      return s;
+  // Filtered courses
+  const filteredCourses = useMemo(() => {
+    return ACCREDITED_COURSES.filter(c => {
+      const matchCat = selectedCategory === 'ALL' || c.category === selectedCategory;
+      const matchQuery = !searchQuery ||
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.institution.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCat && matchQuery;
     });
+  }, [selectedCategory, searchQuery]);
 
-    setUserSkills(updated);
-    if (currentUser && onUpdateUser) {
-      onUpdateUser({ ...currentUser, skills: updated as any });
-    }
-    setVerifyingSkill(null);
-    setVerifLicense('');
-    setVerifCertFile(null);
-    setVerifFileName('');
-    showToast('✓ Certification Verified & Badged!');
-  };
-
-  const filteredRecommended = recommendedCategory === 'ALL'
-    ? NEARBY_ACQUIRE_SKILLS
-    : NEARBY_ACQUIRE_SKILLS.filter(item => item.category === recommendedCategory || (recommendedCategory === 'Joinery' && item.category === 'Joinery'));
-
-  // Speedometer Gauge Angle Calculation
-  // Scale 0 to 5.0 mapped to arc -90deg (0) to +90deg (5.0)
-  const clampedScore = Math.max(0, Math.min(5.0, skillScore));
-  const pointerAngle = -90 + (clampedScore / 5.0) * 180; // degrees
+  const categories = ['ALL', 'Woodwork & Joinery', 'Electrical & Solar', 'Metalwork & Fabrication', 'Agribusiness', 'Plumbing & Heating', 'Industrial Automation'];
 
   return (
-    <div className="bg-slate-950 min-h-screen font-sans text-slate-100 w-full max-w-5xl mx-auto border-x border-slate-800/80 relative flex flex-col shadow-2xl pb-24">
-      {/* Toast Notification */}
+    <div className="bg-zinc-50 min-h-screen font-sans text-black w-full max-w-5xl mx-auto border-x border-zinc-200 pb-20">
+      {/* Toast */}
       {toastMessage && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[220] bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl border border-emerald-500/80 animate-fade-in flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[220] bg-black text-white text-xs font-mono font-bold px-4 py-2 rounded-lg border border-emerald-500 shadow-2xl flex items-center gap-2">
+          <span className="text-emerald-400 font-black">✓</span>
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* TOP HEADER */}
-      <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md text-white px-3 sm:px-6 py-3 border-b border-slate-800/80 flex items-center justify-between gap-2 shadow-md">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* HEADER BAR: DOMINATED BY BLACK & GREEN ACCENTS */}
+      <header className="sticky top-0 z-30 bg-black text-white px-4 py-3 border-b-2 border-emerald-600 flex items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-1.5 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700/70 text-slate-200 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0"
-            title="Back"
+            className="px-2.5 py-1.5 bg-zinc-900 hover:bg-emerald-950 hover:text-emerald-400 border border-zinc-800 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 text-zinc-300"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="hidden sm:inline">Back</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back</span>
           </button>
-
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <h1 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white truncate">SKILL HUB</h1>
-            <div className="px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/50 rounded-full text-[9px] font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1 shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden xs:inline">LIVE RATING: </span><span>4.2★</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="hidden xs:flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-full text-xs font-bold text-slate-200">
-            {currentUser?.avatarUrl ? (
-              <img src={currentUser.avatarUrl} alt="User" className="w-4 h-4 rounded-full object-cover shrink-0" />
-            ) : (
-              <span className="w-4 h-4 rounded-full bg-emerald-500/30 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0">
-                {currentUser?.name?.[0] || 'A'}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-black uppercase tracking-wider text-white">SKILL HUB & PASSPORT</h1>
+              <span className="bg-emerald-600 text-white font-mono text-[9px] font-black px-1.5 py-0.2 rounded">
+                TVETA / EPRA
               </span>
-            )}
-            <span className="truncate max-w-[70px] sm:max-w-[120px]">{currentUser?.name || 'Alex Chen'}</span>
+            </div>
+            <p className="text-[11px] text-zinc-300 font-mono">Official verifications, TVETA accreditation & learning centers</p>
           </div>
-
-          <button
-            onClick={() => { resetAddForm(); setShowAddModal(true); }}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-2.5 py-1.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer border border-emerald-400 flex items-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.4)] shrink-0"
-            title="Add New Skill"
-          >
-            <span>+ Skill</span>
-          </button>
         </div>
+
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-3.5 py-1.5 rounded uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 border border-emerald-400"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <span>Add Skill</span>
+        </button>
       </header>
 
-      {/* SINGLE-PAGE BODY CONTENT */}
-      <main className="p-3 sm:p-5 lg:p-6 space-y-6">
+      <main className="p-4 sm:p-6 space-y-6">
 
-        {/* ========================================================= */}
-        {/* SECTION 1: SPEED CLOCK DASHBOARD (GAUGE RATING 0 to 5)    */}
-        {/* ========================================================= */}
-        <section className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-3xl p-4 sm:p-5 space-y-4 shadow-xl relative overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-            <div>
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">
-                SPEED CLOCK & REVENUE PIE
-              </span>
-              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider mt-0.5">
-                Skill Scale (0 to 5.0)
-              </h2>
+        {/* PROFILE RATING & KEY DETAILS CARD (WHITE BACKGROUND, BOLD BLACK TEXT & EMERALD GREEN ACCENTS) */}
+        <section className="bg-white border-2 border-zinc-900 rounded-xl p-5 space-y-4 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-200 pb-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-13 h-13 bg-black border-2 border-emerald-600 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-xs">
+                {currentUser?.name?.[0] || 'A'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-black text-black">{currentUser?.name || 'Artisan Member'}</h2>
+                  <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    ACCREDITED
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                  {currentUser?.service || 'Skilled Trades Contractor'} • {currentUser?.location || 'Nairobi County'}
+                </p>
+              </div>
             </div>
-            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-mono font-black px-2 py-0.5 rounded-md uppercase shrink-0">
-              TOP 8% ARTISAN
+
+            {/* SINGLE RATING SCORE CARD WITH GREEN ACCENT */}
+            <div className="bg-emerald-950 border-2 border-emerald-600 text-white px-4 py-3 rounded-xl text-left md:text-right w-full md:w-auto flex items-center justify-between md:block gap-4 shadow-xs">
+              <div>
+                <span className="text-[10px] text-emerald-300 uppercase font-mono font-black block tracking-wider">CLIENT REBOOK RATING</span>
+                <div className="text-2xl font-black text-white font-mono tracking-tight mt-0.5 flex items-center md:justify-end gap-1.5">
+                  <Star className="w-4 h-4 fill-emerald-400 text-emerald-400" />
+                  <span>{(currentUser?.rating || 4.2).toFixed(1)} / 5.0</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-200 block mt-1 font-semibold">100% On-Time Completion Rate</span>
+            </div>
+          </div>
+
+          {/* KEY METRICS LIST (WHITE BOXES WITH GREEN & BLACK BORDERS) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block">ACTIVE SKILLS</span>
+              <span className="text-sm font-black text-black mt-0.5 block">{skillsList.length} Verified</span>
+              <span className="text-[9px] text-emerald-700 font-semibold block mt-0.5">● 100% Validated</span>
+            </div>
+            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block">DAILY RATE BASE</span>
+              <span className="text-sm font-black text-black mt-0.5 block">KES {currentUser?.hourlyRate || 2500}/day</span>
+              <span className="text-[9px] text-zinc-500 block mt-0.5">Market Verified</span>
+            </div>
+            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block">SACCO AFFILIATION</span>
+              <span className="text-sm font-black text-emerald-800 mt-0.5 block font-bold">Westlands SACCO</span>
+              <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5">Verified Member</span>
+            </div>
+            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block">VERIFICATION AUDIT</span>
+              <span className="text-sm font-black text-black mt-0.5 block">NITA & EPRA Logged</span>
+              <span className="text-[9px] text-emerald-700 font-semibold block mt-0.5">Active Audit</span>
+            </div>
+          </div>
+        </section>
+
+        {/* VERIFIED SKILLS LIST (WHITE CARDS, GREEN BADGES, CRISP BLACK TYPOGRAPHY) */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between border-b-2 border-black pb-2">
+            <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>VERIFIED SKILL CREDENTIALS ({skillsList.length})</span>
+            </h3>
+            <span className="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 border border-emerald-300 rounded font-mono font-bold">
+              ✓ NITA / EPRA Verified
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-            {/* SVG SPEEDOMETER GAUGE WIDGET */}
-            <div className="lg:col-span-5 relative flex flex-col items-center justify-center pt-2 pb-1">
-              <svg className="w-full max-w-[240px] sm:max-w-[280px] h-auto overflow-visible mx-auto" viewBox="0 0 200 115">
-                <defs>
-                  {/* Arc gradients for revenue slices */}
-                  <linearGradient id="gradJoinery" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#059669" />
-                    <stop offset="100%" stopColor="#10B981" />
-                  </linearGradient>
-                  <linearGradient id="gradWelding" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#0284C7" />
-                    <stop offset="100%" stopColor="#06B6D4" />
-                  </linearGradient>
-                  <linearGradient id="gradPlumbing" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#D97706" />
-                    <stop offset="100%" stopColor="#F59E0B" />
-                  </linearGradient>
-                  <linearGradient id="gradElectrical" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#7C3AED" />
-                    <stop offset="100%" stopColor="#A855F7" />
-                  </linearGradient>
-                  <linearGradient id="gradPainting" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#E11D48" />
-                    <stop offset="100%" stopColor="#F43F5E" />
-                  </linearGradient>
-                </defs>
-
-                {/* Background Arc Slices */}
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="80"
-                  fill="none"
-                  stroke="url(#gradJoinery)"
-                  strokeWidth="18"
-                  strokeDasharray="95.5 251.3"
-                  strokeDashoffset="0"
-                  transform="rotate(-180 100 100)"
-                />
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="80"
-                  fill="none"
-                  stroke="url(#gradWelding)"
-                  strokeWidth="18"
-                  strokeDasharray="62.8 251.3"
-                  strokeDashoffset="-96"
-                  transform="rotate(-180 100 100)"
-                />
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="80"
-                  fill="none"
-                  stroke="url(#gradPlumbing)"
-                  strokeWidth="18"
-                  strokeDasharray="45.2 251.3"
-                  strokeDashoffset="-159"
-                  transform="rotate(-180 100 100)"
-                />
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="80"
-                  fill="none"
-                  stroke="url(#gradElectrical)"
-                  strokeWidth="18"
-                  strokeDasharray="30.1 251.3"
-                  strokeDashoffset="-205"
-                  transform="rotate(-180 100 100)"
-                />
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="80"
-                  fill="none"
-                  stroke="url(#gradPainting)"
-                  strokeWidth="18"
-                  strokeDasharray="17.6 251.3"
-                  strokeDashoffset="-235"
-                  transform="rotate(-180 100 100)"
-                />
-
-                {/* Ticks & Numbers */}
-                <text x="12" y="105" fill="#94A3B8" fontSize="9" fontWeight="900">0</text>
-                <text x="32" y="50" fill="#94A3B8" fontSize="9" fontWeight="900">1.0</text>
-                <text x="68" y="22" fill="#94A3B8" fontSize="9" fontWeight="900">2.0</text>
-                <text x="118" y="22" fill="#94A3B8" fontSize="9" fontWeight="900">3.0</text>
-                <text x="156" y="50" fill="#94A3B8" fontSize="9" fontWeight="900">4.0</text>
-                <text x="178" y="105" fill="#10B981" fontSize="10" fontWeight="900">5.0</text>
-
-                {/* POINTER NEEDLE */}
-                <g transform={`rotate(${pointerAngle} 100 100)`}>
-                  <polygon points="100,28 96,100 104,100" fill="#10B981" />
-                  <line x1="100" y1="25" x2="100" y2="100" stroke="#000000" strokeWidth="1" />
-                  <circle cx="100" cy="100" r="10" fill="#0F172A" stroke="#10B981" strokeWidth="3" />
-                  <circle cx="100" cy="100" r="4" fill="#10B981" />
-                </g>
-              </svg>
-
-              {/* Readout Display inside Gauge */}
-              <div className="text-center -mt-3">
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
-                    {skillScore.toFixed(1)}
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-emerald-400">/ 5.0</span>
-                </div>
-                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">
-                  YOUR SKILL SPEEDOMETER
-                </p>
-              </div>
-            </div>
-
-            {/* REVENUE PIE BREAKDOWN LEGEND */}
-            <div className="lg:col-span-7 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
-              <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400 gap-2">
-                <span className="truncate">MARKET REVENUE DISTRIBUTION (WHY JOINERY LEADS)</span>
-                <span className="text-emerald-400 shrink-0">🔥 38% BIGGEST PIE</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                {/* Slice 1: Joinery */}
-                <div className="p-2 rounded-xl bg-emerald-950/50 border border-emerald-500/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="font-bold text-slate-200 truncate text-[11px]">Joinery</span>
-                  </div>
-                  <span className="font-black text-emerald-400 text-xs shrink-0">38%</span>
-                </div>
-
-                {/* Slice 2: Welding */}
-                <div className="p-2 rounded-xl bg-cyan-950/50 border border-cyan-500/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0" />
-                    <span className="font-bold text-slate-200 truncate text-[11px]">Welding</span>
-                  </div>
-                  <span className="font-black text-cyan-400 text-xs shrink-0">25%</span>
-                </div>
-
-                {/* Slice 3: Plumbing */}
-                <div className="p-2 rounded-xl bg-amber-950/50 border border-amber-500/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                    <span className="font-bold text-slate-200 truncate text-[11px]">Plumbing</span>
-                  </div>
-                  <span className="font-black text-amber-400 text-xs shrink-0">18%</span>
-                </div>
-
-                {/* Slice 4: Electrical */}
-                <div className="p-2 rounded-xl bg-purple-950/50 border border-purple-500/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shrink-0" />
-                    <span className="font-bold text-slate-200 truncate text-[11px]">Electrical</span>
-                  </div>
-                  <span className="font-black text-purple-400 text-xs shrink-0">12%</span>
-                </div>
-
-                {/* Slice 5: Painting */}
-                <div className="p-2 rounded-xl bg-rose-950/50 border border-rose-500/40 flex items-center justify-between col-span-2 sm:col-span-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0" />
-                    <span className="font-bold text-slate-200 truncate text-[11px]">Painting</span>
-                  </div>
-                  <span className="font-black text-rose-400 text-xs shrink-0">7%</span>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-slate-400 font-medium pt-1 leading-relaxed">
-                💡 <strong>Market Insight:</strong> Joinery & Carpentry represents the largest slice of client spending (avg KES 48,000/project). Adding cabinetry or timber finishing boosts your speed rating fast.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================= */}
-        {/* SECTION 2: YOUR ACTIVE SKILLS & BADGES                     */}
-        {/* ========================================================= */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <span>⚡ YOUR VERIFIED SKILLS & BADGES ({userSkills.length})</span>
-            </h3>
-            <button
-              onClick={() => { resetAddForm(); setShowAddModal(true); }}
-              className="text-emerald-400 hover:text-emerald-300 text-xs font-bold uppercase cursor-pointer"
-            >
-              + Add Skill
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {userSkills.map((skill, idx) => {
-              const isVerified = skill.verificationStatus === 'verified';
-
-              return (
-                <div
-                  key={skill.id ? `sk_${skill.id}_${idx}` : `sk_${idx}`}
-                  className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-2 shadow-sm hover:border-slate-700 transition-all flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <h4 className="font-black text-xs text-white uppercase tracking-wider truncate">
-                            {skill.skillTitle}
-                          </h4>
-                          {isVerified ? (
-                            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-500/50 text-[9px] font-black rounded-md uppercase tracking-wider shrink-0">
-                              ✓ VERIFIED
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-500/50 text-[9px] font-black rounded-md uppercase tracking-wider shrink-0">
-                              UNVERIFIED
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5 truncate">
-                          {skill.certificationName} &bull; <strong className="text-slate-300">{skill.issuingSchool}</strong>
-                        </p>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-emerald-400 block">
-                          KES {(skill.hourlyRate || 0).toLocaleString()}/day
-                        </span>
-                      </div>
+          <div className="space-y-3">
+            {skillsList.map((skill) => (
+              <div key={skill.id} className="bg-white border border-zinc-300 rounded-xl p-4 space-y-2.5 hover:border-emerald-600 transition-all shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-sm text-black">{skill.skillTitle}</h4>
+                      <span className="text-[9px] font-mono uppercase bg-emerald-600 text-white px-2 py-0.5 rounded font-black flex items-center gap-1">
+                        ✓ VERIFIED
+                      </span>
                     </div>
-
-                    <p className="text-xs text-slate-300 font-normal line-clamp-2 leading-relaxed">
-                      {skill.description}
+                    <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                      <span className="font-bold text-black">{skill.category}</span> • {skill.issuingSchool}
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                    {skill.licenseNumber ? (
-                      <span className="text-[10px] font-mono text-slate-400 font-bold truncate">
-                        REG #: {skill.licenseNumber}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-500">No license # uploaded</span>
-                    )}
-
-                    {!isVerified && (
-                      <button
-                        onClick={() => setVerifyingSkill(skill)}
-                        className="px-2.5 py-1 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase rounded-lg hover:bg-emerald-400 cursor-pointer transition-all shrink-0"
-                      >
-                        Verify License
-                      </button>
-                    )}
+                  <div className="text-left sm:text-right font-mono text-xs">
+                    <span className="text-emerald-900 font-black">{skill.certificationName}</span>
+                    <p className="text-[11px] text-zinc-500 font-semibold">License #: {skill.licenseNumber} ({skill.yearObtained})</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
 
-        {/* ========================================================= */}
-        {/* SECTION 3: RECOMMENDED SKILLS & ACCREDITED TVET INSTITUTIONS */}
-        {/* ========================================================= */}
-        <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <span>🎓 HIGH-DEMAND SKILLS & TVET INSTITUTIONS</span>
-              </h3>
-              <p className="text-[10px] text-slate-400 font-medium">
-                Accredited institutions offering practical craft upgrades in Kenya.
-              </p>
-            </div>
-          </div>
+                <p className="text-xs text-zinc-700 font-normal leading-relaxed">{skill.description}</p>
 
-          {/* Filter Pills */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {['ALL', 'Joinery', 'Electrical', 'Plumbing', 'Agribusiness', 'Mechanical'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setRecommendedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap cursor-pointer transition-all border ${
-                  recommendedCategory === cat
-                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                {cat === 'ALL' ? '🌐 All Courses' : cat}
-              </button>
+                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-600 pt-2 border-t border-zinc-100">
+                  <span>Standard Rate: <strong className="text-black font-black">KES {skill.hourlyRate} / day</strong></span>
+                  <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 text-zinc-800 font-bold">
+                    Endorsements: <strong className="text-emerald-700">{skill.endorsementsCount} Peers</strong>
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
-
-          {/* List of Recommended Skill Courses */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredRecommended.map((course, idx) => {
-              const isSaved = enrolledCourseIds.includes(course.id);
-
-              return (
-                <div
-                  key={course.id ? `crs_${course.id}_${idx}` : `crs_${idx}`}
-                  className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3 shadow-md hover:border-emerald-500/50 transition-all flex flex-col justify-between"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-black bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded uppercase tracking-wider inline-block">
-                          {course.demandTag}
-                        </span>
-                        <h4 className="font-black text-sm text-white uppercase tracking-wider mt-1.5 leading-snug">
-                          {course.title}
-                        </h4>
-                        <p className="text-xs text-slate-300 font-bold mt-0.5 truncate">
-                          🏛️ {course.institution}
-                        </p>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-emerald-400 block">
-                          {course.earningBoost}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                          {course.estimatedFee}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-300 font-normal leading-relaxed line-clamp-3">
-                      {course.description}
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                      <div className="truncate">
-                        <strong className="text-slate-300">Duration:</strong> {course.duration} ({course.classFormat})
-                      </div>
-                      <div className="truncate">
-                        <strong className="text-slate-300">Location:</strong> {course.location}
-                      </div>
-                      <div className="truncate">
-                        <strong className="text-slate-300">Prerequisites:</strong> {course.prerequisites}
-                      </div>
-                      <div className="truncate">
-                        <strong className="text-slate-300">Award:</strong> {course.certificationAwarded}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-1 mt-auto">
-                    <button
-                      onClick={() => {
-                        if (isSaved) {
-                          setEnrolledCourseIds(prev => prev.filter(id => id !== course.id));
-                          showToast('Removed from saved list');
-                        } else {
-                          setEnrolledCourseIds(prev => [...prev, course.id]);
-                          showToast(`✓ Registered interest in ${course.institutionShort}`);
-                        }
-                      }}
-                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        isSaved
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                      }`}
-                    >
-                      {isSaved ? '✓ Enrolled / Interested' : '🎓 Register Interest'}
-                    </button>
-
-                    <a
-                      href={course.institutionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-2 bg-emerald-950/90 hover:bg-emerald-900/90 text-emerald-400 hover:text-emerald-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border border-emerald-500/50 flex items-center gap-1 shrink-0"
-                      title={`Visit official ${course.institutionShort} website`}
-                    >
-                      <span>🌐 Visit Website</span>
-                    </a>
-
-                    <button
-                      onClick={() => setSelectedOrgForModal({ orgName: course.institutionShort })}
-                      className="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold uppercase transition-all cursor-pointer border border-slate-700 shrink-0"
-                    >
-                      Campus Info
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </section>
 
-        {/* ========================================================= */}
-        {/* SECTION 4: JUA KALI MENTOR NETWORK (EARN FROM MENTORING)  */}
-        {/* ========================================================= */}
-        <section className="space-y-3 pt-3">
-          <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 rounded-3xl p-4 sm:p-5 space-y-3 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded-md inline-block">
-                  JUA KALI ARTISAN MENTORSHIP
-                </span>
-                <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white mt-1.5">
-                  Learn Practical Crafts or Earn as a Mentor
-                </h3>
-                <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
-                  Top-rated Jua Kali master artisans share hands-on workshop techniques 1-on-1 and earn hourly mentoring fees.
-                </p>
-              </div>
+        {/* SUGGESTED COURSES & ACCREDITED LEARNING CENTERS */}
+        <section className="space-y-4 pt-4 border-t-2 border-black">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-emerald-600" />
+                <span>SUGGESTED COURSES & ACCREDITED LEARNING CENTERS</span>
+              </h3>
+              <p className="text-xs text-zinc-600 font-mono mt-0.5">
+                Targeted trade upgrades at accredited institutions in Kenya (NITA, EPRA, KITI, TVETA, KALRO, NTTI).
+              </p>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-black text-white px-2.5 py-1 rounded">
+              TVET ACCREDITED
+            </span>
+          </div>
 
-              <button
-                onClick={() => setShowMentorApplyModal(true)}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-3 py-2 rounded-xl uppercase tracking-wider shrink-0 transition-all cursor-pointer border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)] self-start"
-              >
-                + Become Mentor
-              </button>
+          {/* SEARCH & CATEGORY FILTER */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <input
+                type="text"
+                placeholder="Search courses, institutions (NITA, EPRA, KITI), or trades..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-zinc-300 rounded-lg text-xs text-black placeholder-zinc-400 font-mono outline-none focus:border-emerald-600 shadow-2xs"
+              />
             </div>
 
-            {/* List of Master Mentors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              {JUA_KALI_MENTORS.map((mentor) => (
-                <div
-                  key={mentor.id}
-                  className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5 shadow-sm hover:border-slate-700 transition-all flex flex-col justify-between"
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase whitespace-nowrap cursor-pointer transition-all border ${
+                    selectedCategory === cat
+                      ? 'bg-black text-white border-black shadow-xs'
+                      : 'bg-white text-zinc-700 border-zinc-300 hover:border-emerald-600 hover:text-emerald-700'
+                  }`}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={mentor.avatarUrl}
-                          alt={mentor.name}
-                          className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border-2 border-emerald-500/60 shadow-md shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="font-black text-xs text-white uppercase tracking-wider truncate">
-                              {mentor.name}
-                            </h4>
-                            <span className="text-[9px] font-black bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded uppercase shrink-0">
-                              {mentor.badge}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-300 font-bold mt-0.5 truncate">
-                            {mentor.craftTitle} &bull; <strong className="text-emerald-400">{mentor.experienceYears} Yrs Exp</strong>
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium truncate">
-                            📍 {mentor.location} ({mentor.availableDays})
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="flex items-center gap-1 justify-end text-xs font-black text-emerald-400">
-                          <span>★ {mentor.rating}</span>
-                          <span className="text-[10px] text-slate-400">({mentor.reviewsCount})</span>
-                        </div>
-                        <span className="text-xs font-black text-white block mt-0.5">
-                          KES {mentor.hourlyRate}/hr
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-300 font-normal bg-slate-900/60 p-2 rounded-xl border border-slate-800/80 leading-relaxed">
-                      🔧 <strong>Mentorship focus:</strong> {mentor.specialty}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 mt-auto">
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold">
-                      ✓ Earns from paid 1-on-1 sessions
-                    </span>
-                    <button
-                      onClick={() => setSelectedMentorForBooking(mentor)}
-                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all shadow-sm shrink-0 text-center"
-                    >
-                      Book 1-on-1 Session &rarr;
-                    </button>
-                  </div>
-                </div>
+                  {cat}
+                </button>
               ))}
             </div>
           </div>
+
+          {/* COURSES DETAILED LIST (WHITE CARDS, EMERALD BOOST BADGES, BOLD BLACK BUTTONS) */}
+          <div className="space-y-3">
+            {filteredCourses.map(course => (
+              <div key={course.id} className="bg-white border border-zinc-300 rounded-xl p-4 space-y-3 hover:border-emerald-600 transition-all shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-zinc-100 pb-3">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono uppercase bg-zinc-100 text-black px-2 py-0.5 rounded font-bold border border-zinc-300">
+                        {course.category}
+                      </span>
+                      <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-emerald-700" />
+                        {course.demandTag}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-sm text-black">{course.title}</h4>
+                    <p className="text-xs text-zinc-600 font-medium">
+                      <strong className="text-black">{course.institution}</strong> • {course.location}
+                    </p>
+                  </div>
+
+                  <div className="text-left sm:text-right font-mono text-xs shrink-0">
+                    <span className="text-black font-black text-sm">{course.estimatedFee}</span>
+                    <p className="text-[11px] text-emerald-700 font-bold mt-0.5">Boost: {course.earningBoost}</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-700 leading-relaxed font-normal">{course.description}</p>
+
+                {/* DETAILED COURSE PARAMETERS */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-zinc-100 text-[11px] font-mono text-zinc-600">
+                  <div>
+                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">DURATION & FORMAT</span>
+                    <span className="text-black font-bold">{course.duration} ({course.classFormat})</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">PREREQUISITES</span>
+                    <span className="text-black font-bold">{course.prerequisites}</span>
+                  </div>
+                  <div className="col-span-2 sm:col-span-2">
+                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">AWARDED CERTIFICATION</span>
+                    <span className="text-emerald-900 font-black">{course.certificationAwarded}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <a
+                    href={course.institutionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 bg-white hover:bg-zinc-100 text-black border border-zinc-300 text-xs font-mono font-bold rounded-lg flex items-center gap-1 transition-colors"
+                  >
+                    <span>Portal</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => setSelectedCourseModal(course)}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold rounded-lg transition-all shadow-xs cursor-pointer border border-emerald-700"
+                  >
+                    View Details & Enroll
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {filteredCourses.length === 0 && (
+              <div className="py-12 text-center text-zinc-500 font-mono text-xs border-2 border-dashed border-zinc-300 rounded-xl bg-white">
+                No courses found matching criteria.
+              </div>
+            )}
+          </div>
         </section>
+
       </main>
 
-      {/* ========================================================= */}
-      {/* MODAL: ADD NEW SKILL (WITH CERTIFICATE UPLOAD)             */}
-      {/* ========================================================= */}
+      {/* ADD SKILL MODAL (CLEAN WHITE CARD WITH BLACK & GREEN ACCENTS) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-md w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
-            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-black rounded-xl p-5 w-full max-w-lg space-y-4 font-sans text-black shadow-2xl">
+            <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-black text-base">⚡</span>
-                <h3 className="text-xs font-black uppercase tracking-wider">Add & Verify Skill</h3>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-black">ADD TRADE SKILL CREDENTIAL</h3>
               </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold cursor-pointer"
-              >
-                ✕
+              <button onClick={() => setShowAddModal(false)} className="text-zinc-500 hover:text-black cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSkillSubmit} className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
+            <form onSubmit={handleAddSkillSubmit} className="space-y-3 text-xs font-mono">
               <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Skill Title *</label>
+                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Skill Title / Specialty</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Joinery & Custom Cabinet Fitting"
+                  placeholder="e.g. EPRA Solar PV Inverter Wiring"
                   value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
+                  onChange={e => setFormTitle(e.target.value)}
+                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none focus:border-emerald-600"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Category</label>
+                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Trade Category</label>
                   <select
                     value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as any)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
+                    onChange={e => setFormCategory(e.target.value)}
+                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
                   >
-                    <option value="Construction">Joinery / Carpentry</option>
-                    <option value="Electrical">Electrical & Solar</option>
-                    <option value="Plumbing">Plumbing</option>
-                    <option value="Transport/Boda">Transport/Boda</option>
+                    <option value="Woodwork & Joinery">Woodwork & Joinery</option>
+                    <option value="Electrical & Solar">Electrical & Solar</option>
+                    <option value="Metalwork & Fabrication">Metalwork & Fabrication</option>
                     <option value="Agribusiness">Agribusiness</option>
-                    <option value="Mechanic">Mechanic / Welder</option>
-                    <option value="Other">Other</option>
+                    <option value="Plumbing & Heating">Plumbing & Heating</option>
+                    <option value="Industrial Automation">Industrial Automation</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Daily Rate (KES)</label>
+                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Year Obtained</label>
+                  <input
+                    type="text"
+                    value={formYear}
+                    onChange={e => setFormYear(e.target.value)}
+                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Certification Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. NITA Grade II Trade Test Certificate"
+                  value={formCertName}
+                  onChange={e => setFormCertName(e.target.value)}
+                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Issuing School / Institution</label>
+                <input
+                  type="text"
+                  placeholder="e.g. NITA Kenya / EPRA"
+                  value={formSchool}
+                  onChange={e => setFormSchool(e.target.value)}
+                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">License / Cert #</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. NITA-2023-994"
+                    value={formLicenseNo}
+                    onChange={e => setFormLicenseNo(e.target.value)}
+                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Base Rate (KES/Day)</label>
                   <input
                     type="number"
                     value={formRate}
-                    onChange={(e) => setFormRate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Certification / Course</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. NITA Joinery Grade II"
-                    value={formCertName}
-                    onChange={(e) => setFormCertName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Issuing Institution</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. NITA / TVETA / EPRA"
-                    value={formSchool}
-                    onChange={(e) => setFormSchool(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
+                    onChange={e => setFormRate(e.target.value)}
+                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">License Number (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. NITA-J-2024-99"
-                  value={formLicenseNo}
-                  onChange={(e) => setFormLicenseNo(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-mono font-bold"
-                />
-              </div>
-
-              {/* Certificate Upload */}
-              <div className="bg-slate-950 p-3 rounded-2xl border border-dashed border-slate-700 space-y-2">
-                <label className="font-bold text-slate-200 uppercase block text-[10px]">
-                  Upload Certificate Document / Image (Instant Verification)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleFileUpload(e, false)}
-                  className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-emerald-500 file:text-slate-950 file:font-black file:uppercase file:text-[10px] cursor-pointer"
-                />
-                {formCertFileName && (
-                  <p className="text-[10px] text-emerald-400 font-mono font-bold truncate">
-                    ✓ File Selected: {formCertFileName}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Short Description</label>
+                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Scope & Key Details</label>
                 <textarea
                   rows={2}
-                  placeholder="Describe your practical tools and experience..."
+                  placeholder="Details of trade capabilities, machinery handled, or installation scope..."
                   value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-medium"
+                  onChange={e => setFormDesc(e.target.value)}
+                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold uppercase rounded-xl cursor-pointer"
+                  className="px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-black rounded font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black uppercase rounded-xl shadow-sm cursor-pointer"
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded cursor-pointer shadow-xs"
                 >
-                  Save & Verify
+                  Save Skill
                 </button>
               </div>
             </form>
@@ -1109,256 +702,83 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL: VERIFY SKILL CERTIFICATE                            */}
-      {/* ========================================================= */}
-      {verifyingSkill && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
-            <div className="bg-slate-950 text-white p-3.5 flex items-center justify-between border-b border-slate-800 shrink-0">
-              <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                Verify Accreditation Badge
-              </h3>
-              <button
-                onClick={() => setVerifyingSkill(null)}
-                className="text-slate-400 hover:text-white text-base font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleVerifySubmit} className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
-              <p className="text-slate-300 font-medium">
-                Uploading verification for: <strong className="text-white">{verifyingSkill.skillTitle}</strong>
-              </p>
-
-              <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">License / Registration #</label>
-                <input
-                  type="text"
-                  placeholder="e.g. NITA-J-889"
-                  value={verifLicense}
-                  onChange={(e) => setVerifLicense(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-mono font-bold"
-                />
-              </div>
-
-              <div className="bg-slate-950 p-3 rounded-2xl border border-dashed border-slate-700 space-y-2">
-                <label className="font-bold text-slate-200 uppercase block text-[10px]">
-                  Upload Certificate File / Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleFileUpload(e, true)}
-                  className="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-slate-950 file:font-black file:uppercase file:text-[9px] cursor-pointer"
-                />
-                {verifFileName && (
-                  <p className="text-[10px] text-emerald-400 font-mono font-bold truncate">
-                    ✓ Attached: {verifFileName}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setVerifyingSkill(null)}
-                  className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold uppercase rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black uppercase rounded-xl cursor-pointer shadow-sm"
-                >
-                  Confirm & Badge
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* MODAL: BOOK 1-ON-1 JUA KALI MENTOR SESSION                 */}
-      {/* ========================================================= */}
-      {selectedMentorForBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
-            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+      {/* COURSE DETAIL & ENROLL MODAL (WHITE CONTAINER, GREEN & BLACK ACCENTS) */}
+      {selectedCourseModal && (
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-black rounded-xl p-5 w-full max-w-lg space-y-4 font-mono text-black shadow-2xl">
+            <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-black text-base">🛠️</span>
-                <h3 className="text-xs font-black uppercase tracking-wider">Book Mentorship Session</h3>
+                <GraduationCap className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-sm font-black uppercase text-black">COURSE & INSTITUTION DETAILS</h3>
               </div>
-              <button
-                onClick={() => setSelectedMentorForBooking(null)}
-                className="text-slate-400 hover:text-white text-base font-bold cursor-pointer"
-              >
-                ✕
+              <button onClick={() => setSelectedCourseModal(null)} className="text-zinc-500 hover:text-black cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
-              <div className="flex items-center gap-3 bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
-                <img
-                  src={selectedMentorForBooking.avatarUrl}
-                  alt={selectedMentorForBooking.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-emerald-500/50 shrink-0"
-                />
-                <div className="min-w-0">
-                  <h4 className="font-black text-white text-xs truncate">{selectedMentorForBooking.name}</h4>
-                  <p className="text-[10px] text-emerald-400 font-bold truncate">{selectedMentorForBooking.craftTitle}</p>
-                  <p className="text-[9px] text-slate-400 truncate">Rate: KES {selectedMentorForBooking.hourlyRate}/hr &bull; {selectedMentorForBooking.location}</p>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">INSTITUTION</span>
+                <h4 className="text-sm font-bold text-black">{selectedCourseModal.institution}</h4>
+                <p className="text-zinc-600">{selectedCourseModal.location}</p>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">COURSE TITLE</span>
+                <p className="text-emerald-950 font-bold text-sm">{selectedCourseModal.title}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 bg-zinc-50 p-3 rounded-lg border border-zinc-300">
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">ESTIMATED FEE</span>
+                  <span className="text-black font-black text-sm">{selectedCourseModal.estimatedFee}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">PROJECTED REVENUE BOOST</span>
+                  <span className="text-emerald-700 font-black text-sm">{selectedCourseModal.earningBoost}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">DURATION</span>
+                  <span className="text-black font-semibold">{selectedCourseModal.duration}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">CLASS FORMAT</span>
+                  <span className="text-black font-semibold">{selectedCourseModal.classFormat}</span>
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Preferred Session Time</label>
-                <input
-                  type="text"
-                  value={mentorDate}
-                  onChange={(e) => setMentorDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                />
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">SYLLABUS & DESCRIPTION</span>
+                <p className="text-zinc-700 leading-relaxed text-[11px]">{selectedCourseModal.description}</p>
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Workshop Topic / Skill Focus</label>
-                <textarea
-                  rows={2}
-                  value={mentorTopic}
-                  onChange={(e) => setMentorTopic(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-medium"
-                />
-              </div>
-
-              <div className="bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-500/40 text-[10px] text-emerald-300 font-medium leading-relaxed">
-                💡 Mentorship fees are held in escrow and released directly to the artisan upon completion of your 1-on-1 session.
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMentorForBooking(null)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold uppercase rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedMentorForBooking(null);
-                    showToast(`✓ Mentorship session requested with ${selectedMentorForBooking.name}!`);
-                  }}
-                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black uppercase rounded-xl shadow-sm cursor-pointer"
-                >
-                  Confirm Booking
-                </button>
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">AWARDED CREDENTIAL</span>
+                <p className="text-emerald-900 font-black">{selectedCourseModal.certificationAwarded}</p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ========================================================= */}
-      {/* MODAL: BECOME A JUA KALI MENTOR                            */}
-      {/* ========================================================= */}
-      {showMentorApplyModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl max-w-sm w-full border border-slate-800 overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
-            <div className="bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-black text-base">⭐</span>
-                <h3 className="text-xs font-black uppercase tracking-wider">Become a Jua Kali Mentor</h3>
-              </div>
-              <button
-                onClick={() => setShowMentorApplyModal(false)}
-                className="text-slate-400 hover:text-white text-base font-bold cursor-pointer"
+            <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
+              <a
+                href={selectedCourseModal.institutionUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-zinc-600 underline hover:text-black font-bold"
               >
-                ✕
+                Visit Official Portal
+              </a>
+              <button
+                onClick={() => {
+                  showToast(`✓ Enrollment request submitted for ${selectedCourseModal.institutionShort}!`);
+                  setSelectedCourseModal(null);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-sm cursor-pointer border border-emerald-700"
+              >
+                Submit Enrollment Request
               </button>
             </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setShowMentorApplyModal(false);
-                showToast('✓ Mentor application submitted! Verification badge active.');
-              }}
-              className="p-4 space-y-3 text-xs overflow-y-auto flex-1"
-            >
-              <p className="text-slate-300 font-medium leading-relaxed">
-                Pass on your practical craft skills to upcoming artisans and earn extra hourly revenue.
-              </p>
-
-              <div>
-                <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Your Primary Craft / Specialty</label>
-                <input
-                  type="text"
-                  required
-                  value={mentorCraft}
-                  onChange={(e) => setMentorCraft(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Years of Practical Exp</label>
-                  <input
-                    type="number"
-                    value={mentorExp}
-                    onChange={(e) => setMentorExp(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1 text-[10px]">Mentoring Rate (KES/hr)</label>
-                  <input
-                    type="number"
-                    value={mentorRateInput}
-                    onChange={(e) => setMentorRateInput(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:border-emerald-500 outline-none font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[10px] text-slate-400 font-medium">
-                🔒 Requirements: Must have a verified profile and minimum 4.0 rating or NITA certification.
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowMentorApplyModal(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold uppercase rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black uppercase rounded-xl shadow-sm cursor-pointer"
-                >
-                  Submit & Earn
-                </button>
-              </div>
-            </form>
           </div>
         </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* MODAL: ORG DETAILS (NITA, EPRA, AA, KALRO, TVETA)          */}
-      {/* ========================================================= */}
-      {selectedOrgForModal && (
-        <OrgDetailModal
-          isOpen={true}
-          orgName={selectedOrgForModal.orgName}
-          fullSkillCert={selectedOrgForModal.cert}
-          onClose={() => setSelectedOrgForModal(null)}
-        />
       )}
     </div>
   );

@@ -880,8 +880,50 @@ function App() {
       setProviders(prev => prev.filter(p => p.id !== id));
   };
 
+  const publicProviders = React.useMemo(() => {
+    return providers.filter(p => !p.isSuspended && (p.flagCount || 0) === 0);
+  }, [providers]);
+
   const renderContent = () => {
     if (isLoading) return <div className="flex items-center justify-center h-screen bg-brand-navy text-white font-bold animate-pulse italic uppercase tracking-tighter">NIKOSOKO...</div>;
+
+    // SUSPENDED USER BLOCK SCREEN
+    if (currentUser && (currentUser.isSuspended || (currentUser.flagCount || 0) > 0)) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 font-sans">
+          <div className="bg-slate-900 border-2 border-rose-500 rounded-2xl max-w-lg w-full p-6 text-center space-y-5 shadow-2xl">
+            <div className="w-16 h-16 bg-rose-500/20 text-rose-500 border-2 border-rose-500 rounded-full flex items-center justify-center mx-auto text-3xl font-black">
+              🛑
+            </div>
+            
+            <div className="space-y-2">
+              <h1 className="text-xl font-black uppercase text-white tracking-wide">Account Suspended</h1>
+              <div className="bg-rose-950/70 border border-rose-800 p-3 rounded-xl text-left text-xs text-rose-200">
+                <span className="font-bold uppercase block text-rose-400 text-[10px]">Reason for Suspension:</span>
+                <p className="mt-0.5 font-medium italic">"{currentUser.suspendedReason || 'Account flagged by system administration'}"</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              Your account has been suspended by system administration. Suspended accounts are hidden from public view and cannot access platform services.
+            </p>
+
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-left text-[11px] font-mono text-slate-400 space-y-1">
+              <p className="text-slate-200 font-bold uppercase">To appeal or request unsuspension:</p>
+              <p>📞 Phone: {brandingConfig.supportPhone || '+254 723 119 356'}</p>
+              <p>✉️ Email: {brandingConfig.supportEmail || 'support@nikosoko.com'}</p>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg"
+            >
+              Log Out & Exit
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     switch (currentPage) {
       case 'home':
@@ -889,7 +931,7 @@ function App() {
       case 'services':
         return (
           <NikoSoko 
-            providers={providers} 
+            providers={publicProviders} 
             catalogueItems={catalogueItems}
             specialBanners={specialBanners}
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
@@ -911,7 +953,7 @@ function App() {
         return (
           <Tukosoko 
             items={catalogueItems} 
-            providers={providers} 
+            providers={publicProviders} 
             currentUser={currentUser}
             initialViewMode="sellService"
             onAddCatalogueItem={(newItem) => setCatalogueItems(prev => [newItem, ...prev])}
@@ -981,7 +1023,7 @@ function App() {
       case 'qrScan':
         return <QRScannerView onBack={() => setCurrentPage('home')} onScanSuccess={handleScanSuccess} />;
       case 'skill_id':
-        return <SkillDashboard currentUser={currentUser} onBack={() => setCurrentPage('home')} onNavigate={handleNavigate} onUpdateUser={(u) => { setCurrentUser(u); setProviders(prev => prev.map(p => p.id === u.id ? u : p)); }} onBookProvider={(p) => setBookingTargetProvider(p)} />;
+        return <SkillDashboard currentUser={currentUser} onBack={() => setCurrentPage('home')} onNavigate={handleNavigate} onUpdateUser={(u: ServiceProvider) => { setCurrentUser(u); setProviders(prev => prev.map(p => p.id === u.id ? u : p)); }} onBookProvider={(p: ServiceProvider) => setBookingTargetProvider(p)} />;
       case 'messages':
         return (
           <MessageCenterView 
