@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ServiceProvider, CurrentPage } from '../types';
+import { normalizeSkills } from '../utils/skills';
 import OrgDetailModal from './OrgDetailModal';
 
 export interface SkillCert {
@@ -222,8 +223,9 @@ const SkillDashboard: React.FC<SkillDashboardProps> = ({
 
   // Active user skills state
   const [userSkills, setUserSkills] = useState<SkillCert[]>(() => {
-    if (currentUser?.skills && (currentUser.skills as any[]).length > 0) {
-      return currentUser.skills as any[];
+    const norm = normalizeSkills(currentUser?.skills);
+    if (norm.length > 0) {
+      return norm as any[];
     }
     return [
       {

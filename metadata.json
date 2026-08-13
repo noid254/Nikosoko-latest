@@ -1,5 +1,5 @@
 {
-  "name": "Minimalist nikosoko",
+  "name": "niko-soko-pwa",
   "description": "Secure, fast, and local. Simple gateway to neighborhood services and verified skilled professionals.",
   "requestFramePermissions": [
     "geolocation",

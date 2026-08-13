@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig } from '../types';
+import { normalizeSkills } from '../utils/skills';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -115,7 +116,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                 const locationMatch = p.location.toLowerCase().includes(activeQuery);
                 const aboutMatch = (p.about || '').toLowerCase().includes(activeQuery);
                 const categoryMatch = (p.category || '').toLowerCase().includes(activeQuery);
-                const skillMatch = p.skills?.some(s => 
+                const skillMatch = normalizeSkills(p.skills).some(s => 
                     (s.skillTitle || s.name || '').toLowerCase().includes(activeQuery) ||
                     (s.category || '').toLowerCase().includes(activeQuery) ||
                     (s.description || '').toLowerCase().includes(activeQuery)

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ServiceProvider } from '../types';
+import { normalizeSkills } from '../utils/skills';
 
 const StarIcon: React.FC<{ className?: string }> = ({ className = "w-3 h-3" }) => (
     <svg className={className} fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -26,14 +27,15 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ provider, onClick, searchTerm
     const images = rawImages.length > 0 ? rawImages : [DEFAULT_FALLBACK_IMAGE];
 
     const activeQuery = (searchTerm || '').toLowerCase().trim();
-    const matchedSkill = provider.skills?.find(s => {
+    const normalizedSkills = normalizeSkills(provider.skills);
+    const matchedSkill = normalizedSkills.find(s => {
         if (!activeQuery) return false;
         const title = (s.skillTitle || s.name || '').toLowerCase();
         const cat = (s.category || '').toLowerCase();
         const desc = (s.description || '').toLowerCase();
         const cert = (s.certificationName || '').toLowerCase();
         return title.includes(activeQuery) || cat.includes(activeQuery) || desc.includes(activeQuery) || cert.includes(activeQuery);
-    }) || provider.skills?.[0];
+    }) || normalizedSkills[0];
 
     const categoryName = matchedSkill?.category || provider.category || provider.service || 'Skilled Service';
     const displayTitle = matchedSkill?.skillTitle || matchedSkill?.name || provider.service;

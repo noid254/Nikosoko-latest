@@ -152,125 +152,133 @@ const UsersPage: React.FC<UsersPageProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredProviders.map(user => (
-                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                  {/* User Details */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs cursor-pointer"
-                          onClick={() => setSelectedAdminUser(user)}
-                        />
-                        <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p
-                            onClick={() => setSelectedAdminUser(user)}
-                            className="font-black text-slate-900 hover:text-indigo-600 cursor-pointer transition-colors"
-                          >
-                            {user.name}
-                          </p>
-                          {(user.flagCount || 0) > 0 && (
-                            <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">Flagged</span>
-                          )}
-                          {user.adminNotes && user.adminNotes.length > 0 && (
-                            <span className="bg-amber-100 text-amber-900 text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase border border-amber-300" title={`${user.adminNotes.length} Admin Notes Attached`}>
-                              ✍️ {user.adminNotes.length} Notes
-                            </span>
-                          )}
+              {filteredProviders.map(user => {
+                const disputeCount = user.ratingDisputes?.length || 0;
+                return (
+                  <tr 
+                    key={user.id} 
+                    onClick={() => setSelectedAdminUser(user)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    {/* User Details */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs"
+                          />
+                          <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
                         </div>
-                        <p className="text-[11px] text-slate-500 font-mono mt-0.5">📞 {user.phone} • 📍 {user.location}</p>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
+                              {user.name}
+                            </p>
+                            {(user.flagCount || 0) > 0 && (
+                              <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">Flagged</span>
+                            )}
+                            {disputeCount > 0 && (
+                              <span className="bg-amber-400 text-slate-950 text-[8.5px] font-black px-1.5 py-0.2 rounded uppercase border border-amber-500" title={`${disputeCount} Cases Raised`}>
+                                ⚖️ {disputeCount} Cases
+                              </span>
+                            )}
+                            {user.adminNotes && user.adminNotes.length > 0 && (
+                              <span className="bg-amber-100 text-amber-900 text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase border border-amber-300" title={`${user.adminNotes.length} Admin Notes Attached`}>
+                                ✍️ {user.adminNotes.length} Notes
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-mono mt-0.5">📞 {user.phone} • 📍 {user.location}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Service & Category */}
-                  <td className="py-3.5 px-4">
-                    <span className="font-extrabold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg text-xs">
-                      {user.service}
-                    </span>
-                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{user.category || 'General Service'}</p>
-                  </td>
+                    {/* Service & Category */}
+                    <td className="py-3.5 px-4">
+                      <span className="font-extrabold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg text-xs">
+                        {user.service}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{user.category || 'General Service'}</p>
+                    </td>
 
-                  {/* Role Selector */}
-                  <td className="py-3.5 px-4">
-                    <select
-                      value={user.role || 'Member'}
-                      onChange={e => handleRoleChange(user, e.target.value)}
-                      className="bg-slate-50 border border-slate-300 text-[11px] font-black uppercase text-slate-800 px-2.5 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-600 cursor-pointer"
-                    >
-                      <option value="Member">Member</option>
-                      <option value="Provider">Provider</option>
-                      <option value="Staff">Staff / Admin</option>
-                      <option value="BuildingManager">Building Manager</option>
-                      <option value="Gateman">Gateman</option>
-                    </select>
-                  </td>
-
-                  {/* Engagement (Views & Rating) */}
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                      👀 {user.views || 0}
-                    </span>
-                    <div className="text-[10px] font-extrabold text-amber-600 mt-0.5">
-                      ★ {user.rating || '5.0'}
-                    </div>
-                  </td>
-
-                  {/* Verification Status */}
-                  <td className="py-3.5 px-4">
-                    <button
-                      onClick={() => toggleVerification(user)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
-                        user.isVerified
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                          : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                      }`}
-                    >
-                      {user.isVerified ? '✓ Verified' : 'Unverified'}
-                    </button>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => setSelectedAdminUser(user)}
-                        className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-black px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer shadow-xs"
+                    {/* Role Selector */}
+                    <td className="py-3.5 px-4" onClick={e => e.stopPropagation()}>
+                      <select
+                        value={user.role || 'Member'}
+                        onChange={e => handleRoleChange(user, e.target.value)}
+                        className="bg-slate-50 border border-slate-300 text-[11px] font-black uppercase text-slate-800 px-2.5 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-600 cursor-pointer"
                       >
-                        🧠 View Bio & Notes
-                      </button>
+                        <option value="Member">Member</option>
+                        <option value="Provider">Provider</option>
+                        <option value="Staff">Staff / Admin</option>
+                        <option value="BuildingManager">Building Manager</option>
+                        <option value="Gateman">Gateman</option>
+                      </select>
+                    </td>
+
+                    {/* Engagement (Views & Rating) */}
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                        👀 {user.views || 0}
+                      </span>
+                      <div className="text-[10px] font-extrabold text-amber-600 mt-0.5">
+                        ★ {user.rating || '5.0'}
+                      </div>
+                    </td>
+
+                    {/* Verification Status */}
+                    <td className="py-3.5 px-4" onClick={e => e.stopPropagation()}>
                       <button
-                        onClick={() => toggleFlag(user)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                          (user.flagCount || 0) > 0
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600'
+                        onClick={() => toggleVerification(user)}
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                          user.isVerified
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                         }`}
                       >
-                        {(user.flagCount || 0) > 0 ? 'Unflag' : 'Flag'}
+                        {user.isVerified ? '✓ Verified' : 'Unverified'}
                       </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Permanently remove ${user.name} from the system registry?`)) {
-                            onDeleteProvider(user.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        title="Delete User"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedAdminUser(user)}
+                          className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-black px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer shadow-xs"
+                        >
+                          🧠 Inspect Profile
+                        </button>
+                        <button
+                          onClick={() => toggleFlag(user)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            (user.flagCount || 0) > 0
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600'
+                          }`}
+                        >
+                          {(user.flagCount || 0) > 0 ? 'Unflag' : 'Flag'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Permanently remove ${user.name} from the system registry?`)) {
+                              onDeleteProvider(user.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete User"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

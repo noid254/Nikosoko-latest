@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import * as api from './services/api';
 import { 
   ServiceProvider, CatalogueItem, Document, SpecialBanner, 
-  InboxMessage, UnitDetails, SetupData, CurrentPage, OrderData, UnitKey, RatingDispute,
+  InboxMessage, UnitDetails, SetupData, CurrentPage, OrderData, UnitKey, RatingDispute, AdminNote,
   AppBrandingConfig, AppFeatureConfig
 } from './types';
 
@@ -626,11 +626,14 @@ function App() {
 
   const handleDisputeRating = (providerId: string, reviewerName: string, rating: number, comment: string, disputeReason: string) => {
     const targetProvider = providers.find(p => p.id === providerId);
-    if (!targetProvider || !targetProvider.saccoMember?.saccoId) return;
+    if (!targetProvider) return;
 
-    const saccoId = targetProvider.saccoMember.saccoId;
+    const saccoId = targetProvider.saccoMember?.saccoId;
+    const disputeId = `dsp_${Date.now()}`;
+    const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+
     const dispute: RatingDispute = {
-      id: `dsp_${Date.now()}`,
+      id: disputeId,
       providerId,
       providerName: targetProvider.name,
       reviewerName,
@@ -641,34 +644,54 @@ function App() {
       createdAt: new Date().toISOString()
     };
 
+    const caseNote: AdminNote = {
+      id: `case_${Date.now()}`,
+      authorName: targetProvider.name,
+      authorRole: targetProvider.role || 'Provider',
+      authorEmail: targetProvider.email || `${targetProvider.phone}@nikosoko.com`,
+      content: `🚨 CASE RAISED BY USER: Rating Dispute Submitted.\nReason: "${disputeReason}"\nOriginal Reviewer: ${reviewerName} (${rating}★)\nComment: "${comment || 'N/A'}"`,
+      createdAt: new Date().toISOString(),
+      signature: `System Logged Case • User Ticket #${disputeId.slice(-6)} • ${timestamp}`
+    };
+
     setProviders(prev => prev.map(p => {
-      if (p.id === saccoId) {
-        const updatedOrg = {
+      // Update target provider with dispute and admin note
+      if (p.id === providerId) {
+        const updated = {
           ...p,
-          ratingDisputes: [...(p.ratingDisputes || []), dispute]
+          ratingDisputes: [dispute, ...(p.ratingDisputes || [])],
+          adminNotes: [caseNote, ...(p.adminNotes || [])]
         };
-        if (viewingProvider?.id === saccoId) setViewingProvider(updatedOrg);
-        return updatedOrg;
+        if (viewingProvider?.id === providerId) setViewingProvider(updated);
+        return updated;
+      }
+      // If SACCO exists, also mirror dispute to SACCO org
+      if (saccoId && p.id === saccoId) {
+        return {
+          ...p,
+          ratingDisputes: [dispute, ...(p.ratingDisputes || [])]
+        };
       }
       return p;
     }));
   };
 
-  const handleResolveDispute = (saccoId: string, disputeId: string, action: 'resolve' | 'dismiss') => {
+  const handleResolveDispute = (targetId: string, disputeId: string, action: 'resolve' | 'dismiss') => {
     setProviders(prev => prev.map(p => {
-      if (p.id === saccoId) {
+      const hasDispute = (p.ratingDisputes || []).some(d => d.id === disputeId);
+      if (p.id === targetId || hasDispute) {
         const updatedDisputes = (p.ratingDisputes || []).map(d => {
           if (d.id === disputeId) {
             return {
               ...d,
               status: action === 'resolve' ? ('Resolved' as const) : ('Dismissed' as const),
-              resolutionNote: action === 'resolve' ? 'Resolved by Sacco Executive Committee' : 'Dismissed after review'
+              resolutionNote: action === 'resolve' ? 'Resolved by Admin Arbitration' : 'Dismissed after admin review'
             };
           }
           return d;
         });
         const updatedOrg = { ...p, ratingDisputes: updatedDisputes };
-        if (viewingProvider?.id === saccoId) setViewingProvider(updatedOrg);
+        if (viewingProvider?.id === p.id) setViewingProvider(updatedOrg);
         return updatedOrg;
       }
       return p;

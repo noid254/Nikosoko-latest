@@ -145,9 +145,12 @@ const activeOtpStore = new Map<string, { code: string; expiresAt: number }>();
 export const sendOtp = async (target: string): Promise<{ success: boolean; devCode: string; message: string }> => {
     await delay(150);
     const cleanTarget = String(target).trim().toLowerCase();
-    
-    // Generate 6-digit OTP
-    const devCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const cleanNum = cleanTarget.replace(/\D/g, '');
+    const last9 = cleanNum.slice(-9);
+    const isSuperAdminPhone = last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
+
+    // Generate 6-digit OTP code (or 3232 for superadmin default)
+    const devCode = isSuperAdminPhone ? '3232' : Math.floor(100000 + Math.random() * 900000).toString();
     activeOtpStore.set(cleanTarget, {
         code: devCode,
         expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes expiry
@@ -165,8 +168,8 @@ export const sendOtp = async (target: string): Promise<{ success: boolean; devCo
 
     return {
         success: true,
-        devCode,
-        message: `OTP verification code sent to ${target}`
+        devCode: isSuperAdminPhone ? '3232' : devCode,
+        message: `OTP verification code dispatched to ${target}`
     };
 };
 
@@ -204,7 +207,7 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
     const last9 = normPhone.slice(-9);
 
     if (!otp || otp.trim().length < 4) {
-        throw new Error('Please enter a valid verification OTP code.');
+        throw new Error('Please enter a valid OTP verification code.');
     }
 
     const trimmedOtp = otp.trim();
@@ -213,6 +216,12 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
     const isSuperAdminPhone = normPhone === '254723119356' || normPhone === '0723119356' || last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
 
     if (isSuperAdminPhone) {
+        const storedOtp = activeOtpStore.get(cleanTarget);
+        const isSaCodeValid = trimmedOtp === '3232' || (storedOtp && storedOtp.code === trimmedOtp);
+        if (!isSaCodeValid) {
+            throw new Error('Incorrect code for Super Admin. Default code is 3232.');
+        }
+
         const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
         let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
         if (!saUser) saUser = SUPER_ADMIN_PROVIDER;
@@ -229,20 +238,13 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
         };
     }
 
-    // Verify OTP against active store
+    // Verify OTP against active store & backend
     const storedOtp = activeOtpStore.get(cleanTarget);
-    const isCodeValid = (storedOtp && storedOtp.code === trimmedOtp && Date.now() < storedOtp.expiresAt) ||
-                        trimmedOtp === '1234' || trimmedOtp === '123456';
+    const isLocalValid = storedOtp && storedOtp.code === trimmedOtp && Date.now() < storedOtp.expiresAt;
 
-    if (!isCodeValid) {
-        throw new Error(`Incorrect verification OTP code for ${target}. Please enter the correct code.`);
-    }
-
-    // Clear used OTP
-    activeOtpStore.delete(cleanTarget);
-
-    // 1. Check SQLite backend server for registered profile
+    let backendOk = false;
     let existingUser: ServiceProvider | null = null;
+
     try {
         const res = await fetch('/api/auth/verify-otp', {
             method: 'POST',
@@ -250,6 +252,7 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
             body: JSON.stringify({ target: cleanTarget, code: trimmedOtp })
         });
         if (res.ok) {
+            backendOk = true;
             const data = await res.json();
             if (data.provider) {
                 existingUser = data.provider;
@@ -258,6 +261,13 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
     } catch {
         // Fallback
     }
+
+    if (!isLocalValid && !backendOk) {
+        throw new Error('Incorrect OTP verification code. Please enter the valid code sent to your phone.');
+    }
+
+    // Clear used OTP
+    activeOtpStore.delete(cleanTarget);
 
     // 2. Fallback to local persistent index or localStorage table
     if (!existingUser) {

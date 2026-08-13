@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
+import nodemailer from 'nodemailer';
+import twilio from 'twilio';
 
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
@@ -51,6 +53,11 @@ async function initDatabase() {
 
   // Create SQLite Schema for Trades Professionals, Services & Marketplace
   db.run(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS providers (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -257,36 +264,227 @@ async function startServer() {
     res.json({ status: 'ok', database: 'SQLite', timestamp: new Date().toISOString() });
   });
 
+  // Twilio & SMS Helpers
+  function getTwilioConfig() {
+    const accountSid = queryOne('SELECT value FROM system_settings WHERE key = ?', ['twilioAccountSid'])?.value || process.env.TWILIO_ACCOUNT_SID || '';
+    const authToken = queryOne('SELECT value FROM system_settings WHERE key = ?', ['twilioAuthToken'])?.value || process.env.TWILIO_AUTH_TOKEN || '';
+    const phoneNumber = queryOne('SELECT value FROM system_settings WHERE key = ?', ['twilioPhoneNumber'])?.value || process.env.TWILIO_PHONE_NUMBER || '';
+    const verifyServiceSid = queryOne('SELECT value FROM system_settings WHERE key = ?', ['twilioVerifyServiceSid'])?.value || process.env.TWILIO_VERIFY_SERVICE_SID || '';
+
+    return { accountSid, authToken, phoneNumber, verifyServiceSid };
+  }
+
+  function formatToE164(phone: string): string {
+    let cleaned = String(phone).trim();
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    let digits = cleaned.replace(/\D/g, '');
+    if (digits.startsWith('0')) {
+      digits = '254' + digits.slice(1);
+    } else if (!digits.startsWith('254') && digits.length === 9) {
+      digits = '254' + digits;
+    }
+    return '+' + digits;
+  }
+
   // OTP Verification Endpoints
   const activeServerOtps = new Map<string, { code: string; expiresAt: number }>();
 
-  app.post('/api/auth/send-otp', (req, res) => {
+  app.post('/api/auth/send-otp', async (req, res) => {
     try {
       const { target } = req.body;
-      if (!target) return res.status(400).json({ error: 'Target email or phone is required' });
+      if (!target) return res.status(400).json({ error: 'Target phone number is required' });
       const cleanTarget = String(target).trim().toLowerCase();
+      const normDigits = cleanTarget.replace(/\D/g, '');
+      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
       
-      // Generate a 6-digit OTP code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+      const formattedPhone = formatToE164(cleanTarget);
 
-      res.json({ success: true, message: `OTP verification code sent to ${target}`, code });
+      // Super Admin default code 3232 bypass
+      if (isSuperAdmin) {
+        activeServerOtps.set(cleanTarget, { code: '3232', expiresAt: Date.now() + 10 * 60 * 1000 });
+        return res.json({
+          success: true,
+          message: `OTP requested for Super Admin (${cleanTarget})`,
+          smsSent: false,
+          devCode: '3232'
+        });
+      }
+
+      const cfg = getTwilioConfig();
+      let smsSent = false;
+      let twilioError = '';
+
+      if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
+        try {
+          const client = twilio(cfg.accountSid, cfg.authToken);
+          const verification = await client.verify.v2.services(cfg.verifyServiceSid)
+            .verifications.create({ to: formattedPhone, channel: 'sms' });
+          smsSent = true;
+          console.log(`[Twilio Verify API] Verification SID ${verification.sid} sent to ${formattedPhone}`);
+        } catch (err: any) {
+          console.error('Twilio Verify API error:', err);
+          twilioError = err.message || 'Twilio Verify request failed';
+        }
+      } else if (cfg.accountSid && cfg.authToken && cfg.phoneNumber) {
+        // Fallback to Twilio Messaging API if Verify Service SID is not provided
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+        try {
+          const client = twilio(cfg.accountSid, cfg.authToken);
+          await client.messages.create({
+            body: `Karibu Soko! Your NikoSoko verification code is: ${code}`,
+            from: cfg.phoneNumber,
+            to: formattedPhone
+          });
+          smsSent = true;
+        } catch (err: any) {
+          console.error('Twilio Messaging API error:', err);
+          twilioError = err.message;
+        }
+      } else {
+        // Credentials not configured yet fallback
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+        console.log(`[Twilio Unconfigured Notice] Local OTP code generated for ${cleanTarget}: ${code}`);
+      }
+
+      res.json({
+        success: true,
+        message: smsSent ? `Verification SMS sent via Twilio to ${formattedPhone}` : `OTP code generated for ${cleanTarget}`,
+        smsSent,
+        error: twilioError || undefined
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.post('/api/auth/verify-otp', (req, res) => {
+  // Admin Twilio SMS Settings API
+  app.get('/api/admin/sms-settings', (req, res) => {
+    try {
+      const cfg = getTwilioConfig();
+      const maskedCfg = {
+        ...cfg,
+        authToken: cfg.authToken ? '••••••••••••' : ''
+      };
+      res.json(maskedCfg);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/sms-settings', (req, res) => {
+    try {
+      const { accountSid, authToken, phoneNumber, verifyServiceSid } = req.body;
+      const saveKey = (key: string, val: any) => {
+        runSql('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', [key, String(val)]);
+      };
+
+      if (accountSid !== undefined) saveKey('twilioAccountSid', accountSid);
+      if (authToken !== undefined && authToken !== '••••••••••••') saveKey('twilioAuthToken', authToken);
+      if (phoneNumber !== undefined) saveKey('twilioPhoneNumber', phoneNumber);
+      if (verifyServiceSid !== undefined) saveKey('twilioVerifyServiceSid', verifyServiceSid);
+
+      res.json({ success: true, message: 'Twilio SMS settings saved successfully', config: getTwilioConfig() });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/test-sms', async (req, res) => {
+    try {
+      const { testPhone } = req.body;
+      const recipient = (testPhone || '0723119356').trim();
+      const formattedPhone = formatToE164(recipient);
+      const cfg = getTwilioConfig();
+
+      if (!cfg.accountSid || !cfg.authToken) {
+        return res.status(400).json({ error: 'Twilio Account SID and Auth Token must be configured first.' });
+      }
+
+      const client = twilio(cfg.accountSid, cfg.authToken);
+      let resultMessage = '';
+
+      if (cfg.verifyServiceSid) {
+        const verification = await client.verify.v2.services(cfg.verifyServiceSid)
+          .verifications.create({ to: formattedPhone, channel: 'sms' });
+        resultMessage = `Twilio Verify OTP code requested for ${formattedPhone}. SID: ${verification.sid}`;
+      } else if (cfg.phoneNumber) {
+        const message = await client.messages.create({
+          body: `Karibu Soko! This is a test OTP from NikoSoko Admin. Code: 888999`,
+          from: cfg.phoneNumber,
+          to: formattedPhone
+        });
+        resultMessage = `Twilio SMS dispatched to ${formattedPhone}. SID: ${message.sid}`;
+      } else {
+        return res.status(400).json({ error: 'Provide either a Verify Service SID or Twilio Phone Number.' });
+      }
+
+      res.json({ success: true, message: resultMessage });
+    } catch (e: any) {
+      res.status(500).json({ error: `Twilio Error: ${e.message}` });
+    }
+  });
+
+  app.post('/api/auth/verify-otp', async (req, res) => {
     try {
       const { target, code } = req.body;
-      if (!target || !code) return res.status(400).json({ error: 'Target and OTP code are required' });
+      if (!target || !code) return res.status(400).json({ error: 'Target phone number and OTP code are required' });
       const cleanTarget = String(target).trim().toLowerCase();
+      const normDigits = cleanTarget.replace(/\D/g, '');
+      const inputCode = String(code).trim();
+
+      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
       
-      const stored = activeServerOtps.get(cleanTarget);
-      const isValid = (stored && stored.code === String(code).trim()) || String(code).trim() === '123456' || String(code).trim() === '1234';
+      let isValid = false;
+
+      if (isSuperAdmin && inputCode === '3232') {
+        isValid = true;
+      } else {
+        const cfg = getTwilioConfig();
+        const formattedPhone = formatToE164(cleanTarget);
+
+        if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
+          try {
+            const client = twilio(cfg.accountSid, cfg.authToken);
+            const check = await client.verify.v2.services(cfg.verifyServiceSid)
+              .verificationChecks.create({ to: formattedPhone, code: inputCode });
+            
+            if (check.status === 'approved') {
+              isValid = true;
+            }
+          } catch (err: any) {
+            console.error('Twilio Verify check error:', err);
+            // Fallback check against activeServerOtps
+            const stored = activeServerOtps.get(cleanTarget);
+            if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
+              isValid = true;
+            }
+          }
+        } else {
+          const stored = activeServerOtps.get(cleanTarget);
+          if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
+            isValid = true;
+          }
+        }
+      }
 
       if (!isValid) {
-        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your email or phone.' });
+        if (isSuperAdmin) {
+          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
+        }
+        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
+      }
+
+      activeServerOtps.delete(cleanTarget);
+
+      if (!isValid) {
+        if (isSuperAdmin) {
+          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
+        }
+        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
       }
 
       activeServerOtps.delete(cleanTarget);
@@ -637,6 +835,14 @@ async function startServer() {
     }
   });
 
+  // 404 JSON fallback for unhandled API routes and internal control plane routes
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+  });
+  app.use('/__aistudio_internal_control_plane', (req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+  });
+
   // Vite Middleware integration for development / production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -647,7 +853,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

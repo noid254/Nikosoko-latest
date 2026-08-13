@@ -9,8 +9,8 @@ import AppearancePage from './admin/AppearancePage';
 import BroadcastPage from './admin/BroadcastPage';
 import CategoriesPage from './admin/CategoriesPage';
 import OrganizationsPage from './admin/OrganizationsPage';
-
 import CatalogueAdminPage from './admin/CatalogueAdminPage';
+import EmailSettingsPage from './admin/EmailSettingsPage';
 
 interface SuperAdminDashboardProps {
     onBack: () => void;
@@ -38,7 +38,7 @@ interface SuperAdminDashboardProps {
     onSaveFeatureConfig?: (config: AppFeatureConfig) => void;
 }
 
-export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories';
+export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories' | 'Email & OTP';
 
 // Icons
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
@@ -49,6 +49,7 @@ const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>;
 const OrgIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>;
 const BuildingIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" /></svg>;
+const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 
 
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
@@ -110,6 +111,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                     onAddCategory={props.onAddCategory}
                     onDeleteCategory={props.onDeleteCategory}
                 />;
+            case 'Email & OTP':
+                return <EmailSettingsPage />;
             default: return null;
         }
     }
@@ -120,10 +123,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
         { page: 'Catalogue', icon: <TagIcon/> },
         { page: 'Organizations', icon: <OrgIcon/> },
         { page: 'Analytics', icon: <ChartIcon/> },
+        { page: 'Email & OTP', icon: <MailIcon/> },
         { page: 'Appearance', icon: <PaintIcon/> },
         { page: 'Broadcast', icon: <MegaphoneIcon/> },
         { page: 'Categories', icon: <TagIcon/> }
     ];
+
 
     return (
         <div className="bg-slate-100 min-h-screen font-sans flex flex-col md:flex-row">

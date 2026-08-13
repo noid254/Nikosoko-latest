@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import type { ServiceProvider, CatalogueItem } from '../types';
+import { normalizeSkills } from '../utils/skills';
 
 interface SEOHeadProps {
     provider?: ServiceProvider | null;
@@ -48,7 +49,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ provider, item, customTitle, c
                     "bestRating": "5",
                     "worstRating": "1"
                 },
-                "knowsAbout": provider.skills?.map(s => s.skillTitle) || [provider.service],
+                "knowsAbout": normalizeSkills(provider.skills).length > 0 
+                    ? normalizeSkills(provider.skills).map(s => s.skillTitle || s.name || provider.service)
+                    : [provider.service],
                 "priceRange": provider.rate || "Ksh 1,500 - Ksh 5,000",
                 "memberOf": provider.saccoId ? {
                     "@type": "Organization",

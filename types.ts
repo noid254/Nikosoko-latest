@@ -477,3 +477,17 @@ export interface Enquiry {
   status: 'New' | 'Contacted' | 'Closed';
   vacancyType: string;
 }
+
+export interface EmailConfig {
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: string;
+  fromName: string;
+  fromEmail: string;
+  isEnabled: boolean;
+  lastTestedAt?: string;
+  lastTestStatus?: 'success' | 'failed' | 'pending';
+  lastTestMessage?: string;
+}

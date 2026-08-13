@@ -375,18 +375,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
       <div className={`bg-white rounded-xl border border-black shadow-xl w-full ${step === 3 && step3Mode === 'complete' ? 'max-w-md' : 'max-w-xs'} overflow-hidden relative my-auto max-h-[90vh] flex flex-col transition-all duration-150`}>
         
         {/* Minimal Black Header */}
-        <div className="bg-black text-white px-3.5 py-2.5 flex justify-between items-center shrink-0 border-b border-neutral-800">
+        <div className="bg-black text-white px-4 py-3 flex justify-between items-center shrink-0 border-b border-neutral-800">
           <div className="min-w-0">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-400 block leading-none">
-              {step === 1 && 'Authentication • Step 1'}
-              {step === 2 && 'Authentication • Step 2'}
+            <h2 className="text-sm font-black uppercase tracking-wider text-amber-400 leading-none">
+              Karibu Soko
+            </h2>
+            <p className="text-[10px] text-neutral-300 font-medium mt-1">
+              {step === 1 && 'Enter phone number to continue'}
+              {step === 2 && 'Demand OTP verification code'}
               {step === 3 && step3Mode === 'choice' && 'Account Setup Option'}
               {step === 3 && step3Mode === 'nickname' && 'Continue with Nickname'}
-              {step === 3 && step3Mode === 'complete' && 'Complete Profile'}
-            </span>
-            <h2 className="text-xs font-black uppercase tracking-wider text-white mt-0.5">
-              {step === 3 && step3Mode === 'complete' ? 'Skill Profile Setup' : 'Nikosoko Sign In'}
-            </h2>
+              {step === 3 && step3Mode === 'complete' && 'Complete Skill Profile'}
+            </p>
           </div>
           <button 
             onClick={onClose} 
@@ -398,178 +398,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-[11px] p-2 mx-3.5 mt-2.5 rounded text-center font-bold border border-red-200 shrink-0">
+          <div className="bg-red-50 text-red-600 text-[11px] p-2.5 mx-3.5 mt-2.5 rounded text-center font-bold border border-red-200 shrink-0">
             {error}
           </div>
         )}
         
-        <div className="overflow-y-auto flex-1 p-3.5 space-y-3">
+        <div className="overflow-y-auto flex-1 p-4 space-y-3.5">
           
-          {/* STEP 1: Auth Method Selection & Inputs */}
+          {/* STEP 1: Phone Number Input */}
           {step === 1 && (
-            <div className="space-y-3">
-              {/* Method Selector Tabs */}
-              <div className="grid grid-cols-3 gap-1 p-1 bg-neutral-100 rounded-lg border border-neutral-200">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod('email'); setError(''); }}
-                  className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                    authMethod === 'email' ? 'bg-black text-white shadow-xs' : 'text-neutral-600 hover:text-black'
-                  }`}
-                >
-                  ✉️ Gmail / Email OTP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod('google'); setError(''); }}
-                  className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                    authMethod === 'google' ? 'bg-black text-white shadow-xs' : 'text-neutral-600 hover:text-black'
-                  }`}
-                >
-                  🌐 Google
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod('phone'); setError(''); }}
-                  className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                    authMethod === 'phone' ? 'bg-black text-white shadow-xs' : 'text-neutral-600 hover:text-black'
-                  }`}
-                >
-                  📱 Phone OTP
-                </button>
-              </div>
-
-              {/* EMAIL / GMAIL OTP AUTH METHOD */}
-              {authMethod === 'email' && (
-                <form onSubmit={handleSendEmailOtp} className="space-y-2.5 animate-fade-in">
-                  <div className="text-center bg-emerald-50/70 p-2.5 rounded border border-emerald-200">
-                    <span className="text-xs font-black text-emerald-900 block">Gmail / Email Verification</span>
-                    <span className="text-[9px] text-emerald-700 font-medium block mt-0.5">
-                      Receive a 4-digit OTP code directly in your inbox
+            <div className="space-y-3.5">
+              <form onSubmit={handleSendOtp} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-black uppercase tracking-wider">
+                    Mobile Phone Number *
+                  </label>
+                  <div className="flex items-center border border-black rounded bg-white overflow-hidden focus-within:ring-2 focus-within:ring-black">
+                    <span className="px-3 text-black font-extrabold text-xs bg-neutral-100 border-r border-neutral-300 py-2.5 select-none">
+                      +254
                     </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[9px] font-extrabold text-black uppercase tracking-wider">
-                      Gmail / Email Address *
-                    </label>
                     <input 
-                      type="email" 
-                      required
-                      autoFocus
-                      value={emailInput} 
-                      onChange={e => setEmailInput(e.target.value)} 
-                      placeholder="e.g. user@gmail.com" 
-                      className="w-full p-2 bg-neutral-50 border border-black rounded text-xs font-bold text-black focus:outline-none focus:bg-white" 
+                      type="tel" 
+                      value={phone} 
+                      onChange={handlePhoneChange} 
+                      required 
+                      autoFocus 
+                      placeholder="Enter mobile number" 
+                      className="w-full px-3 py-2.5 text-black font-bold text-sm tracking-wider focus:outline-none" 
                     />
                   </div>
-
-                  <button 
-                    type="submit" 
-                    disabled={isLoading}
-                    className="w-full bg-black hover:bg-neutral-800 text-white font-extrabold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer shadow-xs flex items-center justify-center gap-2"
-                  >
-                    {isLoading ? 'Sending Code...' : '✉️ Send OTP to Gmail / Email →'}
-                  </button>
-                </form>
-              )}
-
-              {/* GOOGLE AUTH METHOD */}
-              {authMethod === 'google' && (
-                <form onSubmit={handleGoogleSignIn} className="space-y-2.5 animate-fade-in">
-                  <div className="text-center bg-blue-50/60 p-2.5 rounded border border-blue-200">
-                    <span className="text-xs font-black text-blue-900 block">Fast Google Account Access</span>
-                    <span className="text-[9px] text-blue-700 font-medium block mt-0.5">
-                      Bypass SMS delays • Continue instantly with Google
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[9px] font-extrabold text-black uppercase tracking-wider">
-                      Google Email Address *
-                    </label>
-                    <input 
-                      type="email" 
-                      required
-                      value={googleEmail} 
-                      onChange={e => setGoogleEmail(e.target.value)} 
-                      placeholder="e.g. wanjiku@gmail.com" 
-                      className="w-full p-2 bg-neutral-50 border border-black rounded text-xs font-bold text-black focus:outline-none focus:bg-white" 
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[9px] font-extrabold text-black uppercase tracking-wider">
-                      Full Name (Optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={googleName} 
-                      onChange={e => setGoogleName(e.target.value)} 
-                      placeholder="e.g. Jane Wanjiku" 
-                      className="w-full p-2 bg-neutral-50 border border-black rounded text-xs font-bold text-black focus:outline-none focus:bg-white" 
-                    />
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    disabled={isLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer shadow-xs flex items-center justify-center gap-2"
-                  >
-                    <span>🌐 Continue with Google</span>
-                    <span>&rarr;</span>
-                  </button>
-                </form>
-              )}
-
-              {/* PHONE AUTH METHOD */}
-              {authMethod === 'phone' && (
-                <div className="space-y-3">
-                  <div className="bg-neutral-50 border border-dashed border-neutral-300 p-2 rounded flex items-center justify-between text-xs">
-                    <div>
-                      <span className="text-[8px] font-bold uppercase text-neutral-400 block">Super Admin Fill</span>
-                      <p className="text-[11px] font-mono font-bold text-black">0723119356</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setPhone('723119356'); setError(''); }}
-                      className="bg-black text-white hover:bg-neutral-800 font-bold text-[9px] px-2 py-0.5 rounded uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                      Fill
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSendOtp} className="space-y-2.5">
-                    <div className="space-y-1">
-                      <label className="block text-[9.5px] font-extrabold text-black uppercase tracking-wider">
-                        Enter Phone Number *
-                      </label>
-                      <div className="flex items-center border border-black rounded bg-white overflow-hidden focus-within:ring-1 focus-within:ring-black">
-                        <span className="px-2.5 text-black font-extrabold text-xs bg-neutral-100 border-r border-neutral-300 py-2">
-                          +254
-                        </span>
-                        <input 
-                          type="tel" 
-                          value={phone} 
-                          onChange={handlePhoneChange} 
-                          required 
-                          autoFocus 
-                          placeholder="712 345 678" 
-                          className="w-full px-2.5 py-2 text-black font-bold text-xs tracking-wider focus:outline-none" 
-                        />
-                      </div>
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      disabled={isLoading} 
-                      className="w-full bg-black text-white hover:bg-neutral-800 font-bold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer disabled:bg-neutral-300 flex items-center justify-center gap-1"
-                    >
-                      {isLoading ? 'Sending Code...' : 'Continue & Send OTP \u2192'}
-                    </button>
-                  </form>
                 </div>
-              )}
+
+                <button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className="w-full bg-black text-white hover:bg-neutral-800 font-extrabold py-3 rounded transition-all uppercase text-[11px] tracking-wider cursor-pointer disabled:bg-neutral-300 flex items-center justify-center gap-1 shadow-xs active:scale-[0.99]"
+                >
+                  {isLoading ? 'Sending OTP Code...' : 'Continue & Send OTP \u2192'}
+                </button>
+              </form>
 
               {/* TERMS & CONDITIONS MANDATORY CHECKBOX */}
               <div className="pt-2 border-t border-neutral-200 space-y-1">
@@ -580,7 +447,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                     onChange={e => setTermsAccepted(e.target.checked)}
                     className="mt-0.5 rounded border-neutral-400 text-black focus:ring-black cursor-pointer"
                   />
-                  <span className="text-[9px] text-neutral-600 leading-tight">
+                  <span className="text-[9.5px] text-neutral-600 leading-tight">
                     I accept the{' '}
                     <button
                       type="button"
@@ -598,44 +465,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
           {/* STEP 2: OTP Verification */}
           {step === 2 && (
-            <form onSubmit={handleVerifyOtp} className="space-y-3">
-              {/* Generated OTP Code Notification Banner */}
-              {activeDevOtp && (
-                <div className="bg-amber-100 border border-amber-300 text-amber-950 p-2.5 rounded-lg text-center shadow-xs">
-                  <span className="text-[9px] font-black uppercase tracking-wider block text-amber-900">
-                    📨 Verification Code Dispatched
-                  </span>
-                  <div className="flex items-center justify-center gap-2 mt-1">
-                    <span className="text-sm font-mono font-black tracking-widest bg-white text-black px-2 py-0.5 rounded border border-amber-400">
-                      {activeDevOtp}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(activeDevOtp)}
-                      className="text-[9px] bg-black text-amber-300 font-extrabold px-2 py-1 rounded uppercase tracking-wider cursor-pointer"
-                    >
-                      Auto-Fill
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-center bg-neutral-50 p-2 rounded border border-dashed border-neutral-300">
-                <span className="text-[9px] text-neutral-600 font-bold uppercase block">
-                  OTP Sent To: <strong className="text-black font-mono">{otpSentTarget || emailInput || (phone ? `+254 ${phone}` : '')}</strong>
+            <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+              <div className="text-center bg-neutral-50 p-2.5 rounded border border-neutral-300">
+                <span className="text-[10px] text-neutral-600 font-bold uppercase block">
+                  OTP Sent To: <strong className="text-black font-mono">{otpSentTarget || (phone ? `+254 ${phone}` : '')}</strong>
                 </span>
                 <button 
                   type="button" 
                   onClick={() => { setStep(1); setError(''); }} 
-                  className="text-[9.5px] text-black font-bold underline mt-0.5 cursor-pointer"
+                  className="text-[10px] text-black font-bold underline mt-1 cursor-pointer hover:text-neutral-700"
                 >
-                  Change Email / Number
+                  Change Phone Number
                 </button>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[9.5px] font-extrabold text-black uppercase tracking-wider text-center">
-                  Enter Verification OTP Code
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-black uppercase tracking-wider text-center">
+                  Enter OTP Verification Code *
                 </label>
                 <input 
                   type="tel" 
@@ -645,33 +491,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                   required 
                   autoFocus 
                   placeholder="Enter Code"
-                  className="w-full text-center tracking-[0.3em] text-lg font-black p-2.5 border border-black rounded bg-neutral-50 focus:outline-none focus:bg-white text-black font-mono" 
+                  className="w-full text-center tracking-[0.3em] text-xl font-black p-3 border border-black rounded bg-neutral-50 focus:outline-none focus:bg-white text-black font-mono" 
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[9px] pt-1">
+              <div className="flex items-center justify-between text-[9.5px] pt-0.5">
                 <span className="text-neutral-500 font-medium">
-                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Did not receive code?'}
+                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Did not receive SMS?'}
                 </span>
                 <button
                   type="button"
                   disabled={resendTimer > 0 || isLoading}
-                  onClick={() => {
-                    if (authMethod === 'email') handleSendEmailOtp();
-                    else handleSendOtp();
-                  }}
+                  onClick={() => handleSendOtp()}
                   className="font-bold text-black underline disabled:text-neutral-400 cursor-pointer"
                 >
-                  Resend OTP Code
+                  Resend OTP
                 </button>
               </div>
 
               <button 
                 type="submit" 
                 disabled={isLoading} 
-                className="w-full bg-black text-white hover:bg-neutral-800 font-bold py-2.5 rounded transition-all uppercase text-[10px] tracking-wider cursor-pointer disabled:bg-neutral-300 flex items-center justify-center gap-1"
+                className="w-full bg-black text-white hover:bg-neutral-800 font-extrabold py-3 rounded transition-all uppercase text-[11px] tracking-wider cursor-pointer disabled:bg-neutral-300 flex items-center justify-center gap-1 shadow-xs active:scale-[0.99]"
               >
-                {isLoading ? 'Verifying Code...' : 'Verify Correct OTP \u2192'}
+                {isLoading ? 'Verifying OTP...' : 'Verify OTP Code \u2192'}
               </button>
             </form>
           )}

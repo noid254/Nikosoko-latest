@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage } from '../types';
+import { normalizeSkills } from '../utils/skills';
 import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
 import LocationPromptModal from './LocationPromptModal';
 import SkillDetailModal from './SkillDetailModal';
@@ -136,9 +137,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
     const handleSaveSkillCard = () => {
         if (!editingSkillItem) return;
-        const currentSkills = (profileData.skills && profileData.skills.length > 0)
-            ? [...profileData.skills]
-            : [];
+        const currentSkills = normalizeSkills(profileData.skills);
         
         let updatedSkills: any[];
         if (editingSkillItem.isNew) {
@@ -191,9 +190,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
     const handleDeleteSkillCard = (skillId: string) => {
         if (!window.confirm("Are you sure you want to delete this skill rating card?")) return;
-        const currentSkills = (profileData.skills && profileData.skills.length > 0)
-            ? [...profileData.skills]
-            : [];
+        const currentSkills = normalizeSkills(profileData.skills);
         const updatedSkills = currentSkills.filter(s => s.id !== skillId);
         onUpdate({
             ...profileData,
@@ -385,7 +382,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         ? profileData.selectedProfileButtons
         : ['call', 'book', 'chat'];
 
-    const skillsList = (profileData.skills && profileData.skills.length > 0) ? profileData.skills : [
+    const normalizedProfileSkills = normalizeSkills(profileData.skills);
+    const skillsList = normalizedProfileSkills.length > 0 ? normalizedProfileSkills : [
         {
             id: 'sk-default',
             skillTitle: profileData.service,
