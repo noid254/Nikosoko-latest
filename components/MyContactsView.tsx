@@ -15,7 +15,14 @@ interface MyContactsViewProps {
   onRemoveContact: (providerId: string) => void;
   onBack: () => void;
   onInitiateContact?: (provider: ServiceProvider) => void;
+  onBookProvider?: (provider: ServiceProvider) => void;
 }
+
+const CalendarIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
 
 const BackIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,7 +67,8 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
   onUpdateLabel,
   onRemoveContact,
   onBack,
-  onInitiateContact
+  onInitiateContact,
+  onBookProvider
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
@@ -223,6 +231,23 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
                         <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-neutral-400'}`} />
                         {isOnline ? 'Live' : 'Offline'}
                       </span>
+
+                      {/* Book Appointment Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onBookProvider) {
+                            onBookProvider(provider);
+                          } else {
+                            onSelectContact(provider);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-black text-white hover:bg-neutral-800 rounded-lg text-[10px] font-semibold tracking-wide transition-all shadow-xs active:scale-95 cursor-pointer"
+                        title="Book Service Appointment"
+                      >
+                        <CalendarIcon />
+                        <span className="hidden sm:inline">Book</span>
+                      </button>
 
                       {/* Call Action Button */}
                       {provider.phone && (

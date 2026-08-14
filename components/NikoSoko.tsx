@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig, Coordinates } from '../types';
 import { normalizeSkills } from '../utils/skills';
+import { recalculateProvidersDistances } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -83,6 +84,24 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     const [selectedCatalogueItem, setSelectedCatalogueItem] = useState<CatalogueItem | null>(null);
     const [selectedOrgModal, setSelectedOrgModal] = useState<{ orgName: string; cert?: any } | null>(null);
 
+    // Location and Distance Sync State (syncs with user profile or default)
+    const [userHubLocation, setUserHubLocation] = useState<string>(
+        currentUser?.location || 'Ruaka, Kiambu County'
+    );
+    const [userHubCoords, setUserHubCoords] = useState<Coordinates | undefined>(undefined);
+
+    // Sync when current user location updates
+    React.useEffect(() => {
+        if (currentUser?.location) {
+            setUserHubLocation(currentUser.location);
+        }
+    }, [currentUser?.location]);
+
+    // Dynamically recalculate distances for all providers based on the user's active location
+    const providersWithDistances = useMemo(() => {
+        return recalculateProvidersDistances(providers, userHubLocation, userHubCoords);
+    }, [providers, userHubLocation, userHubCoords]);
+
     const handleCategoryClick = (cat: HighlightCategory) => {
         if (selectedCategory === cat.id) {
             setSelectedCategory(null);
@@ -104,9 +123,9 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         }
     };
 
-    // Filtered nearby professionals
+    // Filtered nearby professionals with dynamically recalculated distances
     const filteredAndSortedProviders = useMemo(() => {
-        let result = [...providers].filter(p => p.category !== 'PERSONAL' && !p.premiseId);
+        let result = [...providersWithDistances].filter(p => p.category !== 'PERSONAL' && !p.premiseId);
         const activeQuery = (searchTerm || localSearch).toLowerCase().trim();
 
         if (activeQuery) {
@@ -131,7 +150,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             if (bSacco !== aSacco) return bSacco - aSacco;
             return a.distanceKm - b.distanceKm;
         });
-    }, [providers, searchTerm, localSearch]);
+    }, [providersWithDistances, searchTerm, localSearch]);
 
     // Filtered service listings (catalogue items - strictly services offered by professionals)
     const filteredAndSortedServices = useMemo(() => {
@@ -265,24 +284,30 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
             {/* DYNAMIC TARGETED TOP HERO HEADER BANNER */}
-            <header className="bg-black text-white min-h-[170px] p-0 border-b border-gray-800 relative flex flex-col justify-center items-center overflow-hidden">
+            <header className="bg-white text-black min-h-[170px] p-0 border-b border-gray-200 relative flex flex-col justify-center items-center overflow-hidden">
                 {/* Custom Background Image (From Targeted Banner or Global Branding) */}
-                {(targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl) && (
-                    <>
-                        <img 
-                            src={targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl} 
-                            alt={targetedHeaderBanner?.title || 'Hero Banner Background'} 
-                            className="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-black/40 z-0" />
-                    </>
-                )}
+                {(() => {
+                    const bannerSrc = targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl || 'https://nikosoko.com/images/nikosoko-hero-banner-white.jpg';
+                    const isWhiteBanner = bannerSrc.includes('nikosoko-hero-banner-white');
+                    return (
+                        <>
+                            <img 
+                                src={bannerSrc} 
+                                alt={targetedHeaderBanner?.title || 'Hero Banner'} 
+                                className="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-500"
+                            />
+                            {!isWhiteBanner && (
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-0" />
+                            )}
+                        </>
+                    );
+                })()}
 
                 {/* Burger Menu Button - Top Left Corner Direct */}
                 <button 
                     onClick={onBack} 
                     aria-label="Open Menu"
-                    className="absolute top-2 left-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-xs border border-white/10 hover:bg-black/60 cursor-pointer z-20"
+                    className="absolute top-2 left-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-xs border border-white/20 hover:bg-black/80 cursor-pointer z-20 shadow-md"
                 >
                     <MenuIcon />
                 </button>
@@ -294,7 +319,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         <button 
                             onClick={onMessagesClick} 
                             aria-label="Notifications"
-                            className="absolute top-2 right-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-black/40 backdrop-blur-xs border border-white/10 hover:bg-black/60 cursor-pointer z-20"
+                            className="absolute top-2 right-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-black/60 backdrop-blur-xs border border-white/20 hover:bg-black/80 cursor-pointer z-20 shadow-md"
                         >
                             <BellIcon />
                             {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>}
@@ -313,9 +338,13 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         }
                     }}
                 >
-                    {/* Optional App Logo Image if configured, otherwise clean banner image */}
-                    {brandingConfig?.appIconUrl && (
-                        <img src={brandingConfig.appIconUrl} alt="Logo" className="w-10 h-10 rounded-xl object-cover border border-white/30 shadow-md" />
+                    {/* App Logo Image */}
+                    {(brandingConfig?.appIconUrl || 'https://nikosoko.com/images/nikosoko-icon.jpg') && (
+                        <img 
+                            src={brandingConfig?.appIconUrl || 'https://nikosoko.com/images/nikosoko-icon.jpg'} 
+                            alt="Logo" 
+                            className="w-12 h-12 rounded-2xl object-cover border border-white/60 shadow-lg" 
+                        />
                     )}
                 </div>
             </header>

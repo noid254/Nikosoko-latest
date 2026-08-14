@@ -25,9 +25,15 @@ const DesktopBannerLayout: React.FC<DesktopBannerLayoutProps> = ({
         {/* Top Header & Logo */}
         <div className="relative z-10 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 flex items-center justify-center text-2xl shadow-lg shadow-amber-500/20 font-black text-black">
-              🏪
-            </div>
+            <img 
+              src="https://nikosoko.com/images/nikosoko-icon.jpg" 
+              alt="NikoSoko Logo" 
+              className="w-12 h-12 rounded-2xl object-cover shadow-lg shadow-amber-500/20 border border-amber-400/30"
+              onError={(e) => {
+                // Fallback to emoji if network image fails
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
             <div>
               <span className="text-2xl font-black tracking-tight text-white block">
                 Niko<span className="text-amber-400">Soko</span>

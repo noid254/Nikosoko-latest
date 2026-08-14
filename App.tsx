@@ -28,6 +28,7 @@ import SkillDashboard from './components/SkillDashboard';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
+import BookingsView from './components/BookingsView';
 import SEOHead from './components/SEOHead';
 import SEOMapModal from './components/SEOMapModal';
 import DesktopBannerLayout from './components/DesktopBannerLayout';
@@ -166,23 +167,31 @@ function App() {
     ];
   });
   const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
+    const defaultBranding: AppBrandingConfig = {
+      appName: 'NikoSoko',
+      tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
+      appIconUrl: 'https://nikosoko.com/images/nikosoko-icon.jpg',
+      faviconUrl: 'https://nikosoko.com/images/nikosoko-favicon.jpg',
+      heroBannerUrl: 'https://nikosoko.com/images/nikosoko-hero-banner-white.jpg',
+      primaryColor: '#F59E0B',
+      supportPhone: '+254 723 119 356',
+      supportEmail: 'support@nikosoko.com'
+    };
     try {
       const saved = localStorage.getItem('nikosoko_branding_config');
-      return saved ? JSON.parse(saved) : {
-        appName: 'NikoSoko',
-        tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
-        primaryColor: '#F59E0B',
-        supportPhone: '+254 723 119 356',
-        supportEmail: 'support@nikosoko.com'
-      };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...defaultBranding,
+          ...parsed,
+          appIconUrl: parsed.appIconUrl || defaultBranding.appIconUrl,
+          faviconUrl: parsed.faviconUrl || defaultBranding.faviconUrl,
+          heroBannerUrl: parsed.heroBannerUrl || defaultBranding.heroBannerUrl
+        };
+      }
+      return defaultBranding;
     } catch {
-      return {
-        appName: 'NikoSoko',
-        tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
-        primaryColor: '#F59E0B',
-        supportPhone: '+254 723 119 356',
-        supportEmail: 'support@nikosoko.com'
-      };
+      return defaultBranding;
     }
   });
   const [featureConfig, setFeatureConfig] = useState<AppFeatureConfig>(() => {
@@ -1055,6 +1064,21 @@ function App() {
             onRemoveContact={handleRemoveContact} 
             onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))} 
             onInitiateContact={(p) => { handleCtaInteraction(p); return true; }} 
+            onBookProvider={(p) => setBookingTargetProvider(p)}
+          />
+        );
+      case 'bookings':
+        return (
+          <BookingsView
+            currentUser={currentUser}
+            providers={providers}
+            onBack={() => handleBackWithReviewCheck(() => setCurrentPage('home'))}
+            onNavigate={(page) => handleNavigate(page)}
+            onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }}
+            onUpdateCurrentUser={(updated) => {
+              setCurrentUser(updated);
+              localStorage.setItem('nikosoko_cached_user', JSON.stringify(updated));
+            }}
           />
         );
       case 'pendingRatings': {
@@ -1412,7 +1436,17 @@ function App() {
           onClose={handleCloseReviewModal} 
         />
       )}
-      {bookingTargetProvider && <BookingModal provider={bookingTargetProvider} onClose={() => setBookingTargetProvider(null)} />}
+      {bookingTargetProvider && (
+        <BookingModal 
+          provider={bookingTargetProvider} 
+          currentUser={currentUser}
+          onClose={() => setBookingTargetProvider(null)} 
+          onNavigateToBookings={() => {
+            setBookingTargetProvider(null);
+            setCurrentPage('bookings');
+          }}
+        />
+      )}
       <SaccoModal 
         isOpen={Boolean(saccoModalProvider)} 
         onClose={() => setSaccoModalProvider(null)} 

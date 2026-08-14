@@ -15,9 +15,9 @@ interface AppearancePageProps {
 const DEFAULT_BRANDING: AppBrandingConfig = {
   appName: 'NikoSoko',
   tagline: "Kenya's Premier Hyperlocal Service & Business Marketplace",
-  appIconUrl: '',
-  faviconUrl: '',
-  heroBannerUrl: '',
+  appIconUrl: 'https://nikosoko.com/images/nikosoko-icon.jpg',
+  faviconUrl: 'https://nikosoko.com/images/nikosoko-favicon.jpg',
+  heroBannerUrl: 'https://nikosoko.com/images/nikosoko-hero-banner-white.jpg',
   heroTitle: 'NIKOSOKO',
   heroSubtitle: 'Neighborhood Skilled Marketplace',
   primaryColor: '#F59E0B',

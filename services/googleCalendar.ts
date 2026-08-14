@@ -70,6 +70,8 @@ export interface BookingCalendarPayload {
     time: string; // HH:mm
     notes?: string;
     location?: string;
+    depositAmount?: number;
+    mpesaReceipt?: string;
 }
 
 export interface CalendarEventResult {
@@ -78,6 +80,60 @@ export interface CalendarEventResult {
     htmlLink?: string;
     error?: string;
 }
+
+export interface CalendarTimeSlot {
+    time: string;
+    isAvailable: boolean;
+    conflictTitle?: string;
+}
+
+/**
+ * Check Google Calendar availability for a given date
+ */
+export const checkGoogleCalendarAvailability = async (
+    accessToken: string,
+    dateStr: string
+): Promise<{ success: boolean; busyEvents: { title: string; start: string; end: string }[]; error?: string }> => {
+    try {
+        const timeMin = new Date(`${dateStr}T00:00:00Z`).toISOString();
+        const timeMax = new Date(`${dateStr}T23:59:59Z`).toISOString();
+
+        const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime`;
+        
+        const res = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.error?.message || `Calendar query returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        const items = data.items || [];
+        
+        const busyEvents = items.map((ev: any) => ({
+            title: ev.summary || 'Busy Slot',
+            start: ev.start?.dateTime || ev.start?.date || '',
+            end: ev.end?.dateTime || ev.end?.date || ''
+        }));
+
+        return {
+            success: true,
+            busyEvents
+        };
+    } catch (err: any) {
+        console.error('Failed to check calendar availability:', err);
+        return {
+            success: false,
+            busyEvents: [],
+            error: err.message || 'Could not fetch Google Calendar events'
+        };
+    }
+};
 
 export const createGoogleCalendarEvent = async (
     accessToken: string,
@@ -95,9 +151,13 @@ export const createGoogleCalendarEvent = async (
         
         const formatIso = (d: Date) => d.toISOString();
 
+        const depositText = booking.depositAmount 
+            ? `\nMinimum Booking Fee: KES ${booking.depositAmount.toLocaleString()} (Paid via M-Pesa ${booking.mpesaReceipt ? `Ref: ${booking.mpesaReceipt}` : ''})`
+            : '';
+
         const eventData = {
-            summary: `Booking: ${booking.serviceTitle} with ${booking.providerName}`,
-            description: `Appointment confirmed via Nikosoko Marketplace.\nClient Email: ${booking.userEmail}\nProvider: ${booking.providerName}\nNotes: ${booking.notes || 'None'}`,
+            summary: `NikoSoko Booking: ${booking.serviceTitle} with ${booking.providerName}`,
+            description: `Appointment confirmed via NikoSoko Marketplace.\nClient Email: ${booking.userEmail}\nProvider: ${booking.providerName}${depositText}\nNotes: ${booking.notes || 'None'}`,
             start: {
                 dateTime: formatIso(startDate),
                 timeZone: timeZone
@@ -106,7 +166,7 @@ export const createGoogleCalendarEvent = async (
                 dateTime: formatIso(endDate),
                 timeZone: timeZone
             },
-            location: booking.location || 'Nikosoko Appointment',
+            location: booking.location || 'NikoSoko Appointment Location',
             attendees: [
                 { email: booking.userEmail },
                 ...(booking.providerEmail ? [{ email: booking.providerEmail }] : [])
@@ -146,5 +206,28 @@ export const createGoogleCalendarEvent = async (
             success: false,
             error: err.message || 'Failed to connect to Google Calendar'
         };
+    }
+};
+
+export const deleteGoogleCalendarEvent = async (
+    accessToken: string,
+    eventId: string
+): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        if (!response.ok && response.status !== 404 && response.status !== 410) {
+            throw new Error(`Google Calendar API returned status ${response.status}`);
+        }
+
+        return { success: true };
+    } catch (err: any) {
+        console.error('Failed to delete calendar event:', err);
+        return { success: false, error: err.message || 'Failed to remove calendar event' };
     }
 };

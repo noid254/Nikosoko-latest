@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CurrentPage } from '../types';
 import { normalizeSkills } from '../utils/skills';
+import { calculateTrustAndRanking } from '../utils/trustEngine';
 import {
   Award,
   CheckCircle2,
@@ -301,6 +302,19 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
     });
   }, [selectedCategory, searchQuery]);
 
+  // Compute 5-Pillar Trust and Ranking Breakdown
+  const trustBreakdown = useMemo(() => {
+    return calculateTrustAndRanking(currentUser || {
+      isVerified: true,
+      skills: skillsList as any,
+      isSaccoVerified: true,
+      referredBy: 'REF-MASTER-01',
+      rating: 4.8,
+      reviewsCount: 18,
+      completionRate: 0.98
+    });
+  }, [currentUser, skillsList]);
+
   const categories = ['ALL', 'Woodwork & Joinery', 'Electrical & Solar', 'Metalwork & Fabrication', 'Agribusiness', 'Plumbing & Heating', 'Industrial Automation'];
 
   return (
@@ -397,9 +411,125 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
               <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5">Verified Member</span>
             </div>
             <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block">VERIFICATION AUDIT</span>
-              <span className="text-sm font-black text-black mt-0.5 block">NITA & EPRA Logged</span>
-              <span className="text-[9px] text-emerald-700 font-semibold block mt-0.5">Active Audit</span>
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block">TRUST SCORE</span>
+              <span className="text-sm font-black text-emerald-700 mt-0.5 block">{trustBreakdown.totalScore.toFixed(2)} / 5.0</span>
+              <span className="text-[9px] text-zinc-500 block mt-0.5">5-Pillar Engine</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 5-PILLAR TRUST AND RANKING CALCULATION ENGINE BREAKDOWN */}
+        <section className="bg-white border-2 border-zinc-900 rounded-xl p-5 space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-black pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-black">
+                  TRUST & RANKING ENGINE CALCULATION (MAX 5.0)
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 font-mono mt-0.5">
+                Official 5-pillar mathematical score model for provider ranking & search visibility.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-black text-white px-3 py-1 rounded-lg text-xs font-mono font-black border border-emerald-500">
+                SCORE: {trustBreakdown.totalScore.toFixed(2)} / 5.0
+              </span>
+            </div>
+          </div>
+
+          {/* THE 5 PILLARS */}
+          <div className="space-y-2.5 font-mono text-xs">
+            {/* Pillar 1 */}
+            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-black">1. Identity Verification</span>
+                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 1.0</span>
+                </div>
+                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.identityExplanation}</p>
+              </div>
+              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
+                +{trustBreakdown.identityScore.toFixed(1)} pt
+              </span>
+            </div>
+
+            {/* Pillar 2 */}
+            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-black">2. Institutional Skill Certification</span>
+                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 1.0</span>
+                </div>
+                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.skillExplanation}</p>
+              </div>
+              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
+                +{trustBreakdown.skillScore.toFixed(1)} pt
+              </span>
+            </div>
+
+            {/* Pillar 3 */}
+            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-black">3. Ecosystem / Group Affiliation</span>
+                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 0.5</span>
+                </div>
+                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.ecosystemExplanation}</p>
+              </div>
+              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
+                +{trustBreakdown.ecosystemScore.toFixed(2)} pt
+              </span>
+            </div>
+
+            {/* Pillar 4 */}
+            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-black">4. Referral Network</span>
+                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 0.5</span>
+                </div>
+                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.referralExplanation}</p>
+              </div>
+              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
+                +{trustBreakdown.referralScore.toFixed(2)} pt
+              </span>
+            </div>
+
+            {/* Pillar 5 */}
+            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-black">5. Client Ratings & Performance</span>
+                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 2.0</span>
+                </div>
+                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.performanceExplanation}</p>
+              </div>
+              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
+                +{trustBreakdown.performanceScore.toFixed(2)} pts
+              </span>
+            </div>
+          </div>
+
+          {/* QUALIFYING TRUST BADGES */}
+          <div className="pt-2 border-t border-zinc-200">
+            <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold block mb-2">
+              QUALIFYING TRUST BADGES EARNED
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {trustBreakdown.badges.map(b => (
+                <span
+                  key={b.id}
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 border ${b.color}`}
+                >
+                  <span>{b.icon}</span>
+                  <span>{b.label}</span>
+                </span>
+              ))}
+              {trustBreakdown.badges.length === 0 && (
+                <span className="text-xs text-zinc-500 font-mono">No badges earned yet. Complete verifications above.</span>
+              )}
             </div>
           </div>
         </section>

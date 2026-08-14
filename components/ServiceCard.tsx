@@ -78,8 +78,10 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     const isSaccoConfirmed = Boolean(provider?.isSaccoVerified || provider?.saccoMember?.status === 'Confirmed' || provider?.saccoMember?.status === 'Approved');
     const saccoName = provider?.saccoMember?.saccoName || 'Sacco Member';
 
-    // Distance display: e.g. "4 Km away"
-    const distanceDisplay = provider?.distanceKm ? `${provider.distanceKm} Km away` : '4 Km away';
+    // Distance display: realistic distance e.g. "13.8 km away", "0.5 km away"
+    const distanceDisplay = typeof provider?.distanceKm === 'number'
+        ? `${provider.distanceKm.toFixed(1)} km away`
+        : 'Nearby';
 
     // Real name formatted
     const realName = provider?.name ? provider.name.toLowerCase() : 'artisan';

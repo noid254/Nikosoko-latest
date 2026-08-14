@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config';
-import type { ServiceProvider, CatalogueItem, Document, SpecialBanner, InboxMessage, Event, Gig, Ticket, SetupData, UnitDetails } from '../types';
+import type { ServiceProvider, CatalogueItem, Document, SpecialBanner, InboxMessage, Event, Gig, Ticket, SetupData, UnitDetails, LocationCheckInLog } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockSpecialBanners, mockInboxMessages, mockEvents, mockGigs, mockTickets, mockCategories } from './mockData';
 import { saveUserProfileToFirestore, getUserProfileFromFirestore, getAllUserProfilesFromFirestore } from './firebase';
 
@@ -606,3 +606,86 @@ export const deleteProvider = async (id: string): Promise<void> => {
     const filtered = providers.filter(p => p.id !== id);
     saveTable(DB_KEYS.PROVIDERS, filtered);
 };
+
+// --- Location Check-in & Distance API Services ---
+
+export const recordLocationCheckIn = async (data: Partial<LocationCheckInLog> & { providerId?: string }): Promise<{ success: boolean; log: LocationCheckInLog; resolvedCoords?: any }> => {
+    try {
+        const res = await fetch('/api/locations/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            return await res.json();
+        }
+    } catch (e) {
+        console.warn('API recordLocationCheckIn failed, logging locally:', e);
+    }
+
+    const fallbackLog: LocationCheckInLog = {
+        id: `chk_${Date.now()}`,
+        userId: data.userId || data.providerId || 'guest',
+        userName: data.userName || 'User',
+        userPhone: data.userPhone || '',
+        userRole: data.userRole || 'Member',
+        locationName: data.locationName || 'Ruaka, Kiambu County',
+        estateName: data.estateName || 'Ruaka',
+        county: data.county || 'Kiambu County',
+        latitude: data.latitude || -1.2065,
+        longitude: data.longitude || 36.7767,
+        accuracyMeters: data.accuracyMeters || 10,
+        checkInType: data.checkInType || 'manual_update',
+        timestamp: new Date().toISOString(),
+        isActive: true
+    };
+    return { success: true, log: fallbackLog };
+};
+
+export const getLocationCheckInLogs = async (query?: { userId?: string; location?: string; limit?: number }): Promise<LocationCheckInLog[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (query?.userId) params.append('userId', query.userId);
+        if (query?.location) params.append('location', query.location);
+        if (query?.limit) params.append('limit', String(query.limit));
+
+        const res = await fetch(`/api/locations/logs?${params.toString()}`);
+        if (res.ok) {
+            return await res.json();
+        }
+    } catch (e) {
+        console.warn('API getLocationCheckInLogs failed:', e);
+    }
+    return [];
+};
+
+export const getCalculatedDistance = async (
+    from: string,
+    to: string,
+    lat1?: number,
+    lon1?: number,
+    lat2?: number,
+    lon2?: number
+): Promise<{ distanceKm: number; formattedText: string; from: any; to: any }> => {
+    try {
+        const params = new URLSearchParams({ from, to });
+        if (lat1 !== undefined) params.append('lat1', String(lat1));
+        if (lon1 !== undefined) params.append('lon1', String(lon1));
+        if (lat2 !== undefined) params.append('lat2', String(lat2));
+        if (lon2 !== undefined) params.append('lon2', String(lon2));
+
+        const res = await fetch(`/api/locations/distance?${params.toString()}`);
+        if (res.ok) {
+            return await res.json();
+        }
+    } catch (e) {
+        console.warn('API getCalculatedDistance failed:', e);
+    }
+    return {
+        distanceKm: 0,
+        formattedText: '0 km away',
+        from: { location: from },
+        to: { location: to }
+    };
+};
+

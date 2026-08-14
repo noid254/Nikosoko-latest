@@ -28,6 +28,8 @@ export interface Skill {
   portfolioImages?: string[];
   iconUrl?: string;
   isVerified?: boolean;
+  licenseNumber?: string;
+  tradeTestGrade?: string;
   verifier?: {
     type: 'institution' | 'mentor';
     name: string;
@@ -233,6 +235,7 @@ export interface ServiceProvider {
   idNumber?: string;
   idDocumentUrl?: string;
   selfieUrl?: string;
+  minBookingDeposit?: number;
   saccoDetails?: {
     description?: string;
     location?: string;
@@ -244,9 +247,45 @@ export interface ServiceProvider {
   hasCatalogue?: boolean;
   catalogueItems?: CatalogueItem[];
   joinRequests?: { id: string; userId: string; userName: string; userPhone?: string; status: 'Pending' | 'Approved' | 'Rejected' | 'pending' }[];
+  nationalId?: string;
+  referredBy?: string;
+  referralCodeUsed?: string;
+  isReferred?: boolean;
+  reviewsCount?: number;
+  completionRate?: number;
+  trustScore?: number;
   ratingDisputes?: RatingDispute[];
   adminNotes?: AdminNote[];
   systemIntelligence?: SystemProfileIntelligence;
+  latitude?: number;
+  longitude?: number;
+  lastCheckInAt?: string;
+  lastCheckInLocation?: string;
+  checkInHistory?: LocationCheckInLog[];
+}
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface LocationCheckInLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhone?: string;
+  userRole?: string;
+  locationName: string;
+  estateName?: string;
+  county?: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  checkInType: 'live_status' | 'premise_checkin' | 'manual_update' | 'gps_auto' | 'service_area';
+  deviceInfo?: string;
+  notes?: string;
+  timestamp: string;
+  isActive?: boolean;
 }
 
 export interface QaRibuRequest {
@@ -272,7 +311,40 @@ export interface QaRibuRequest {
   isDigitalKey?: boolean;
 }
 
-export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'settings' | 'admin' | 'addService' | 'messages' | 'createPost' | 'mytoolkit' | 'login' | 'qrScan' | 'premiseLanding' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
+export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'bookings' | 'settings' | 'admin' | 'addService' | 'messages' | 'createPost' | 'mytoolkit' | 'login' | 'qrScan' | 'premiseLanding' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
+
+export interface Booking {
+  id: string;
+  providerId: string;
+  providerName: string;
+  providerPhone?: string;
+  providerAvatar?: string;
+  providerService: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  serviceTitle: string;
+  estimatedFee?: number;
+  minBookingFee: number; // Minimum deposit set by provider
+  paidDepositAmount: number;
+  mpesaReceiptNumber?: string;
+  mpesaPhoneNumber?: string;
+  paymentStatus: 'Pending' | 'Paid' | 'Refunded';
+  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Rescheduled';
+  location?: string;
+  notes?: string;
+  googleCalendarEventId?: string;
+  googleCalendarHtmlLink?: string;
+  isCalendarSynced?: boolean;
+  cancellationReason?: string;
+  cancelledBy?: 'client' | 'provider' | 'admin';
+  cancelledAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 export interface BusinessAssets {
   name: string;
