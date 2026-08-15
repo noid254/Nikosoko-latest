@@ -281,73 +281,135 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         }
     };
 
+    const [isChangingLocation, setIsChangingLocation] = useState(false);
+    const [customLocInput, setCustomLocInput] = useState('');
+
+    const POPULAR_LOCATIONS = [
+        'Ruaka, Kiambu',
+        'Nairobi CBD',
+        'Kasarani, Nairobi',
+        'Westlands, Nairobi',
+        'Kilimani, Nairobi',
+        'Industrial Area, Nairobi',
+        'Roysambu, Nairobi',
+        'Karen, Nairobi',
+        'Thika Town'
+    ];
+
+    const handleSelectLocation = (loc: string) => {
+        setUserHubLocation(loc);
+        setIsChangingLocation(false);
+    };
+
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
-            {/* DYNAMIC TARGETED TOP HERO HEADER BANNER */}
-            <header className="bg-white text-black min-h-[170px] p-0 border-b border-gray-200 relative flex flex-col justify-center items-center overflow-hidden">
-                {/* Custom Background Image (From Targeted Banner or Global Branding) */}
-                {(() => {
-                    const bannerSrc = targetedHeaderBanner?.imageUrl || brandingConfig?.heroBannerUrl || 'https://nikosoko.com/images/nikosoko-hero-banner-white.jpg';
-                    const isWhiteBanner = bannerSrc.includes('nikosoko-hero-banner-white');
-                    return (
-                        <>
-                            <img 
-                                src={bannerSrc} 
-                                alt={targetedHeaderBanner?.title || 'Hero Banner'} 
-                                className="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-500"
-                            />
-                            {!isWhiteBanner && (
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-0" />
-                            )}
-                        </>
-                    );
-                })()}
-
-                {/* Burger Menu Button - Top Left Corner Direct */}
+            {/* CLEAN APP TOP HEADER (NO BANNER) */}
+            <header className="bg-brand-navy text-white px-3 py-2.5 border-b border-gray-200 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+                {/* Burger Menu Button */}
                 <button 
                     onClick={onBack} 
                     aria-label="Open Menu"
-                    className="absolute top-2 left-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-xs border border-white/20 hover:bg-black/80 cursor-pointer z-20 shadow-md"
+                    className="p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 cursor-pointer shadow-xs"
                 >
                     <MenuIcon />
                 </button>
 
-                {/* Notification Bell Button - Top Right Corner Direct */}
+                {/* Brand Logo & Title */}
+                <div 
+                    className="flex items-center gap-2 cursor-pointer select-none"
+                    onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}
+                >
+                    <div className="w-7 h-7 bg-amber-400 text-black font-black flex items-center justify-center rounded-md text-xs shadow-xs">
+                        NS
+                    </div>
+                    <div className="text-left">
+                        <h1 className="text-sm font-black uppercase tracking-wider text-white leading-tight">NikoSoko</h1>
+                        <p className="text-[9.5px] font-bold text-amber-300 tracking-tight leading-none">Neighbourhood Marketplace</p>
+                    </div>
+                </div>
+
+                {/* Notification Bell Button */}
                 {(() => {
                     const isUnread = hasNewMessages || Boolean(currentUser && !currentUser.isProfileCompleted);
                     return (
                         <button 
                             onClick={onMessagesClick} 
                             aria-label="Notifications"
-                            className="absolute top-2 right-2 p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-black/60 backdrop-blur-xs border border-white/20 hover:bg-black/80 cursor-pointer z-20 shadow-md"
+                            className="relative p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 cursor-pointer shadow-xs"
                         >
                             <BellIcon />
-                            {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>}
+                            {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>}
                         </button>
                     );
                 })()}
-
-                {/* Clean Hero Banner Area (No text overlay) */}
-                <div 
-                    className="text-center cursor-pointer z-10 py-8 px-6 flex flex-col items-center justify-center select-none w-full min-h-[140px]" 
-                    onClick={() => {
-                        if (targetedHeaderBanner) {
-                            handleBannerClick(targetedHeaderBanner);
-                        } else {
-                            setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null);
-                        }
-                    }}
-                >
-                    {/* App Logo Image */}
-                    {(brandingConfig?.appIconUrl || 'https://nikosoko.com/images/nikosoko-icon.jpg') && (
-                        <img 
-                            src={brandingConfig?.appIconUrl || 'https://nikosoko.com/images/nikosoko-icon.jpg'} 
-                            alt="Logo" 
-                            className="w-12 h-12 rounded-2xl object-cover border border-white/60 shadow-lg" 
-                        />
-                    )}
-                </div>
             </header>
+
+            {/* REALISTIC LOCATION & VIEWING DISTANCE HUB */}
+            <div className="bg-amber-50 border-b border-amber-200 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm">📍</span>
+                        <div className="truncate">
+                            <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider mr-1">Viewing from:</span>
+                            <span className="font-bold text-gray-900 text-xs">{userHubLocation}</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsChangingLocation(!isChangingLocation)}
+                        className="px-2 py-1 bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-[10.5px] font-black uppercase tracking-wider rounded-md shrink-0 transition-colors cursor-pointer shadow-2xs"
+                    >
+                        {isChangingLocation ? 'Close' : 'Change'}
+                    </button>
+                </div>
+
+                {/* Quick Location Switcher Dropdown */}
+                {isChangingLocation && (
+                    <div className="mt-2 pt-2 border-t border-amber-200 space-y-2">
+                        <p className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">Select your location to see accurate travel distances:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {POPULAR_LOCATIONS.map(loc => (
+                                <button
+                                    key={loc}
+                                    onClick={() => handleSelectLocation(loc)}
+                                    className={`px-2 py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
+                                        userHubLocation.toLowerCase().includes(loc.split(',')[0].toLowerCase())
+                                            ? 'bg-amber-500 text-black border-amber-600 font-black'
+                                            : 'bg-white text-gray-800 border-gray-300 hover:bg-amber-100'
+                                    }`}
+                                >
+                                    {loc}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex gap-1.5 pt-1">
+                            <input
+                                type="text"
+                                placeholder="Or enter specific estate (e.g. Kasarani, Karen)..."
+                                value={customLocInput}
+                                onChange={(e) => setCustomLocInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && customLocInput.trim()) {
+                                        handleSelectLocation(customLocInput.trim());
+                                        setCustomLocInput('');
+                                    }
+                                }}
+                                className="flex-1 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-black placeholder-gray-400 outline-none focus:border-black"
+                            />
+                            <button
+                                onClick={() => {
+                                    if (customLocInput.trim()) {
+                                        handleSelectLocation(customLocInput.trim());
+                                        setCustomLocInput('');
+                                    }
+                                }}
+                                className="px-3 py-1 bg-black text-white text-[10.5px] font-bold uppercase rounded cursor-pointer"
+                            >
+                                Set
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* MINIMALIST SEARCH BAR */}
             <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-200">

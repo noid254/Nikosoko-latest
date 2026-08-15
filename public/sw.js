@@ -38,8 +38,14 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Stale-While-Revalidate with network fallback
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+
+  // CRITICAL: Never cache or intercept any API requests
+  if (url.pathname.startsWith('/api') || url.pathname.includes('/api/')) {
+    return;
+  }
+
+  if (event.request.method !== 'GET') return;
 
   // Skip browser extension requests or cross-origin POSTs
   if (url.origin !== location.origin && !url.href.includes('fonts.googleapis.com') && !url.href.includes('cdn.tailwindcss.com')) {

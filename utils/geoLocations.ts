@@ -12,63 +12,63 @@ export interface KenyanEstateGeo {
 export const KENYAN_ESTATES: KenyanEstateGeo[] = [
   {
     name: 'Industrial Area',
-    aliases: ['industrial area', 'enterprise road', 'commercial street', 'likoni road', 'dar es salaam rd', 'bandari road', 'lusingeti rd', 'donholm industrial'],
+    aliases: ['industrial area', 'enterprise road', 'commercial street', 'likoni road', 'dar es salaam rd', 'bandari road', 'lusingeti rd', 'donholm industrial', 'industrial area, nairobi'],
     county: 'Nairobi County',
     lat: -1.3100,
     lng: 36.8450
   },
   {
     name: 'Ruaka',
-    aliases: ['ruaka', 'ruaka town', 'ruaka kiambu', 'two rivers', 'rosslyn', 'banana hill', 'muchatha', 'gacharage'],
+    aliases: ['ruaka', 'ruaka town', 'ruaka kiambu', 'two rivers', 'rosslyn', 'banana hill', 'muchatha', 'gacharage', 'ruaka, kiambu'],
     county: 'Kiambu County',
     lat: -1.2065,
     lng: 36.7767
   },
   {
     name: 'Kasarani',
-    aliases: ['kasarani', 'kasarani nairobi', 'clay city', 'mirema', 'mwiki', 'sports view', 'seasons', 'sunton', 'hacienda', 'icdc'],
+    aliases: ['kasarani', 'kasarani nairobi', 'clay city', 'mirema', 'mwiki', 'sports view', 'seasons', 'sunton', 'hacienda', 'icdc', 'kasarani, nairobi'],
     county: 'Nairobi County',
     lat: -1.2215,
     lng: 36.8974
   },
   {
     name: 'Westlands',
-    aliases: ['westlands', 'sarit', 'westgate', 'parklands', 'rhapta', 'mpaka', 'waiyaki way', 'chiromo', 'school lane'],
+    aliases: ['westlands', 'sarit', 'westgate', 'parklands', 'rhapta', 'mpaka', 'waiyaki way', 'chiromo', 'school lane', 'westlands, nairobi'],
     county: 'Nairobi County',
     lat: -1.2674,
     lng: 36.8110
   },
   {
     name: 'Kilimani',
-    aliases: ['kilimani', 'yaya', 'argwings kodhek', 'chaka', 'hurlingham', 'dennis pritt', 'wood avenue', 'rose avenue'],
+    aliases: ['kilimani', 'yaya', 'argwings kodhek', 'chaka', 'hurlingham', 'dennis pritt', 'wood avenue', 'rose avenue', 'kilimani, nairobi'],
     county: 'Nairobi County',
     lat: -1.2905,
     lng: 36.7865
   },
   {
     name: 'Lavington',
-    aliases: ['lavington', 'james gichuru', 'kandara', 'valley arcade', 'kawasaki', 'chalbi', 'muthangari'],
+    aliases: ['lavington', 'james gichuru', 'kandara', 'valley arcade', 'kawasaki', 'chalbi', 'muthangari', 'lavington, nairobi'],
     county: 'Nairobi County',
     lat: -1.2789,
     lng: 36.7692
   },
   {
     name: 'Karen',
-    aliases: ['karen', 'hardy', 'karen shopping centre', 'bogani', 'dagoretti south', 'marula', 'langata south'],
+    aliases: ['karen', 'hardy', 'karen shopping centre', 'bogani', 'dagoretti south', 'marula', 'langata south', 'karen, nairobi'],
     county: 'Nairobi County',
     lat: -1.3197,
     lng: 36.7065
   },
   {
     name: 'Upperhill',
-    aliases: ['upperhill', 'upper hill', 'elgon road', 'hospital road', 'nhif', 'mara road', 'ragati road'],
+    aliases: ['upperhill', 'upper hill', 'elgon road', 'hospital road', 'nhif', 'mara road', 'ragati road', 'upperhill, nairobi'],
     county: 'Nairobi County',
     lat: -1.2995,
     lng: 36.8163
   },
   {
     name: 'Roysambu',
-    aliases: ['roysambu', 'thika road mall', 'trm', 'lumumba', 'zimmerman', 'kahawa west road'],
+    aliases: ['roysambu', 'thika road mall', 'trm', 'lumumba', 'zimmerman', 'kahawa west road', 'roysambu, nairobi'],
     county: 'Nairobi County',
     lat: -1.2185,
     lng: 36.8872
@@ -79,6 +79,27 @@ export const KENYAN_ESTATES: KenyanEstateGeo[] = [
     county: 'Kiambu / Nairobi County',
     lat: -1.1856,
     lng: 36.9298
+  },
+  {
+    name: 'Parklands & Highridge',
+    aliases: ['parklands', 'highridge', 'limuru road', 'aga khan', '3rd parklands', '4th parklands'],
+    county: 'Nairobi County',
+    lat: -1.2612,
+    lng: 36.8228
+  },
+  {
+    name: 'Gigiri & Runda',
+    aliases: ['gigiri', 'runda', 'un avenue', 'village market', 'limuru road', 'rosslyn lone tree'],
+    county: 'Nairobi County',
+    lat: -1.2330,
+    lng: 36.8040
+  },
+  {
+    name: 'Kiambu Town',
+    aliases: ['kiambu town', 'kiambu road', 'thindigua', 'kirigiti', 'edenville', 'fourways junction'],
+    county: 'Kiambu County',
+    lat: -1.1714,
+    lng: 36.8356
   },
   {
     name: 'Ngong Road / Adams',
@@ -102,6 +123,13 @@ export const KENYAN_ESTATES: KenyanEstateGeo[] = [
     lng: 37.0900
   },
   {
+    name: 'Juja',
+    aliases: ['juja', 'jkuat', 'juja city mall', 'high point juja', 'juja farm'],
+    county: 'Kiambu County',
+    lat: -1.1018,
+    lng: 37.0144
+  },
+  {
     name: 'South B & South C',
     aliases: ['south b', 'south c', 'plainsview', 'akiba', 'bellevue', 'madaraka', 'strathmore', 'mombasa road'],
     county: 'Nairobi County',
@@ -114,6 +142,13 @@ export const KENYAN_ESTATES: KenyanEstateGeo[] = [
     county: 'Nairobi County',
     lat: -1.2750,
     lng: 36.8500
+  },
+  {
+    name: 'Pangani & Ngara',
+    aliases: ['pangani', 'ngara', 'guru nanak', 'forest road', 'desai road', 'kariokor'],
+    county: 'Nairobi County',
+    lat: -1.2710,
+    lng: 36.8330
   },
   {
     name: 'Buruburu & Donholm',

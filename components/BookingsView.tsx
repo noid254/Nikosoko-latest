@@ -96,7 +96,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         setIsLoading(true);
         try {
             const res = await fetch('/api/bookings');
-            if (res.ok) {
+            const contentType = res.headers.get('content-type');
+            if (res.ok && contentType && contentType.includes('application/json')) {
                 const data = await res.json();
                 if (Array.isArray(data) && data.length > 0) {
                     setBookings(data);
@@ -104,7 +105,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 }
             }
         } catch (e) {
-            console.error('Error fetching bookings from API:', e);
+            console.warn('API bookings load fallback:', e);
         }
 
         // Fallback to local storage

@@ -70,6 +70,7 @@ async function initDatabase() {
       isVerified INTEGER DEFAULT 0,
       location TEXT,
       bio TEXT,
+      about TEXT,
       avatarUrl TEXT,
       coverImageUrl TEXT,
       role TEXT DEFAULT 'Provider',
@@ -79,6 +80,11 @@ async function initDatabase() {
       password TEXT,
       isOnline INTEGER DEFAULT 1,
       contactInfo TEXT,
+      latitude REAL,
+      longitude REAL,
+      lastCheckInAt TEXT,
+      lastCheckInLocation TEXT,
+      rawData TEXT,
       createdAt TEXT
     );
 
@@ -318,6 +324,14 @@ async function startServer() {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+
+  // Critical No-Cache Policy for all API requests to ensure fresh SQLite queries
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
 
   // --- SQLite REST API Routes ---
 
@@ -681,12 +695,22 @@ async function startServer() {
   app.get('/api/providers', (req, res) => {
     try {
       const rows = queryAll('SELECT * FROM providers ORDER BY isVerified DESC, rating DESC');
-      const formatted = rows.map(r => ({
-        ...r,
-        skills: typeof r.skills === 'string' ? JSON.parse(r.skills || '[]') : r.skills,
-        isVerified: Boolean(r.isVerified),
-        isOnline: Boolean(r.isOnline)
-      }));
+      const formatted = rows.map(r => {
+        let raw: any = {};
+        if (r.rawData && typeof r.rawData === 'string') {
+          try { raw = JSON.parse(r.rawData); } catch (_) {}
+        }
+        return {
+          ...raw,
+          ...r,
+          about: r.about || r.bio || raw.about || '',
+          skills: typeof r.skills === 'string' ? JSON.parse(r.skills || '[]') : (r.skills || raw.skills || []),
+          isVerified: Boolean(r.isVerified),
+          isOnline: Boolean(r.isOnline),
+          latitude: typeof r.latitude === 'number' ? r.latitude : (raw.latitude ?? null),
+          longitude: typeof r.longitude === 'number' ? r.longitude : (raw.longitude ?? null)
+        };
+      });
       res.json(formatted);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -697,11 +721,19 @@ async function startServer() {
     try {
       const row = queryOne('SELECT * FROM providers WHERE id = ?', [req.params.id]);
       if (!row) return res.status(404).json({ error: 'Provider not found' });
+      let raw: any = {};
+      if (row.rawData && typeof row.rawData === 'string') {
+        try { raw = JSON.parse(row.rawData); } catch (_) {}
+      }
       res.json({
+        ...raw,
         ...row,
-        skills: typeof row.skills === 'string' ? JSON.parse(row.skills || '[]') : row.skills,
+        about: row.about || row.bio || raw.about || '',
+        skills: typeof row.skills === 'string' ? JSON.parse(row.skills || '[]') : (row.skills || raw.skills || []),
         isVerified: Boolean(row.isVerified),
-        isOnline: Boolean(row.isOnline)
+        isOnline: Boolean(row.isOnline),
+        latitude: typeof row.latitude === 'number' ? row.latitude : (raw.latitude ?? null),
+        longitude: typeof row.longitude === 'number' ? row.longitude : (raw.longitude ?? null)
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -713,15 +745,18 @@ async function startServer() {
       const p = req.body;
       const id = p.id || `pro-${Date.now()}`;
       const skillsJson = JSON.stringify(p.skills || []);
+      const rawDataJson = JSON.stringify(p);
 
       runSql(
-        `INSERT OR REPLACE INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO providers (
+          id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, about, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline, latitude, longitude, lastCheckInAt, lastCheckInLocation, rawData, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, p.name || '', p.phone || '', p.email || '', p.service || '', p.category || '',
           p.rating || 5.0, p.reviewsCount || 0, p.isVerified ? 1 : 0, p.location || '',
-          p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
-          skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0
+          p.bio || p.about || '', p.about || p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
+          skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0,
+          p.latitude || null, p.longitude || null, p.lastCheckInAt || null, p.lastCheckInLocation || null, rawDataJson, p.createdAt || new Date().toISOString()
         ]
       );
 
@@ -737,17 +772,27 @@ async function startServer() {
       const id = req.params.id;
       const p = req.body;
       const existing = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
-      if (!existing) return res.status(404).json({ error: 'Provider not found' });
+      
+      let existingRaw: any = {};
+      if (existing?.rawData && typeof existing.rawData === 'string') {
+        try { existingRaw = JSON.parse(existing.rawData); } catch (_) {}
+      }
 
-      const updated = { ...existing, ...p };
+      const updated = { ...existingRaw, ...(existing || {}), ...p, id };
       const skillsJson = JSON.stringify(updated.skills || []);
+      const rawDataJson = JSON.stringify(updated);
 
       runSql(
-        `UPDATE providers SET name=?, phone=?, email=?, service=?, category=?, rating=?, reviewsCount=?, isVerified=?, location=?, bio=?, avatarUrl=?, coverImageUrl=?, role=?, skills=?, hourlyRate=? WHERE id=?`,
+        `INSERT OR REPLACE INTO providers (
+          id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, about, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline, latitude, longitude, lastCheckInAt, lastCheckInLocation, rawData, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          updated.name, updated.phone, updated.email, updated.service, updated.category,
-          updated.rating, updated.reviewsCount, updated.isVerified ? 1 : 0, updated.location,
-          updated.bio, updated.avatarUrl, updated.coverImageUrl, updated.role, skillsJson, updated.hourlyRate, id
+          id, updated.name || '', updated.phone || '', updated.email || '', updated.service || '', updated.category || '',
+          updated.rating ?? 5.0, updated.reviewsCount ?? 0, updated.isVerified ? 1 : 0, updated.location || '',
+          updated.bio || updated.about || '', updated.about || updated.bio || '', updated.avatarUrl || '', updated.coverImageUrl || '', updated.role || 'Provider',
+          skillsJson, updated.hourlyRate || '', updated.password || '', updated.isOnline ? 1 : 0,
+          updated.latitude || null, updated.longitude || null, updated.lastCheckInAt || null, updated.lastCheckInLocation || null,
+          rawDataJson, updated.createdAt || new Date().toISOString()
         ]
       );
 
