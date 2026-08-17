@@ -4,45 +4,32 @@ const handleUpdateProfile = async () => {
     let finalAvatarUrl = profileData.avatarUrl;
     let finalCoverImageUrl = profileData.coverImageUrl || DEFAULT_PROFILE_COVER;
 
-    // 1. Upload Avatar
-    if (avatarFile) {
+    console.log('Starting profile update...');
+
+    if (avatarFile || (editAvatarUrl && editAvatarUrl.startsWith('data:'))) {
+      alert('Uploading avatar...');
       finalAvatarUrl = await uploadImageToStorage(
-        avatarFile,
+        avatarFile || editAvatarUrl,
         `users/\( {profileData.id}/avatar_ \){Date.now()}.jpg`
       );
-    } else if (editAvatarUrl && editAvatarUrl.startsWith('data:')) {
-      finalAvatarUrl = await uploadImageToStorage(
-        editAvatarUrl,
-        `users/\( {profileData.id}/avatar_ \){Date.now()}.jpg`
-      );
-    } else if (editAvatarUrl) {
-      finalAvatarUrl = editAvatarUrl;
+      console.log('Avatar uploaded:', finalAvatarUrl);
+      alert('Avatar uploaded successfully!\n' + finalAvatarUrl.substring(0, 80) + '...');
     }
 
-    // 2. Upload Cover Image
-    if (coverFile) {
+    if (coverFile || (editCoverImageUrl && editCoverImageUrl.startsWith('data:'))) {
+      alert('Uploading cover...');
       finalCoverImageUrl = await uploadImageToStorage(
-        coverFile,
+        coverFile || editCoverImageUrl,
         `users/\( {profileData.id}/cover_ \){Date.now()}.jpg`
       );
-    } else if (editCoverImageUrl && editCoverImageUrl.startsWith('data:')) {
-      finalCoverImageUrl = await uploadImageToStorage(
-        editCoverImageUrl,
-        `users/\( {profileData.id}/cover_ \){Date.now()}.jpg`
-      );
-    } else if (editCoverImageUrl) {
-      finalCoverImageUrl = editCoverImageUrl;
+      console.log('Cover uploaded:', finalCoverImageUrl);
     }
 
-    // Safety check – never save data URLs
-    if (
-      (finalAvatarUrl && finalAvatarUrl.startsWith('data:')) ||
-      (finalCoverImageUrl && finalCoverImageUrl.startsWith('data:'))
-    ) {
-      throw new Error('Image upload did not complete. Please try again with a smaller photo.');
+    if (finalAvatarUrl.startsWith('data:') || finalCoverImageUrl.startsWith('data:')) {
+      throw new Error('Upload failed – still got a data URL');
     }
 
-    const updatedProfile: ServiceProvider = {
+    const updatedProfile = {
       ...profileData,
       name: editName,
       service: editService,
@@ -52,17 +39,16 @@ const handleUpdateProfile = async () => {
       selectedProfileButtons: editButtons
     };
 
-    // Save to Firestore
     await saveUserProfileToFirestore(profileData.id, updatedProfile);
-
-    // Update app state
     onUpdate(updatedProfile);
+
+    alert('Profile saved successfully!\nAvatar: ' + finalAvatarUrl.substring(0, 60) + '...');
     setIsEditing(false);
     setAvatarFile(null);
     setCoverFile(null);
   } catch (err: any) {
-    console.error('Error updating profile images or saving:', err);
-    alert(err?.message || 'An error occurred while saving profile changes. Please try again.');
+    console.error(err);
+    alert('ERROR: ' + (err?.message || 'Unknown error'));
   } finally {
     setIsUploadingImages(false);
   }
