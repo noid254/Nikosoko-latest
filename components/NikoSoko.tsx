@@ -97,6 +97,40 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
         }
     }, [currentUser?.location]);
 
+    // Auto-detect the viewer's live GPS position on load, so distances reflect
+    // where they actually are instead of the static default location above.
+    React.useEffect(() => {
+        if (!('geolocation' in navigator)) return;
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserHubCoords({ lat: latitude, lng: longitude });
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+                        { signal: controller.signal }
+                    );
+                    clearTimeout(timeoutId);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const addr = data.address || {};
+                        const suburb = addr.suburb || addr.neighbourhood || addr.quarter || addr.town || addr.city || addr.village;
+                        const county = addr.county || addr.state;
+                        if (suburb) setUserHubLocation(county ? `${suburb}, ${county}` : suburb);
+                    }
+                } catch {
+                    // Reverse geocoding failed — the raw coordinates set above are still used.
+                }
+            },
+            () => {
+                // Permission denied or unavailable — keep the profile/default location.
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+        );
+    }, []);
+
     // Dynamically recalculate distances for all providers based on the user's active location
     const providersWithDistances = useMemo(() => {
         return recalculateProvidersDistances(providers, userHubLocation, userHubCoords);
@@ -548,7 +582,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     <div>
                         <div className="grid grid-cols-2 gap-2.5">
                             {filteredAndSortedServices.map((item, idx) => {
-                                const provider = providers.find(p => p.id === item.providerId);
+                                const provider = providersWithDistances.find(p => p.id === item.providerId);
                                 const photo = item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
 
                                 return (
