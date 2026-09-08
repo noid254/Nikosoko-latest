@@ -540,9 +540,9 @@ function App() {
                 service: fullProfile.service || 'Trades Professional', 
                 avatarUrl: fullProfile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullProfile.name || nickname || 'U')}&background=random`,
                 coverImageUrl: fullProfile.coverImageUrl || 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=800', 
-                isVerified: fullProfile.isVerified ?? hasReferral, 
-                rating: 5.0, 
-                distanceKm: 0, 
+                isVerified: fullProfile.isVerified ?? hasReferral,
+                rating: 0,
+                distanceKm: 0,
                 hourlyRate: fullProfile.hourlyRate ?? 0,
                 rateType: fullProfile.rateType || 'per hour', 
                 currency: 'Ksh', 
@@ -1273,8 +1273,12 @@ function App() {
       setRatedProviderIds(newRated);
       localStorage.setItem('nikosoko_rated_provider_ids', JSON.stringify(newRated));
 
-      setProviders(prev => prev.map(p => p.id === providerId ? { ...p, rating: Math.min(5, Math.max(1, (p.rating * 10 + rating) / 11)) } : p));
-      
+      setProviders(prev => prev.map(p => p.id === providerId ? {
+          ...p,
+          rating: Math.min(5, Math.max(1, (p.rating * 10 + rating) / 11)),
+          reviewsCount: (p.reviewsCount || 0) + 1
+      } : p));
+
       setContactHistory(prev => {
           const updated = prev.filter(c => c.providerId !== providerId);
           localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));

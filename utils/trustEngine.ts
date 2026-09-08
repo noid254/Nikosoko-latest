@@ -1,6 +1,42 @@
 import type { ServiceProvider } from '../types';
 import { normalizeSkills } from './skills';
 
+export interface DisplayRating {
+  show: boolean;
+  value: number;
+  reviewsCount: number;
+}
+
+/**
+ * The star rating actually shown to users. Applies two safeguards so a
+ * handful of reviews can't produce a misleadingly perfect score:
+ * - Bayesian shrinkage toward a neutral platform baseline (prior weight
+ *   C=5, baseline m=4.0), so low review counts pull the score down.
+ * - A hard cap below 5.0 unless the profile is complete AND there are at
+ *   least 5 reviews.
+ */
+export function getDisplayRating(
+  provider: Pick<ServiceProvider, 'rating' | 'reviewsCount' | 'isProfileCompleted'> | null | undefined
+): DisplayRating {
+  const reviewsCount = provider?.reviewsCount || 0;
+  const rawRating = typeof provider?.rating === 'number' ? provider.rating : 0;
+
+  if (reviewsCount <= 0 || rawRating <= 0) {
+    return { show: false, value: 0, reviewsCount };
+  }
+
+  const C = 5;
+  const m = 4.0;
+  let value = (C * m + rawRating * reviewsCount) / (C + reviewsCount);
+
+  const canShowPerfectScore = provider?.isProfileCompleted === true && reviewsCount >= 5;
+  if (!canShowPerfectScore) {
+    value = Math.min(value, 4.9);
+  }
+
+  return { show: true, value: Math.round(value * 10) / 10, reviewsCount };
+}
+
 export interface TrustBreakdown {
   identityScore: number; // Max 1.0
   identityExplanation: string;

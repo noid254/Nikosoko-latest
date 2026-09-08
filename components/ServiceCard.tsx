@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ServiceProvider } from '../types';
 import { normalizeSkills } from '../utils/skills';
+import { getDisplayRating } from '../utils/trustEngine';
 
 const StarIcon: React.FC<{ className?: string }> = ({ className = "w-3 h-3" }) => (
     <svg className={className} fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -82,6 +83,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     const distanceDisplay = typeof provider?.distanceKm === 'number'
         ? `${provider.distanceKm.toFixed(1)} km away`
         : 'Nearby';
+
+    const displayRating = getDisplayRating(provider);
 
     // Real name formatted
     const realName = provider?.name ? provider.name.toLowerCase() : 'artisan';
@@ -196,10 +199,10 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                         </h3>
 
                         <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
-                            {provider?.rating && provider?.reviewsCount ? (
+                            {displayRating.show ? (
                                 <>
                                     <StarIcon className="text-black" />
-                                    <span>{provider.rating.toFixed(1)}</span>
+                                    <span>{displayRating.value.toFixed(1)}</span>
                                 </>
                             ) : (
                                 <span>New</span>

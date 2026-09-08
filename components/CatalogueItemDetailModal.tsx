@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CatalogueItem, ServiceProvider } from '../types';
+import { getDisplayRating } from '../utils/trustEngine';
 
 interface CatalogueItemDetailModalProps {
   item: CatalogueItem;
@@ -237,11 +238,14 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                                           </svg>
                                       )}
-                                      {provider.rating && provider.reviewsCount ? (
-                                          <span className="text-gray-700 font-mono text-xs font-bold">⭐ {provider.rating.toFixed(1)}</span>
-                                      ) : (
-                                          <span className="text-gray-700 font-mono text-xs font-bold">New</span>
-                                      )}
+                                      {(() => {
+                                          const displayRating = getDisplayRating(provider);
+                                          return displayRating.show ? (
+                                              <span className="text-gray-700 font-mono text-xs font-bold">⭐ {displayRating.value.toFixed(1)}</span>
+                                          ) : (
+                                              <span className="text-gray-700 font-mono text-xs font-bold">New</span>
+                                          );
+                                      })()}
                                   </p>
                                   <p className="text-[10.5px] text-gray-500 font-medium">{provider.service} • {provider.location}</p>
                               </div>
