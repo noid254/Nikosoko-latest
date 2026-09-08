@@ -43,6 +43,7 @@ interface NikoSokoProps {
     hasNewMessages: boolean;
     onNavigate: (p: CurrentPage) => void;
     currentUser: ServiceProvider | null;
+    guestCoords?: Coordinates;
     onViewSacco?: (p: ServiceProvider) => void;
     isAuthenticated?: boolean;
     onAuthClick?: () => void;
@@ -75,8 +76,8 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, catalogueItems = [], specialBanners = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick, 
-    hasNewMessages, onNavigate, currentUser, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
+    providers, catalogueItems = [], specialBanners = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick,
+    hasNewMessages, onNavigate, currentUser, guestCoords, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
     const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
     const [localSearch, setLocalSearch] = useState(searchTerm || '');
@@ -98,12 +99,14 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     }, [currentUser?.location]);
 
     React.useEffect(() => {
-        if (typeof currentUser?.latitude === 'number' && typeof currentUser?.longitude === 'number') {
-            setUserHubCoords({ lat: currentUser.latitude, lng: currentUser.longitude });
-            const nearest = findNearestEstate(currentUser.latitude, currentUser.longitude);
+        const lat = typeof currentUser?.latitude === 'number' ? currentUser.latitude : guestCoords?.lat;
+        const lng = typeof currentUser?.longitude === 'number' ? currentUser.longitude : guestCoords?.lng;
+        if (typeof lat === 'number' && typeof lng === 'number') {
+            setUserHubCoords({ lat, lng });
+            const nearest = findNearestEstate(lat, lng);
             setUserHubLocation(nearest.displayName);
         }
-    }, [currentUser?.latitude, currentUser?.longitude]);
+    }, [currentUser?.latitude, currentUser?.longitude, guestCoords?.lat, guestCoords?.lng]);
 
     // Dynamically recalculate distances for all providers based on the user's active location
     const providersWithDistances = useMemo(() => {

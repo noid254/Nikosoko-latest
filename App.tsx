@@ -248,6 +248,7 @@ function App() {
   const [selectedTools, setSelectedTools] = useState<CurrentPage[]>(['home', 'journey', 'admin']);
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
   const [isSEOMapOpen, setIsSEOMapOpen] = useState(false);
+  const [guestCoords, setGuestCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [savedContactsMap, setSavedContactsMap] = useState<Record<string, SavedContactItem>>(() => {
     try {
       const local = localStorage.getItem('nikosoko_saved_contacts_v2');
@@ -595,19 +596,24 @@ function App() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || !currentUser?.id) return;
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        const updatedUser = { ...currentUser, latitude, longitude };
-        setCurrentUser(updatedUser);
-        api.updateProvider(updatedUser).catch(() => {});
-        setProviders(prev => recalculateProvidersDistances(
-          prev.map(p => p.id === updatedUser.id ? updatedUser : p),
-          '',
-          { lat: latitude, lng: longitude }
-        ));
+        if (isAuthenticated && currentUser?.id) {
+          const updatedUser = { ...currentUser, latitude, longitude };
+          setCurrentUser(updatedUser);
+          api.updateProvider(updatedUser).catch(() => {});
+          setProviders(prev => recalculateProvidersDistances(
+            prev.map(p => p.id === updatedUser.id ? updatedUser : p),
+            '',
+            { lat: latitude, lng: longitude }
+          ));
+        } else {
+          // Guests aren't signed in, so there's no profile to persist to —
+          // just keep the live coords for distance calculations this session.
+          setGuestCoords({ lat: latitude, lng: longitude });
+        }
       },
       (error) => {
         console.warn('Geolocation unavailable, using saved location:', error.message);
@@ -1009,7 +1015,8 @@ function App() {
             onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
             hasNewMessages={false} 
             onNavigate={handleNavigate} 
-            currentUser={currentUser} 
+            currentUser={currentUser}
+            guestCoords={guestCoords}
             onViewSacco={(p) => setSaccoModalProvider(p)}
             isAuthenticated={isAuthenticated}
             onAuthClick={() => setIsAuthModalOpen(true)}
@@ -1195,7 +1202,7 @@ function App() {
           onSaveFeatureConfig={handleSaveFeatureAdmin}
         />;
       default:
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} specialBanners={specialBanners} brandingConfig={brandingConfig} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} specialBanners={specialBanners} brandingConfig={brandingConfig} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} guestCoords={guestCoords} />;
     }
   };
 
