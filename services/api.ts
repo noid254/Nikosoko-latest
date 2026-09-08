@@ -584,6 +584,26 @@ export const updateCatalogueItem = async (updatedItem: CatalogueItem): Promise<C
     }
     return updatedItem;
 };
+export const addCatalogueItem = async (newItem: CatalogueItem): Promise<CatalogueItem> => {
+    try {
+        await fetch('/api/catalogue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newItem)
+        });
+    } catch (e) {
+        console.error('Failed to save catalogue item to server:', e);
+    }
+    const items = getTable<CatalogueItem>(DB_KEYS.CATALOGUE);
+    const index = items.findIndex(i => i.id === newItem.id);
+    if (index > -1) {
+        items[index] = newItem;
+    } else {
+        items.unshift(newItem);
+    }
+    saveTable(DB_KEYS.CATALOGUE, items);
+    return newItem;
+};
 
 export const deleteCatalogueItem = async (id: string): Promise<void> => {
     try {

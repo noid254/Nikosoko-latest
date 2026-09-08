@@ -2,6 +2,7 @@ import React from 'react';
 import { ServiceProvider } from '../types';
 
 interface DesktopBannerLayoutProps {
+  brandingConfig?: { heroBannerUrl?: string; appIconUrl?: string };
   children: React.ReactNode;
   currentUser: ServiceProvider | null;
   onOpenSignUp: () => void;
@@ -13,6 +14,7 @@ const DesktopBannerLayout: React.FC<DesktopBannerLayoutProps> = ({
   currentUser,
   onOpenSignUp,
   onOpenLogin
+  ,brandingConfig
 }) => {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col lg:flex-row overflow-x-hidden">
@@ -22,11 +24,22 @@ const DesktopBannerLayout: React.FC<DesktopBannerLayoutProps> = ({
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
+        {brandingConfig?.heroBannerUrl && (
+          <div className="relative z-10 -mx-8 xl:-mx-12 -mt-8 xl:-mt-12 mb-6 overflow-hidden">
+            <img
+              src={brandingConfig.heroBannerUrl}
+              alt="NikoSoko - Highlighting top service providers in your area"
+              className="w-full h-40 xl:h-48 object-cover"
+              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+          </div>
+        )}
         {/* Top Header & Logo */}
         <div className="relative z-10 space-y-6">
           <div className="flex items-center gap-3">
             <img 
-              src="https://nikosoko.com/images/nikosoko-icon.jpg" 
+              src="/images/nikosoko-icon.jpg" 
               alt="NikoSoko Logo" 
               className="w-12 h-12 rounded-2xl object-cover shadow-lg shadow-amber-500/20 border border-amber-400/30"
               onError={(e) => {

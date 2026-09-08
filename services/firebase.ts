@@ -40,35 +40,56 @@ export async function uploadImageToStorage(
     ) {
       return fileOrDataUrl;
     }
-
-    const storageRef = ref(storage, storagePath);
-    let blobToUpload: Blob;
-
+    let dataUrl: string;
     if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
-      const res = await fetch(fileOrDataUrl);
-      blobToUpload = await res.blob();
+      dataUrl = fileOrDataUrl;
     } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
-      blobToUpload = fileOrDataUrl;
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(fileOrDataUrl);
+      });
     } else if (typeof fileOrDataUrl === 'string') {
       return fileOrDataUrl;
     } else {
       throw new Error('Unsupported image input type');
     }
-
-    // Give the real upload up to 12 seconds (reasonable for mobile)
-    const snapshot = await withTimeout(
-      uploadBytes(storageRef, blobToUpload),
+    const compressedDataUrl = await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onload = () => {
+        const maxWidth = 1000;
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas not supported')); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = dataUrl;
+    });
+    const res = await withTimeout(
+      fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataUrl: compressedDataUrl, path: storagePath })
+      }),
       12000,
       null as any
     );
-
-    if (!snapshot) {
-      throw new Error('Upload timed out. Please try a smaller photo.');
+    if (!res || !res.ok) {
+      throw new Error('Upload timed out or failed. Please try a smaller photo.');
     }
-
-    return await getDownloadURL(snapshot.ref);
+    const result = await res.json();
+    if (!result.success || !result.url) {
+      throw new Error(result.error || 'Upload failed');
+    }
+    return result.url;
   } catch (error) {
-    console.error('Error uploading image to Firebase Storage:', error);
+    console.error('Error uploading image:', error);
     throw new Error(
       'Failed to upload image. Please try a smaller photo or check your connection.'
     );

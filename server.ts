@@ -7,7 +7,7 @@ import { createServer as createViteServer } from 'vite';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 
-const PORT = 3000;
+const PORT = 3002;
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 
 let db: Database;
@@ -324,6 +324,12 @@ async function startServer() {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
 
   // Critical No-Cache Policy for all API requests to ensure fresh SQLite queries
   app.use('/api', (req, res, next) => {
@@ -745,7 +751,8 @@ async function startServer() {
       const p = req.body;
       const id = p.id || `pro-${Date.now()}`;
       const skillsJson = JSON.stringify(p.skills || []);
-      const rawDataJson = JSON.stringify(p);
+      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
+      const rawDataJson = JSON.stringify(safeP);
 
       runSql(
         `INSERT OR REPLACE INTO providers (
@@ -780,7 +787,8 @@ async function startServer() {
 
       const updated = { ...existingRaw, ...(existing || {}), ...p, id };
       const skillsJson = JSON.stringify(updated.skills || []);
-      const rawDataJson = JSON.stringify(updated);
+      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, ...safeForRawData } = updated;
+      const rawDataJson = JSON.stringify(safeForRawData);
 
       runSql(
         `INSERT OR REPLACE INTO providers (
@@ -817,7 +825,7 @@ async function startServer() {
       const rows = queryAll('SELECT * FROM catalogue_items');
       const formatted = rows.map(r => ({
         ...r,
-        images: typeof r.images === 'string' ? JSON.parse(r.images || '[]') : r.images,
+        imageUrls: typeof r.images === 'string' ? JSON.parse(r.images || '[]') : (r.images || []),
         isVerified: Boolean(r.isVerified)
       }));
       res.json(formatted);
@@ -825,12 +833,40 @@ async function startServer() {
       res.status(500).json({ error: e.message });
     }
   });
+  // Image Upload Endpoint - saves base64 images to persistent disk storage
+  app.post('/api/upload', (req, res) => {
+    try {
+      const { dataUrl, path: uploadPath } = req.body;
+      if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+        return res.status(400).json({ error: 'Invalid or missing dataUrl' });
+      }
+      const matches = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ error: 'Invalid data URL format' });
+      }
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const ext = mimeType.split('/')[1].replace('jpeg', 'jpg');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const safePath = (uploadPath || `misc/upload_${Date.now()}`).replace(/[^a-zA-Z0-9_\-\/]/g, '_');
+      const fileName = `${safePath}.${ext}`;
+      const fullPath = path.join(process.cwd(), 'uploads', fileName);
+      const fullDir = path.dirname(fullPath);
+      fs.mkdirSync(fullDir, { recursive: true });
+      fs.writeFileSync(fullPath, buffer);
+      const publicUrl = `/uploads/${fileName}`;
+      res.json({ success: true, url: publicUrl });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
 
   app.post('/api/catalogue', (req, res) => {
     try {
       const item = req.body;
       const id = item.id || `cat-${Date.now()}`;
-      const imagesJson = JSON.stringify(item.images || [item.imageUrl].filter(Boolean));
+      const imagesJson = JSON.stringify(item.imageUrls || item.images || []);
 
       runSql(
         `INSERT OR REPLACE INTO catalogue_items (id, providerId, title, category, price, description, isVerified, images, serialNumber, duration, discountInfo, externalLink, createdAt)
@@ -1640,6 +1676,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
     app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

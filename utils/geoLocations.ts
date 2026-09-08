@@ -251,6 +251,24 @@ export function calculateHaversineDistance(
   if (d < 0.3) return 0.5;
   return Math.round(d * 10) / 10;
 }
+export function findNearestEstate(lat: number, lng: number): { name: string; county: string; displayName: string; distanceKm: number } {
+  let nearest = KENYAN_ESTATES[0];
+  let minDist = Infinity;
+  for (const estate of KENYAN_ESTATES) {
+    const d = calculateHaversineDistance(lat, lng, estate.lat, estate.lng);
+    if (d < minDist) {
+      minDist = d;
+      nearest = estate;
+    }
+  }
+  return {
+    name: nearest.name,
+    county: nearest.county,
+    displayName: `${nearest.name}, ${nearest.county}`,
+    distanceKm: minDist
+  };
+}
+
 
 /**
  * Resolves coordinates for a location string using the curated Kenyan estate geo-database.

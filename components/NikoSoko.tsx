@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig, Coordinates } from '../types';
 import { normalizeSkills } from '../utils/skills';
-import { recalculateProvidersDistances } from '../utils/geoLocations';
+import { recalculateProvidersDistances, findNearestEstate } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -96,6 +96,14 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             setUserHubLocation(currentUser.location);
         }
     }, [currentUser?.location]);
+
+    React.useEffect(() => {
+        if (typeof currentUser?.latitude === 'number' && typeof currentUser?.longitude === 'number') {
+            setUserHubCoords({ lat: currentUser.latitude, lng: currentUser.longitude });
+            const nearest = findNearestEstate(currentUser.latitude, currentUser.longitude);
+            setUserHubLocation(nearest.displayName);
+        }
+    }, [currentUser?.latitude, currentUser?.longitude]);
 
     // Dynamically recalculate distances for all providers based on the user's active location
     const providersWithDistances = useMemo(() => {
@@ -462,6 +470,21 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* PROMO BANNER - TOP PROVIDERS SPOTLIGHT */}
+            {brandingConfig?.heroBannerUrl && (
+                <div className="px-3 pt-3">
+                    <div className="relative rounded-2xl overflow-hidden shadow-md h-36">
+                        <img src={brandingConfig.heroBannerUrl} alt="NikoSoko - Top providers near you" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+                        <div className="relative z-10 h-full flex flex-col justify-center px-4 max-w-[70%]">
+                            <h3 className="text-white font-black text-base leading-tight">Top Pros Near You</h3>
+                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">Discover the highest-rated verified professionals in your area</p>
+                            <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Explore Now</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">

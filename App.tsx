@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { recalculateProvidersDistances } from './utils/geoLocations';
 import * as api from './services/api';
 import { 
   ServiceProvider, CatalogueItem, Document, SpecialBanner, 
@@ -170,9 +171,9 @@ function App() {
     const defaultBranding: AppBrandingConfig = {
       appName: 'NikoSoko',
       tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
-      appIconUrl: 'https://nikosoko.com/images/nikosoko-icon.jpg',
-      faviconUrl: 'https://nikosoko.com/images/nikosoko-favicon.jpg',
-      heroBannerUrl: 'https://nikosoko.com/images/nikosoko-hero-banner-white.jpg',
+      appIconUrl: '/images/nikosoko-icon.jpg',
+      faviconUrl: '/images/nikosoko-favicon.jpg',
+      heroBannerUrl: '/images/nikosoko-hero-banner-white.jpg',
       primaryColor: '#F59E0B',
       supportPhone: '+254 723 119 356',
       supportEmail: 'support@nikosoko.com'
@@ -548,6 +549,28 @@ function App() {
         setIsAuthModalOpen(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const updatedUser = { ...currentUser, latitude, longitude };
+        setCurrentUser(updatedUser);
+        api.updateProvider(updatedUser).catch(() => {});
+        setProviders(prev => recalculateProvidersDistances(
+          prev.map(p => p.id === updatedUser.id ? updatedUser : p),
+          '',
+          { lat: latitude, lng: longitude }
+        ));
+      },
+      (error) => {
+        console.warn('Geolocation unavailable, using saved location:', error.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  }, [isAuthenticated, currentUser?.id]);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -965,7 +988,7 @@ function App() {
             providers={publicProviders} 
             currentUser={currentUser}
             initialViewMode="sellService"
-            onAddCatalogueItem={(newItem) => setCatalogueItems(prev => [newItem, ...prev])}
+            onAddCatalogueItem={(newItem) => { setCatalogueItems(prev => [newItem, ...prev]); api.addCatalogueItem(newItem); }}
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
             onBack={() => setCurrentPage('tukosoko')} 
             onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} 
@@ -1310,6 +1333,7 @@ function App() {
     <DesktopBannerLayout
       currentUser={currentUser}
       onOpenSignUp={handleOpenCompleteSignUp}
+      brandingConfig={brandingConfig}
       onOpenLogin={handleOpenLogin}
     >
       {/* Floating CTA Tap Notification Toast Banner */}

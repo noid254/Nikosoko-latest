@@ -586,21 +586,43 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
     }
   }, []);
 
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
+  const compressImage = (file: File, maxWidth = 1000, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setUploadedImages(prev => [...prev, reader.result as string]);
-        }
+        const img = new Image();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('Canvas not supported')); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     });
+  };
 
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      compressImage(file)
+        .then((dataUrl) => {
+          setUploadedImages(prev => [...prev, dataUrl]);
+        })
+        .catch((err) => {
+          console.error('Image compression failed:', err);
+          alert('Sorry, that photo could not be processed. Please try a different image.');
+        });
+    });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -632,7 +654,7 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
       ? `Ksh ${priceAmount}`
       : `Ksh ${priceAmount} ${rateUnit}`;
 
-    const defaultPresets = CATEGORY_PHOTO_PRESETS[category] || CATEGORY_PHOTO_PRESETS['Other Service'];
+    const defaultPresets = CATEGORY_PHOTO_PRESETS[category] || ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
     const finalImages = uploadedImages.length > 0 ? uploadedImages : [defaultPresets[0]];
 
     const newItem: CatalogueItem = {
@@ -651,7 +673,7 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
     onSubmit(newItem);
   };
 
-  const currentPresets = CATEGORY_PHOTO_PRESETS[category] || CATEGORY_PHOTO_PRESETS['Other Service'];
+  const currentPresets = CATEGORY_PHOTO_PRESETS[category] || ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
   const activeCoverImage = uploadedImages[0] || currentPresets[0];
 
   const totalSteps = 6;
@@ -1319,13 +1341,18 @@ const Tukosoko: React.FC<TukosokoProps> = ({
   }, [items, selectedCategory, searchTerm, providerMap]);
 
   const handleCreateServiceItem = (newItem: CatalogueItem) => {
-    if (onAddCatalogueItem) {
-      onAddCatalogueItem(newItem);
+    try {
+      if (onAddCatalogueItem) {
+        onAddCatalogueItem(newItem);
+      }
+      setViewMode('marketplace');
+      setSelectedCategory('all');
+      setToastMessage(`🎉 Service Card "${newItem.title}" published live on Tukosoko!`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      console.error("Publish error:", err);
+      alert("Publish failed: " + (err as any)?.message || err);
     }
-    setViewMode('marketplace');
-    setSelectedCategory('all');
-    setToastMessage(`🎉 Service Card "${newItem.title}" published live on Tukosoko!`);
-    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // If in sellService viewMode, render full SellServicePage
