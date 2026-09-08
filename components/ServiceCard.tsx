@@ -196,8 +196,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                         </h3>
 
                         <div className="flex items-center gap-0.5 text-[9px] font-mono font-bold text-black border border-gray-200 px-1 py-0.5 bg-gray-50 flex-shrink-0">
-                            <StarIcon className="text-black" />
-                            <span>{provider?.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                            {provider?.rating && provider?.reviewsCount ? (
+                                <>
+                                    <StarIcon className="text-black" />
+                                    <span>{provider.rating.toFixed(1)}</span>
+                                </>
+                            ) : (
+                                <span>New</span>
+                            )}
                         </div>
                     </div>
 

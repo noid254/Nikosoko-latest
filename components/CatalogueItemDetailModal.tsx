@@ -8,13 +8,14 @@ interface CatalogueItemDetailModalProps {
   isAuthenticated: boolean;
   onAuthClick: () => void;
   onInitiateContact: (provider: ServiceProvider) => boolean;
+  onViewProfile?: (provider: ServiceProvider) => void;
 }
 
 const CallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const WhatsAppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99 0-3.903-.52-5.586-1.456l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 4.315 1.731 6.086l.474 1.039-1.04 3.833 3.855-1.017z" /></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
-const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ item, onClose, provider, isAuthenticated, onAuthClick, onInitiateContact }) => {
+const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ item, onClose, provider, isAuthenticated, onAuthClick, onInitiateContact, onViewProfile }) => {
   const [activeImageIndex, setActiveImageIndex] = React.useState(0);
 
   const handleCall = () => {
@@ -195,16 +196,6 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                 )}
 
                 <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
-                  <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0 text-xs font-bold">
-                    🛡️
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Buyer Guarantee</p>
-                    <p className="font-extrabold text-gray-900 text-[11px]">NikoSoko Protected</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center gap-2">
                   <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg shrink-0 text-xs font-bold">
                     ⚡
                   </div>
@@ -232,7 +223,10 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
               {provider && (
                   <div className="pt-2">
                       <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1.5">Sold & Fulfilled By</p>
-                      <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                      <div
+                          className={`flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-2xs ${onViewProfile ? 'cursor-pointer hover:border-black transition-colors' : ''}`}
+                          onClick={onViewProfile ? () => onViewProfile(provider) : undefined}
+                      >
                           <div className="flex items-center gap-2.5">
                               <img src={provider.avatarUrl} alt={provider.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
                               <div>
@@ -243,7 +237,11 @@ const CatalogueItemDetailModal: React.FC<CatalogueItemDetailModalProps> = ({ ite
                                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                                           </svg>
                                       )}
-                                      <span className="text-gray-700 font-mono text-xs font-bold">⭐ {provider.rating ? provider.rating.toFixed(1) : '5.0'}</span>
+                                      {provider.rating && provider.reviewsCount ? (
+                                          <span className="text-gray-700 font-mono text-xs font-bold">⭐ {provider.rating.toFixed(1)}</span>
+                                      ) : (
+                                          <span className="text-gray-700 font-mono text-xs font-bold">New</span>
+                                      )}
                                   </p>
                                   <p className="text-[10.5px] text-gray-500 font-medium">{provider.service} • {provider.location}</p>
                               </div>

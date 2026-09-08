@@ -655,6 +655,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     isAuthenticated={isAuthenticated}
                     onAuthClick={onAuthClick || (() => {})}
                     onInitiateContact={onInitiateContact || (() => true)}
+                    onViewProfile={(p) => { setSelectedCatalogueItem(null); onSelectProvider(p); }}
                 />
             )}
 
