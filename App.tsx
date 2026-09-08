@@ -72,7 +72,7 @@ function App() {
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isForcedReview, setIsForcedReview] = useState(false);
-  const [contactHistory, setContactHistory] = useState<{ providerId: string; contactedAt: number; postponeCount: number; snoozedUntil?: number }[]>(() => {
+  const [contactHistory, setContactHistory] = useState<{ providerId: string; contactedAt: number; postponeCount: number; snoozedUntil?: number; reminderSent?: boolean }[]>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_contact_history_v2');
       if (saved) return JSON.parse(saved);
@@ -286,6 +286,50 @@ function App() {
       appleIconLink.href = brandingConfig.appIconUrl || faviconUrl;
     }
   }, [brandingConfig]);
+
+  // Send the viewer's own "rate this provider" reminder ~3 hours after they
+  // viewed/contacted the number, instead of instantly. Checked on load and
+  // then periodically so it fires even without other app activity.
+  useEffect(() => {
+    const REMINDER_DELAY_HOURS = 3;
+
+    const dispatchDueReminders = () => {
+      const now = Date.now();
+      setContactHistory(prev => {
+        let changed = false;
+        const updated = prev.map(c => {
+          if (c.reminderSent) return c;
+          if (ratedProviderIds.includes(c.providerId)) return c;
+          if (dismissedProviderIds.includes(c.providerId)) return c;
+          const hoursPassed = (now - c.contactedAt) / (1000 * 3600);
+          if (hoursPassed < REMINDER_DELAY_HOURS) return c;
+
+          const provider = providers.find(p => p.id === c.providerId);
+          if (provider) {
+            api.addInboxMessage({
+              sender: 'team',
+              text: `⭐ Thanks for contacting ${provider.name}! Click here to leave a quick 5-star rating for their service.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              type: 'rating_reminder',
+              targetProviderId: provider.id,
+              targetProviderName: provider.name,
+              isActionable: true
+            });
+          }
+          changed = true;
+          return { ...c, reminderSent: true };
+        });
+
+        if (!changed) return prev;
+        localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
+        return updated;
+      });
+    };
+
+    dispatchDueReminders();
+    const interval = setInterval(dispatchDueReminders, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [providers, ratedProviderIds, dismissedProviderIds]);
 
   const showCtaToast = (text: string) => {
     setCtaToast({ show: true, text });
@@ -856,18 +900,10 @@ function App() {
           isActionable: true
       };
 
-      const tapperMsg: Omit<InboxMessage, 'id'> = {
-          sender: 'team',
-          text: `⭐ Thanks for contacting ${provider.name}! Click here to leave a quick 5-star rating for their service.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type: 'rating_reminder',
-          targetProviderId: provider.id,
-          targetProviderName: provider.name,
-          isActionable: true
-      };
-
+      // Note: the tapper's own rating-reminder notification is NOT sent here.
+      // It's dispatched automatically ~3 hours after contact (see the
+      // rating-reminder scheduling effect), not the instant they view/contact.
       api.addInboxMessage(providerMsg);
-      api.addInboxMessage(tapperMsg);
 
       // Trigger floating CTA Toast Notification
       setCtaToast({

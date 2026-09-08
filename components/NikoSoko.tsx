@@ -571,7 +571,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     <div>
                         <div className="grid grid-cols-2 gap-2.5">
                             {filteredAndSortedServices.map((item, idx) => {
-                                const provider = providers.find(p => p.id === item.providerId);
+                                const provider = providersWithDistances.find(p => p.id === item.providerId);
                                 const photo = item.imageUrls?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=400';
 
                                 return (
