@@ -6,8 +6,8 @@ import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
 
-const MenuIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+const MenuIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-white' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
   </svg>
 );
@@ -18,8 +18,8 @@ const SearchIcon = () => (
   </svg>
 );
 
-const BellIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+const BellIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-white' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
   </svg>
 );
@@ -314,60 +314,42 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
-            {/* CLEAN APP TOP HEADER (NO BANNER) */}
-            <header className="bg-brand-navy text-white px-3 py-2.5 border-b border-gray-200 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-                {/* Burger Menu Button */}
-                <button 
-                    onClick={onBack} 
+            {/* MINIMAL TOP BAR - branding now lives in the hero banner below */}
+            <header className="bg-white text-black px-3 py-2.5 flex items-center justify-between sticky top-0 z-30">
+                <button
+                    onClick={onBack}
                     aria-label="Open Menu"
-                    className="p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 cursor-pointer shadow-xs"
+                    className="p-1.5 text-black hover:text-gray-600 transition-colors flex items-center justify-center rounded-lg hover:bg-gray-100 cursor-pointer"
                 >
-                    <MenuIcon />
+                    <MenuIcon className="h-5 w-5 text-black" />
                 </button>
-
-                {/* Brand Logo & Title */}
-                <div 
-                    className="flex items-center gap-2 cursor-pointer select-none"
-                    onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}
-                >
-                    <div className="w-7 h-7 bg-amber-400 text-black font-black flex items-center justify-center rounded-md text-xs shadow-xs">
-                        NS
-                    </div>
-                    <div className="text-left">
-                        <h1 className="text-sm font-black uppercase tracking-wider text-white leading-tight">NikoSoko</h1>
-                        <p className="text-[9.5px] font-bold text-amber-300 tracking-tight leading-none">Neighbourhood Marketplace</p>
-                    </div>
-                </div>
 
                 {/* Notification Bell Button */}
                 {(() => {
                     const isUnread = hasNewMessages || Boolean(currentUser && !currentUser.isProfileCompleted);
                     return (
-                        <button 
-                            onClick={onMessagesClick} 
+                        <button
+                            onClick={onMessagesClick}
                             aria-label="Notifications"
-                            className="relative p-1.5 text-white hover:text-gray-200 transition-colors flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 cursor-pointer shadow-xs"
+                            className="relative p-1.5 text-black hover:text-gray-600 transition-colors flex items-center justify-center rounded-lg hover:bg-gray-100 cursor-pointer"
                         >
-                            <BellIcon />
-                            {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>}
+                            <BellIcon className="h-5 w-5 text-black" />
+                            {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
                         </button>
                     );
                 })()}
             </header>
 
             {/* REALISTIC LOCATION & VIEWING DISTANCE HUB */}
-            <div className="bg-amber-50 border-b border-amber-200 px-3 py-2 text-xs">
+            <div className="bg-white border-b border-gray-100 px-3 py-2 text-xs">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-sm">📍</span>
-                        <div className="truncate">
-                            <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider mr-1">Viewing from:</span>
-                            <span className="font-bold text-gray-900 text-xs">{userHubLocation}</span>
-                        </div>
+                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider mr-1">Viewing from:</span>
+                        <span className="font-bold text-gray-900 text-xs truncate">{userHubLocation}</span>
                     </div>
                     <button
                         onClick={() => setIsChangingLocation(!isChangingLocation)}
-                        className="px-2 py-1 bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-[10.5px] font-black uppercase tracking-wider rounded-md shrink-0 transition-colors cursor-pointer shadow-2xs"
+                        className="px-3 py-1 bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 text-[10.5px] font-black uppercase tracking-wider rounded-full shrink-0 transition-colors cursor-pointer shadow-2xs"
                     >
                         {isChangingLocation ? 'Close' : 'Change'}
                     </button>
@@ -375,8 +357,8 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
                 {/* Quick Location Switcher Dropdown */}
                 {isChangingLocation && (
-                    <div className="mt-2 pt-2 border-t border-amber-200 space-y-2">
-                        <p className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">Select your location to see accurate travel distances:</p>
+                    <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
+                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Select your location to see accurate travel distances:</p>
                         <div className="flex flex-wrap gap-1.5">
                             {POPULAR_LOCATIONS.map(loc => (
                                 <button
@@ -385,7 +367,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                     className={`px-2 py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
                                         userHubLocation.toLowerCase().includes(loc.split(',')[0].toLowerCase())
                                             ? 'bg-amber-500 text-black border-amber-600 font-black'
-                                            : 'bg-white text-gray-800 border-gray-300 hover:bg-amber-100'
+                                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
                                     }`}
                                 >
                                     {loc}
@@ -422,32 +404,43 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                 )}
             </div>
 
-            {/* MINIMALIST SEARCH BAR */}
-            <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-200">
-                <div className="bg-gray-50 border border-gray-300 flex items-center px-3 py-1.5 transition-colors focus-within:border-black">
-                    <SearchIcon />
-                    <input 
-                        className="w-full bg-transparent outline-none text-xs text-black placeholder-gray-500 font-medium ml-2 h-7" 
-                        placeholder="Search electrician, boda, TV mount, water, gas..."
-                        value={localSearch}
-                        onChange={handleSearchChange}
-                    />
-                    {localSearch && (
-                        <button 
-                            onClick={() => {
-                                setLocalSearch('');
-                                setSearchTerm('');
-                                setSelectedCategory(null);
-                            }}
-                            className="text-xs font-bold text-gray-500 hover:text-black px-1"
-                        >
-                            ✕
-                        </button>
-                    )}
+            {/* HERO BANNER - branded wordmark on black, search bar overlapping the bottom edge */}
+            <div className="relative bg-brand-navy px-6 pt-6 pb-8">
+                <img
+                    src="https://i.imgur.com/YzrNOe1.jpeg"
+                    alt="NikoSoko - Nearby, Skilled and Ready"
+                    className="w-full h-40 object-contain mx-auto select-none cursor-pointer"
+                    onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}
+                />
+                <div className="absolute left-6 right-6 -bottom-5">
+                    <div className="bg-white border border-gray-200 shadow-lg rounded-xl flex items-center px-3 py-2 transition-colors focus-within:border-black">
+                        <SearchIcon />
+                        <input
+                            className="w-full bg-transparent outline-none text-xs text-black placeholder-gray-500 font-medium ml-2 h-7"
+                            placeholder="Search electrician, boda, TV mount, water, gas..."
+                            value={localSearch}
+                            onChange={handleSearchChange}
+                        />
+                        {localSearch && (
+                            <button
+                                onClick={() => {
+                                    setLocalSearch('');
+                                    setSearchTerm('');
+                                    setSelectedCategory(null);
+                                }}
+                                className="text-xs font-bold text-gray-500 hover:text-black px-1"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
                 </div>
+            </div>
 
-                {/* QUICK FILTERS - MINIMAL MONOCHROME PILLS WITH SCROLL AFFORDANCE */}
-                <div className="relative flex items-center pt-2">
+            {/* QUICK FILTERS - MINIMAL MONOCHROME PILLS WITH SCROLL AFFORDANCE */}
+            {/* pt-7 clears the search bar card overlapping down from the hero above */}
+            <div className="px-3 pt-7 pb-2 bg-white">
+                <div className="relative flex items-center">
                     <div className="flex gap-1.5 overflow-x-auto no-scrollbar pr-8 py-0.5 w-full scroll-smooth">
                         {HIGHLIGHT_CATEGORIES.map(cat => {
                             const isSelected = selectedCategory === cat.id;
@@ -456,8 +449,8 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                     key={cat.id}
                                     onClick={() => handleCategoryClick(cat)}
                                     className={`px-3 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer shadow-xs ${
-                                        isSelected 
-                                            ? cat.activeClass 
+                                        isSelected
+                                            ? cat.activeClass
                                             : cat.bgClass
                                     }`}
                                 >
