@@ -20,13 +20,15 @@ import initSqlJs from 'sql.js';
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 const CONFIRM = process.argv.includes('--confirm');
 
-// Only the account with this exact phone number is preserved — everything
-// else is deleted, deliberately including any other accounts that happen
-// to be flagged with an admin role or email (e.g. stale test accounts).
+// Multiple duplicate rows share the phone number ending in 723119356
+// (created across separate OTP logins where the phone was stored in
+// slightly different formats each time). Only the one confirmed real
+// account — "Alex Kiprop (Super Admin)" — is preserved; the phone match
+// alone is not enough since it's ambiguous across duplicates.
 function isSuperAdmin(row: any): boolean {
   const phone = String(row.phone || '');
   const last9 = phone.replace(/\D/g, '').slice(-9);
-  return last9 === '723119356';
+  return last9 === '723119356' && String(row.name || '').trim() === 'Alex Kiprop (Super Admin)';
 }
 
 async function main() {

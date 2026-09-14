@@ -30,12 +30,13 @@ function formatToE164(phone: string): string {
   return '+' + digits;
 }
 
-// Only the account with this exact phone number is treated as the
-// SuperAdmin (and skipped from the text blast) — matches resetPlatform.ts.
+// Matches resetPlatform.ts: only the one confirmed real SuperAdmin account
+// is skipped from the text blast, not the other duplicate rows sharing the
+// same phone number.
 function isSuperAdmin(row: any): boolean {
   const phone = String(row.phone || '');
   const last9 = phone.replace(/\D/g, '').slice(-9);
-  return last9 === '723119356';
+  return last9 === '723119356' && String(row.name || '').trim() === 'Alex Kiprop (Super Admin)';
 }
 
 async function main() {
