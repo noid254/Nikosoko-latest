@@ -314,14 +314,22 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
     return (
         <div className="w-full max-w-md mx-auto bg-white min-h-screen font-sans pb-20 relative border-x border-gray-200">
-            {/* MINIMAL TOP BAR - branding now lives in the hero banner below */}
-            <header className="bg-white text-black px-3 py-2.5 flex items-center justify-between sticky top-0 z-30">
+            {/* STICKY TOP BAR - hamburger, location pin (between icons, single line), bell */}
+            <header className="bg-black text-white px-3 py-2.5 flex items-center justify-between gap-2 sticky top-0 z-30">
                 <button
                     onClick={onBack}
                     aria-label="Open Menu"
-                    className="p-1.5 text-black hover:text-gray-600 transition-colors flex items-center justify-center rounded-lg hover:bg-gray-100 cursor-pointer"
+                    className="p-1.5 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer shrink-0"
                 >
-                    <MenuIcon className="h-5 w-5 text-black" />
+                    <MenuIcon className="h-5 w-5 text-white" />
+                </button>
+
+                <button
+                    onClick={() => setIsChangingLocation(!isChangingLocation)}
+                    className="flex items-center gap-1 min-w-0 px-2 py-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                    <span className="text-sm shrink-0">📍</span>
+                    <span className="text-xs font-bold truncate">{userHubLocation}</span>
                 </button>
 
                 {/* Notification Bell Button */}
@@ -331,85 +339,69 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         <button
                             onClick={onMessagesClick}
                             aria-label="Notifications"
-                            className="relative p-1.5 text-black hover:text-gray-600 transition-colors flex items-center justify-center rounded-lg hover:bg-gray-100 cursor-pointer"
+                            className="relative p-1.5 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer shrink-0"
                         >
-                            <BellIcon className="h-5 w-5 text-black" />
+                            <BellIcon className="h-5 w-5 text-white" />
                             {isUnread && <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
                         </button>
                     );
                 })()}
             </header>
 
-            {/* REALISTIC LOCATION & VIEWING DISTANCE HUB */}
-            <div className="bg-white border-b border-gray-100 px-3 py-2 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider mr-1">Viewing from:</span>
-                        <span className="font-bold text-gray-900 text-xs truncate">{userHubLocation}</span>
-                    </div>
-                    <button
-                        onClick={() => setIsChangingLocation(!isChangingLocation)}
-                        className="px-3 py-1 bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 text-[10.5px] font-black uppercase tracking-wider rounded-full shrink-0 transition-colors cursor-pointer shadow-2xs"
-                    >
-                        {isChangingLocation ? 'Close' : 'Change'}
-                    </button>
-                </div>
-
-                {/* Quick Location Switcher Dropdown */}
-                {isChangingLocation && (
-                    <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
-                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Select your location to see accurate travel distances:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {POPULAR_LOCATIONS.map(loc => (
-                                <button
-                                    key={loc}
-                                    onClick={() => handleSelectLocation(loc)}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
-                                        userHubLocation.toLowerCase().includes(loc.split(',')[0].toLowerCase())
-                                            ? 'bg-amber-500 text-black border-amber-600 font-black'
-                                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    {loc}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex gap-1.5 pt-1">
-                            <input
-                                type="text"
-                                placeholder="Or enter specific estate (e.g. Kasarani, Karen)..."
-                                value={customLocInput}
-                                onChange={(e) => setCustomLocInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && customLocInput.trim()) {
-                                        handleSelectLocation(customLocInput.trim());
-                                        setCustomLocInput('');
-                                    }
-                                }}
-                                className="flex-1 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-black placeholder-gray-400 outline-none focus:border-black"
-                            />
+            {/* Quick Location Switcher Dropdown */}
+            {isChangingLocation && (
+                <div className="bg-white border-b border-gray-200 px-3 py-2.5 space-y-2">
+                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Select your location to see accurate travel distances:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {POPULAR_LOCATIONS.map(loc => (
                             <button
-                                onClick={() => {
-                                    if (customLocInput.trim()) {
-                                        handleSelectLocation(customLocInput.trim());
-                                        setCustomLocInput('');
-                                    }
-                                }}
-                                className="px-3 py-1 bg-black text-white text-[10.5px] font-bold uppercase rounded cursor-pointer"
+                                key={loc}
+                                onClick={() => handleSelectLocation(loc)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
+                                    userHubLocation.toLowerCase().includes(loc.split(',')[0].toLowerCase())
+                                        ? 'bg-amber-500 text-black border-amber-600 font-black'
+                                        : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                                }`}
                             >
-                                Set
+                                {loc}
                             </button>
-                        </div>
+                        ))}
                     </div>
-                )}
-            </div>
+                    <div className="flex gap-1.5 pt-1">
+                        <input
+                            type="text"
+                            placeholder="Or enter specific estate (e.g. Kasarani, Karen)..."
+                            value={customLocInput}
+                            onChange={(e) => setCustomLocInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && customLocInput.trim()) {
+                                    handleSelectLocation(customLocInput.trim());
+                                    setCustomLocInput('');
+                                }
+                            }}
+                            className="flex-1 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-black placeholder-gray-400 outline-none focus:border-black"
+                        />
+                        <button
+                            onClick={() => {
+                                if (customLocInput.trim()) {
+                                    handleSelectLocation(customLocInput.trim());
+                                    setCustomLocInput('');
+                                }
+                            }}
+                            className="px-3 py-1 bg-black text-white text-[10.5px] font-bold uppercase rounded cursor-pointer"
+                        >
+                            Set
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* HERO BANNER - branded wordmark on black, search bar overlapping the bottom edge */}
             <div className="relative bg-brand-navy px-6 pt-6 pb-8">
                 <img
                     src="https://i.imgur.com/YzrNOe1.jpeg"
                     alt="NikoSoko - Nearby, Skilled and Ready"
-                    className="w-full h-40 object-contain mx-auto select-none cursor-pointer"
+                    className="w-[65%] h-auto mx-auto block select-none cursor-pointer"
                     onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}
                 />
                 <div className="absolute left-6 right-6 -bottom-5">
