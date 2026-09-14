@@ -398,12 +398,19 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
             {/* HERO BANNER - branded wordmark on black, search bar overlapping the bottom edge */}
             <div className="relative bg-brand-navy px-6 pt-6 pb-8">
-                <img
-                    src="https://i.imgur.com/YzrNOe1.jpeg"
-                    alt="NikoSoko - Nearby, Skilled and Ready"
-                    className="w-[65%] h-auto mx-auto block select-none cursor-pointer"
+                {/* Source artwork is a square 1408x1408 file with a lot of black
+                    padding around the wordmark; crop to just that band via
+                    object-cover so the visible logo actually fills the width. */}
+                <div
+                    className="w-[65%] mx-auto aspect-[9/2] overflow-hidden cursor-pointer"
                     onClick={() => { setLocalSearch(''); setSearchTerm(''); setSelectedCategory(null); }}
-                />
+                >
+                    <img
+                        src="https://i.imgur.com/YzrNOe1.jpeg"
+                        alt="NikoSoko - Nearby, Skilled and Ready"
+                        className="w-full h-full object-cover object-center select-none"
+                    />
+                </div>
                 <div className="absolute left-6 right-6 -bottom-5">
                     <div className="bg-white border border-gray-200 shadow-lg rounded-xl flex items-center px-3 py-2 transition-colors focus-within:border-black">
                         <SearchIcon />
