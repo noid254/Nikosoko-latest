@@ -20,16 +20,13 @@ import initSqlJs from 'sql.js';
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 const CONFIRM = process.argv.includes('--confirm');
 
+// Only the account with this exact phone number is preserved — everything
+// else is deleted, deliberately including any other accounts that happen
+// to be flagged with an admin role or email (e.g. stale test accounts).
 function isSuperAdmin(row: any): boolean {
   const phone = String(row.phone || '');
-  const email = String(row.email || '').toLowerCase();
   const last9 = phone.replace(/\D/g, '').slice(-9);
-  return (
-    last9 === '723119356' ||
-    email === 'noid254@gmail.com' ||
-    email === 'admin@nikosoko.com' ||
-    row.role === 'SuperAdmin'
-  );
+  return last9 === '723119356';
 }
 
 async function main() {

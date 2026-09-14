@@ -30,16 +30,12 @@ function formatToE164(phone: string): string {
   return '+' + digits;
 }
 
+// Only the account with this exact phone number is treated as the
+// SuperAdmin (and skipped from the text blast) — matches resetPlatform.ts.
 function isSuperAdmin(row: any): boolean {
   const phone = String(row.phone || '');
-  const email = String(row.email || '').toLowerCase();
   const last9 = phone.replace(/\D/g, '').slice(-9);
-  return (
-    last9 === '723119356' ||
-    email === 'noid254@gmail.com' ||
-    email === 'admin@nikosoko.com' ||
-    row.role === 'SuperAdmin'
-  );
+  return last9 === '723119356';
 }
 
 async function main() {
