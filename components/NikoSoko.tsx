@@ -397,7 +397,9 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             )}
 
             {/* HERO BANNER - branded wordmark on black, search bar overlapping the bottom edge */}
-            <div className="relative bg-brand-navy px-6 pt-6 pb-8">
+            {/* min-h matches the SideMenu black header (min-h-[160px]) so the two black
+                blocks drop to the same depth; the slack lands under the wordmark. */}
+            <div className="relative bg-brand-navy px-6 pt-6 pb-8 min-h-[160px]">
                 {/* Source artwork is a square 1408x1408 file with a lot of black
                     padding around the wordmark; crop to just that band via
                     object-cover so the visible logo actually fills the width. */}
