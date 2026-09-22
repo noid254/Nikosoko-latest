@@ -115,25 +115,25 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     return (
         <div 
             onClick={onClick} 
-            className="bg-white cursor-pointer w-full group transition-all duration-150 flex flex-col border border-gray-200 hover:border-black rounded-none shadow-2xs hover:shadow-xs active:scale-[0.99] overflow-hidden relative z-0"
+            className="bg-white cursor-pointer w-full group transition-all duration-150 flex flex-col border border-gray-200 hover:border-black rounded-xl shadow-2xs hover:shadow-md active:scale-[0.99] overflow-hidden relative z-0"
         >
             {/* THUMBNAIL PICTURE & OVERLAY BADGES */}
             <div className="relative h-28 bg-gray-100 flex-shrink-0 border-b border-gray-200 overflow-hidden z-0">
-                <img 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                    src={displayImage} 
-                    alt={isProfessionalProfile ? `${provider?.name} Profile` : displayServiceTitle} 
+                <img
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    src={displayImage}
+                    alt={isProfessionalProfile ? `${provider?.name} Profile` : displayServiceTitle}
                     onError={handleImageError}
                 />
 
                 {/* DISTANCE BADGE (e.g. 4 Km away) */}
-                <div className="absolute bottom-1.5 left-1.5 bg-black text-emerald-400 font-mono text-[8.5px] px-1.5 py-0.5 font-bold uppercase tracking-wider z-10 border border-emerald-500/30">
+                <div className="absolute bottom-1.5 left-1.5 bg-black text-emerald-400 font-mono text-[8.5px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider z-10 border border-emerald-500/30">
                     {distanceDisplay}
                 </div>
 
                 {/* ONLINE INDICATOR BADGE */}
                 {Boolean(provider?.isOnline) && (
-                    <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] font-bold px-1.5 py-0.5 flex items-center gap-1 z-10 border border-emerald-500/30">
+                    <div className="absolute bottom-1.5 right-1.5 bg-black text-emerald-400 text-[8px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 z-10 border border-emerald-500/30">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>ONLINE</span>
                     </div>
@@ -148,7 +148,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                                 e.stopPropagation();
                                 if (onViewSacco && provider) onViewSacco(provider);
                             }}
-                            className="bg-black text-white text-[8px] px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1 border border-white/20 active:scale-95 transition-transform cursor-pointer"
+                            className="bg-black text-white text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 border border-white/20 active:scale-95 transition-transform cursor-pointer"
                             title={`Member of ${saccoName}`}
                         >
                             <span>●</span>

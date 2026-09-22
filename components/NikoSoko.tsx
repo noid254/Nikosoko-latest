@@ -12,21 +12,52 @@ const MenuIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-
   </svg>
 );
 
-const SearchIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+const SearchIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-gray-400' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const PinIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+  </svg>
+);
+
+const ChevronDownIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+  </svg>
+);
+
+const CloseIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const PlusIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.75}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const UserIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.5-1.632z" />
+  </svg>
+);
+
+const WrenchIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.164-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26" />
   </svg>
 );
 
 const BellIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-white' }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-  </svg>
-);
-
-const StarIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-black fill-current" viewBox="0 0 20 20">
-    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
   </svg>
 );
 
@@ -56,23 +87,21 @@ interface HighlightCategory {
     title: string;
     keyword: string;
     icon: string;
-    bgClass: string;
-    activeClass: string;
 }
 
 const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
-    { id: 'boda', title: 'Boda', keyword: 'boda', icon: '🛵', bgClass: 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100', activeClass: 'bg-amber-500 text-black border-amber-600 font-black shadow-md' },
-    { id: 'taxi', title: 'Taxi', keyword: 'taxi', icon: '🚕', bgClass: 'bg-yellow-50 text-yellow-900 border-yellow-300 hover:bg-yellow-100', activeClass: 'bg-yellow-400 text-black border-yellow-500 font-black shadow-md' },
-    { id: 'electrician', title: 'Electrician', keyword: 'electric', icon: '⚡', bgClass: 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100', activeClass: 'bg-blue-600 text-white border-blue-700 font-black shadow-md' },
-    { id: 'plumber', title: 'Plumber', keyword: 'plumb', icon: '🚰', bgClass: 'bg-sky-50 text-sky-900 border-sky-300 hover:bg-sky-100', activeClass: 'bg-sky-500 text-white border-sky-600 font-black shadow-md' },
-    { id: 'refills', title: 'Gas & Water', keyword: 'refill', icon: '💧', bgClass: 'bg-cyan-50 text-cyan-900 border-cyan-300 hover:bg-cyan-100', activeClass: 'bg-cyan-600 text-white border-cyan-700 font-black shadow-md' },
-    { id: 'tv', title: 'TV Mounting', keyword: 'tv', icon: '📺', bgClass: 'bg-indigo-50 text-indigo-900 border-indigo-300 hover:bg-indigo-100', activeClass: 'bg-indigo-600 text-white border-indigo-700 font-black shadow-md' },
-    { id: 'braiding', title: 'Braiding', keyword: 'braid', icon: '💇‍♀️', bgClass: 'bg-pink-50 text-pink-900 border-pink-300 hover:bg-pink-100', activeClass: 'bg-pink-500 text-white border-pink-600 font-black shadow-md' },
-    { id: 'cleaner', title: 'Cleaning', keyword: 'clean', icon: '🧹', bgClass: 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100', activeClass: 'bg-emerald-600 text-white border-emerald-700 font-black shadow-md' },
-    { id: 'mechanic', title: 'Mechanic & Tech', keyword: 'repair', icon: '🧰', bgClass: 'bg-orange-50 text-orange-900 border-orange-300 hover:bg-orange-100', activeClass: 'bg-orange-500 text-white border-orange-600 font-black shadow-md' },
-    { id: 'courier', title: 'Delivery', keyword: 'deliver', icon: '📦', bgClass: 'bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100', activeClass: 'bg-purple-600 text-white border-purple-700 font-black shadow-md' },
-    { id: 'solar', title: 'Solar', keyword: 'solar', icon: '☀️', bgClass: 'bg-lime-50 text-lime-900 border-lime-300 hover:bg-lime-100', activeClass: 'bg-lime-500 text-black border-lime-600 font-black shadow-md' },
-    { id: 'tutoring', title: 'Tutoring', keyword: 'tutor', icon: '📚', bgClass: 'bg-teal-50 text-teal-900 border-teal-300 hover:bg-teal-100', activeClass: 'bg-teal-600 text-white border-teal-700 font-black shadow-md' }
+    { id: 'boda', title: 'Boda', keyword: 'boda', icon: '🛵' },
+    { id: 'taxi', title: 'Taxi', keyword: 'taxi', icon: '🚕' },
+    { id: 'electrician', title: 'Electrician', keyword: 'electric', icon: '⚡' },
+    { id: 'plumber', title: 'Plumber', keyword: 'plumb', icon: '🚰' },
+    { id: 'refills', title: 'Gas & Water', keyword: 'refill', icon: '💧' },
+    { id: 'tv', title: 'TV Mounting', keyword: 'tv', icon: '📺' },
+    { id: 'braiding', title: 'Braiding', keyword: 'braid', icon: '💇‍♀️' },
+    { id: 'cleaner', title: 'Cleaning', keyword: 'clean', icon: '🧹' },
+    { id: 'mechanic', title: 'Mechanic & Tech', keyword: 'repair', icon: '🧰' },
+    { id: 'courier', title: 'Delivery', keyword: 'deliver', icon: '📦' },
+    { id: 'solar', title: 'Solar', keyword: 'solar', icon: '☀️' },
+    { id: 'tutoring', title: 'Tutoring', keyword: 'tutor', icon: '📚' }
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
@@ -326,10 +355,11 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
                 <button
                     onClick={() => setIsChangingLocation(!isChangingLocation)}
-                    className="flex items-center gap-1 min-w-0 px-2 py-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 min-w-0 px-2.5 py-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
                 >
-                    <span className="text-sm shrink-0">📍</span>
-                    <span className="text-xs font-bold truncate">{userHubLocation}</span>
+                    <PinIcon className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    <span className="text-xs font-bold truncate max-w-[130px]">{userHubLocation}</span>
+                    <ChevronDownIcon className={`h-3 w-3 text-white/50 shrink-0 transition-transform duration-200 ${isChangingLocation ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Notification Bell Button */}
@@ -429,9 +459,10 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                     setSearchTerm('');
                                     setSelectedCategory(null);
                                 }}
-                                className="text-xs font-bold text-gray-500 hover:text-black px-1"
+                                aria-label="Clear search"
+                                className="text-gray-400 hover:text-black p-1 -mr-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
                             >
-                                ✕
+                                <CloseIcon className="h-3.5 w-3.5" />
                             </button>
                         )}
                     </div>
@@ -449,10 +480,10 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                 <button
                                     key={cat.id}
                                     onClick={() => handleCategoryClick(cat)}
-                                    className={`px-3 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer shadow-xs ${
+                                    className={`px-3 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap active:scale-95 cursor-pointer ${
                                         isSelected
-                                            ? cat.activeClass
-                                            : cat.bgClass
+                                            ? 'bg-black text-white border-black shadow-sm'
+                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                                 >
                                     <span className="text-sm leading-none">{cat.icon}</span>
@@ -462,9 +493,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         })}
                     </div>
                     {/* Right Fade Gradient Scroll Indicator */}
-                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none flex items-center justify-end pr-0.5 z-10">
-                        <span className="text-gray-400 font-bold text-[10px] animate-pulse">→</span>
-                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none z-10" />
                 </div>
             </div>
 
@@ -486,39 +515,39 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">
                 {/* HEADER TITLE, FULL-WIDTH TOGGLE SWITCH & SUBTITLE */}
-                <div className="pb-3 border-b border-dashed border-gray-200 mb-3 space-y-2">
-                    {/* FULL-WIDTH TOGGLE BUTTONS WITH ICONS & COUNTS */}
-                    <div className="flex w-full border border-black p-0.5 bg-white shadow-2xs">
+                <div className="pb-4 border-b border-gray-200 mb-4">
+                    {/* SEGMENTED TOGGLE WITH ICONS & COUNTS */}
+                    <div className="flex w-full border border-black rounded-xl p-1 bg-white gap-1">
                         <button
                             onClick={() => setActiveTab('pros')}
-                            className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            className={`flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 activeTab === 'pros'
                                     ? 'bg-black text-white'
-                                    : 'bg-white text-black hover:bg-gray-100'
+                                    : 'text-black hover:bg-gray-100'
                             }`}
                             title="Browse verified local professionals"
                         >
-                            <span>👤</span>
+                            <UserIcon className="h-3.5 w-3.5" />
                             <span>Pros</span>
-                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
-                                activeTab === 'pros' ? 'border-white/30 bg-white/20 text-white' : 'border-gray-200 bg-gray-50 text-black'
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                                activeTab === 'pros' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black'
                             }`}>
                                 {filteredAndSortedProviders.length}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('services')}
-                            className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            className={`flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 activeTab === 'services'
                                     ? 'bg-black text-white'
-                                    : 'bg-white text-black hover:bg-gray-100'
+                                    : 'text-black hover:bg-gray-100'
                             }`}
                             title="Browse fixed-price services & catalog items"
                         >
-                            <span>🛠️</span>
+                            <WrenchIcon className="h-3.5 w-3.5" />
                             <span>Services</span>
-                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 border ${
-                                activeTab === 'services' ? 'border-white/30 bg-white/20 text-white' : 'border-gray-200 bg-gray-50 text-black'
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                                activeTab === 'services' ? 'bg-white/20 text-white' : 'bg-gray-100 text-black'
                             }`}>
                                 {filteredAndSortedServices.length}
                             </span>
@@ -526,16 +555,11 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     </div>
 
                     {/* HELPER SUBTITLE */}
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-black uppercase tracking-wider text-black">
-                            {activeTab === 'pros' ? 'Nearby Professionals' : 'Service Listings'}
-                        </h2>
-                        <p className="text-[10px] text-gray-500 font-medium truncate">
-                            {activeTab === 'pros' 
-                                ? '👤 Profiles & skilled experts' 
-                                : '🛠️ Fixed-price packages'}
-                        </p>
-                    </div>
+                    <p className="text-[11px] text-gray-500 font-medium mt-2.5 px-0.5">
+                        {activeTab === 'pros'
+                            ? 'Verified profiles and skilled experts near you'
+                            : 'Fixed-price packages from local providers'}
+                    </p>
                 </div>
 
                 {/* TAB CONTENTS */}
@@ -635,8 +659,10 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                     className="bg-black hover:bg-gray-900 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-full shadow-2xl border border-gray-700 flex items-center gap-2 transition-all active:scale-95 cursor-pointer group"
                     title="List & Sell a Service on NikoSoko"
                 >
-                    <span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm leading-none group-hover:scale-110 transition-transform">+</span>
-                    <span>SELL A SERVICE</span>
+                    <span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <PlusIcon className="h-3 w-3" />
+                    </span>
+                    <span>Sell a Service</span>
                 </button>
             </div>
 
