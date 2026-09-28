@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { recalculateProvidersDistances } from './utils/geoLocations';
 import * as api from './services/api';
 import { 
@@ -260,7 +260,8 @@ function App() {
   });
   const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
   const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
-  const [ctaToast, setCtaToast] = useState<{ show: boolean; text: string; providerId?: string } | null>(null);
+  const [ctaToast, setCtaToast] = useState<{ id: number; show: boolean; text: string; providerId?: string } | null>(null);
+  const ctaToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dynamic Favicon, App Icon, and Document Title synchronization
   useEffect(() => {
@@ -332,9 +333,18 @@ function App() {
     return () => clearInterval(interval);
   }, [providers, ratedProviderIds, dismissedProviderIds]);
 
-  const showCtaToast = (text: string) => {
-    setCtaToast({ show: true, text });
-    setTimeout(() => setCtaToast(null), 4000);
+  // Single source of truth for the floating CTA toast. Cancels any pending
+  // hide-timer from a previous toast before starting this one, so a stale
+  // timeout can never prematurely hide a toast that replaced it.
+  const showCtaToast = (text: string, providerId?: string, durationMs: number = 4000) => {
+    if (ctaToastTimerRef.current) {
+      clearTimeout(ctaToastTimerRef.current);
+    }
+    const id = Date.now();
+    setCtaToast({ id, show: true, text, providerId });
+    ctaToastTimerRef.current = setTimeout(() => {
+      setCtaToast(prev => (prev && prev.id === id ? { ...prev, show: false } : prev));
+    }, durationMs);
   };
 
   const contactedProviderIds = contactHistory.map(c => c.providerId);
@@ -912,12 +922,11 @@ function App() {
       api.addInboxMessage(providerMsg);
 
       // Trigger floating CTA Toast Notification
-      setCtaToast({
-          show: true,
-          text: `🔔 Notification sent! Tapped '${actionType.toUpperCase()}'. Click to remind client or rate!`,
-          providerId: provider.id
-      });
-      setTimeout(() => setCtaToast(prev => prev ? { ...prev, show: false } : null), 5000);
+      showCtaToast(
+          `🔔 Notification sent! Tapped '${actionType.toUpperCase()}'. Click to remind client or rate!`,
+          provider.id,
+          5000
+      );
 
       if (actionCallback) actionCallback();
       return true;
@@ -1383,85 +1392,90 @@ function App() {
       brandingConfig={brandingConfig}
       onOpenLogin={handleOpenLogin}
     >
-      {/* Floating CTA Tap Notification Toast Banner */}
-      {ctaToast && ctaToast.show && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[120] w-full max-w-md px-3 animate-fade-in">
-          <div className="bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xl shrink-0">🔔</span>
-              <p className="text-slate-100 font-bold text-xs leading-tight truncate">
-                {ctaToast.text}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setCtaToast(null);
-                setCurrentPage('messages');
+      {/* Floating notification stack. Both banners live in one fixed-position
+          flex column so if they're ever both active at once they stack with
+          a gap instead of rendering on top of each other. */}
+      {(ctaToast || (active6HourProvider && active6HourItem)) && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[120] w-full max-w-lg px-3 flex flex-col items-stretch gap-2 pointer-events-none">
+          {/* Floating CTA Tap Notification Toast */}
+          {ctaToast && (
+            <div
+              className={`pointer-events-auto transition-all duration-300 ease-out ${
+                ctaToast.show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+              }`}
+              onTransitionEnd={() => {
+                if (!ctaToast.show) setCtaToast(null);
               }}
-              className="bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all uppercase text-[10px] tracking-wider shrink-0 cursor-pointer"
             >
-              Open Messages &rarr;
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 6-Hour Post-Service Notification Reminder Banner */}
-      {active6HourProvider && active6HourItem && (
-        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[110] w-full max-w-lg px-3 animate-fade-in">
-          <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 w-full sm:w-auto min-w-0">
-              <span className="text-xl shrink-0 p-1.5 bg-amber-400/20 rounded-xl">📱</span>
-              <div className="min-w-0 flex-1">
-                <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider flex items-center gap-1.5">
-                  <span>Post-Service Reminder</span>
-                  <span className="bg-amber-400/20 text-amber-300 text-[8px] px-1.5 py-0.5 rounded-md font-bold">Returns in 6h if unacted</span>
+              <div className="bg-slate-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-xl shrink-0">🔔</span>
+                  <p className="text-slate-100 font-bold text-xs leading-tight truncate">
+                    {ctaToast.text}
+                  </p>
                 </div>
-                <p className="text-gray-100 font-bold text-xs leading-tight truncate">
-                  Rate your service with <span className="text-amber-400 font-extrabold">{active6HourProvider.name}</span>?
-                </p>
+                <button
+                  onClick={() => {
+                    if (ctaToastTimerRef.current) clearTimeout(ctaToastTimerRef.current);
+                    setCtaToast(null);
+                    setCurrentPage('messages');
+                  }}
+                  className="bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all uppercase text-[10px] tracking-wider shrink-0 cursor-pointer"
+                >
+                  Open Messages &rarr;
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-2 sm:pt-0">
-              <button
-                onClick={() => {
-                  snoozeRatingPrompt(active6HourProvider.id, 6);
-                  setPendingReviews([active6HourProvider]);
-                  setReviewModalSubtitle(`Reminder to rate your service with ${active6HourProvider.name}`);
-                  setReviewPostponeCount(active6HourItem.postponeCount || 0);
-                  setIsForcedReview(false);
-                  setShowReviewModal(true);
-                }}
-                className="bg-amber-400 text-black font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all active:scale-95 uppercase text-[10px] tracking-wider cursor-pointer"
-              >
-                Rate
-              </button>
-              <button
-                onClick={() => handleNeverHappened(active6HourProvider.id)}
-                className="bg-white/10 text-gray-200 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
-                title="Service did not take place"
-              >
-                Never Happened
-              </button>
-              <button
-                onClick={() => handleSmsPostpone(active6HourProvider.id)}
-                className="bg-white/10 text-gray-300 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
-                title="Snooze prompt for 6 hours"
-              >
-                Later (6h)
-              </button>
-              <button
-                onClick={() => {
-                  setSimulated6HOverdueId(active6HourProvider.id);
-                  showCtaToast("⚡ Simulated 6h trigger active!");
-                }}
-                className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 font-black px-2 py-1.5 rounded-xl text-[9px] uppercase tracking-wide cursor-pointer"
-                title="Fast-forward test simulation"
-              >
-                ⚡ Test
-              </button>
+          )}
+
+          {/* 6-Hour Post-Service Notification Reminder */}
+          {active6HourProvider && active6HourItem && (
+            <div className="pointer-events-auto animate-fade-in">
+              <div className="bg-gray-900 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto min-w-0">
+                  <span className="text-xl shrink-0 p-1.5 bg-amber-400/20 rounded-xl">📱</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Post-Service Reminder</span>
+                      <span className="bg-amber-400/20 text-amber-300 text-[8px] px-1.5 py-0.5 rounded-md font-bold">Returns in 6h if unacted</span>
+                    </div>
+                    <p className="text-gray-100 font-bold text-xs leading-tight truncate">
+                      Rate your service with <span className="text-amber-400 font-extrabold">{active6HourProvider.name}</span>?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-2 sm:pt-0">
+                  <button
+                    onClick={() => {
+                      snoozeRatingPrompt(active6HourProvider.id, 6);
+                      setPendingReviews([active6HourProvider]);
+                      setReviewModalSubtitle(`Reminder to rate your service with ${active6HourProvider.name}`);
+                      setReviewPostponeCount(active6HourItem.postponeCount || 0);
+                      setIsForcedReview(false);
+                      setShowReviewModal(true);
+                    }}
+                    className="bg-amber-400 text-black font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all active:scale-95 uppercase text-[10px] tracking-wider cursor-pointer"
+                  >
+                    Rate
+                  </button>
+                  <button
+                    onClick={() => handleNeverHappened(active6HourProvider.id)}
+                    className="bg-white/10 text-gray-200 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
+                    title="Service did not take place"
+                  >
+                    Never Happened
+                  </button>
+                  <button
+                    onClick={() => handleSmsPostpone(active6HourProvider.id)}
+                    className="bg-white/10 text-gray-300 hover:text-white font-bold px-2.5 py-1.5 rounded-xl hover:bg-white/20 text-[10px] uppercase tracking-wide cursor-pointer"
+                    title="Snooze prompt for 6 hours"
+                  >
+                    Later (6h)
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
