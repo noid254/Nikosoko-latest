@@ -1386,12 +1386,18 @@ function App() {
   const active6HourProvider = active6HourItem ? providers.find(p => p.id === active6HourItem.providerId) : null;
 
   return (
-    <DesktopBannerLayout
-      currentUser={currentUser}
-      onOpenSignUp={handleOpenCompleteSignUp}
-      brandingConfig={brandingConfig}
-      onOpenLogin={handleOpenLogin}
-    >
+    <>
+      {/* SEOHead and AuthModal render outside DesktopBannerLayout, not as its
+          children: on desktop that component shows a landing page instead of
+          the app and skips its children entirely, but Sign Up/Sign In must
+          still work there, and the page's meta tags should always be set. */}
+      <SEOHead provider={viewingProvider || currentUser} />
+      <DesktopBannerLayout
+        currentUser={currentUser}
+        onOpenSignUp={handleOpenCompleteSignUp}
+        brandingConfig={brandingConfig}
+        onOpenLogin={handleOpenLogin}
+      >
       {/* Floating notification stack. Both banners live in one fixed-position
           flex column so if they're ever both active at once they stack with
           a gap instead of rendering on top of each other. */}
@@ -1479,9 +1485,8 @@ function App() {
         </div>
       )}
 
-      <SEOHead provider={viewingProvider || currentUser} />
-      <SideMenu 
-        isOpen={isSideMenuOpen} 
+      <SideMenu
+        isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)} 
         onNavigate={(p) => { setIsSideMenuOpen(false); handleNavigate(p as CurrentPage); }} 
         currentUser={currentUser} 
@@ -1500,13 +1505,6 @@ function App() {
         onClose={() => setIsSEOMapOpen(false)} 
         onNavigate={(page) => handleNavigate(page)} 
       />
-      {isAuthModalOpen && (
-        <AuthModal 
-          onClose={() => setIsAuthModalOpen(false)} 
-          onLogin={handleLogin} 
-          initialMode={authModalMode}
-        />
-      )}
       {showReviewModal && (
         <ReviewModal 
           pendingProviders={pendingReviews} 
@@ -1539,7 +1537,15 @@ function App() {
         saccoOrg={saccoModalProvider ? providers.find(p => p.id === saccoModalProvider.saccoMember?.saccoId || p.name === saccoModalProvider.saccoMember?.saccoName) || null : null} 
       />
       {renderContent()}
-    </DesktopBannerLayout>
+      </DesktopBannerLayout>
+      {isAuthModalOpen && (
+        <AuthModal
+          onClose={() => setIsAuthModalOpen(false)}
+          onLogin={handleLogin}
+          initialMode={authModalMode}
+        />
+      )}
+    </>
   );
 }
 
