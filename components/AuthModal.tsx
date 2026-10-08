@@ -8,6 +8,7 @@ interface AuthModalProps {
   onClose: () => void;
   onLogin: (data: api.VerifyOtpResponse, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => void;
   initialMode?: 'nickname' | 'complete_signup';
+  initialAccountType?: 'individual' | 'organization';
 }
 
 const CTA_OPTIONS: { id: 'call' | 'whatsapp' | 'book' | 'catalogue' | 'menu' | 'save' | 'chat'; label: string; icon: string }[] = [
@@ -26,7 +27,7 @@ const RATE_TYPE_OPTIONS = [
   { value: 'per piece work', label: 'Piece Work' },
 ];
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialMode = 'nickname' }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialMode = 'nickname', initialAccountType = 'individual' }) => {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [nickname, setNickname] = useState('');
@@ -84,7 +85,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   const [phoneNum, setPhoneNum] = useState('');
   const [serviceTitle, setServiceTitle] = useState('');
   const [category, setCategory] = useState('PERSONAL');
-  const [accountType, setAccountType] = useState<'individual' | 'organization'>('individual');
+  const [accountType, setAccountType] = useState<'individual' | 'organization'>(initialAccountType);
   const [saccoRegNo, setSaccoRegNo] = useState('');
   const [location, setLocation] = useState('Nairobi, Kenya');
   const [about, setAbout] = useState('');

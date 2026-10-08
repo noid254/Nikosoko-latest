@@ -67,6 +67,7 @@ function App() {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'nickname' | 'complete_signup'>('nickname');
+  const [authAccountType, setAuthAccountType] = useState<'individual' | 'organization'>('individual');
   const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
@@ -350,6 +351,13 @@ function App() {
   const contactedProviderIds = contactHistory.map(c => c.providerId);
 
   const handleOpenCompleteSignUp = () => {
+    setAuthAccountType('individual');
+    setAuthModalMode('complete_signup');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleOpenOrgSignUp = () => {
+    setAuthAccountType('organization');
     setAuthModalMode('complete_signup');
     setIsAuthModalOpen(true);
   };
@@ -1395,6 +1403,7 @@ function App() {
       <DesktopBannerLayout
         currentUser={currentUser}
         onOpenSignUp={handleOpenCompleteSignUp}
+        onOpenOrgSignUp={handleOpenOrgSignUp}
         brandingConfig={brandingConfig}
         onOpenLogin={handleOpenLogin}
       >
@@ -1543,6 +1552,7 @@ function App() {
           onClose={() => setIsAuthModalOpen(false)}
           onLogin={handleLogin}
           initialMode={authModalMode}
+          initialAccountType={authAccountType}
         />
       )}
     </>
