@@ -10,7 +10,8 @@ interface DesktopBannerLayoutProps {
 }
 
 const DESKTOP_BREAKPOINT = '(min-width: 1024px)';
-const LOGO_URL = 'https://i.imgur.com/xHseJe9.jpeg';
+const LOGO_DARK = 'https://i.imgur.com/xHseJe9.jpeg'; // white wordmark on black - use on dark backgrounds
+const LOGO_LIGHT = 'https://i.imgur.com/XLZLQYS.jpeg'; // black wordmark on white - use on light backgrounds
 
 /** True once mounted and above the desktop breakpoint. Starts false so
  * server/first-paint output matches the mobile app (no flash of the
@@ -29,26 +30,47 @@ function useIsDesktop(): boolean {
   return isDesktop;
 }
 
+// Stock photography below is pulled from the same Unsplash photo IDs already
+// live elsewhere in this app (verified working, category-matched via
+// Tukosoko.tsx's CATEGORY_PHOTO_PRESETS) so nothing here depends on an
+// unverified image URL. All of it is placeholder stock and swappable later.
 const AUDIENCES = [
   {
-    icon: '🧰',
-    title: 'For Job Seekers & Professionals',
-    desc: 'Create a free profile and list what you do — plumbing, electrical, braiding, boda, cleaning, solar and more. Get discovered and booked by clients near you, anywhere in Kenya.',
+    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600',
+    title: 'Individuals & Professionals',
+    desc: 'Create a free profile, list what you do, and get discovered by clients near you — anywhere in Kenya.',
     cta: 'Create Free Account',
   },
   {
-    icon: '🎓',
-    title: 'For Schools & Training Institutions',
-    desc: 'TVET colleges and trade schools can partner with NikoSoko to verify their trainees directly on the platform. Verified graduates rank higher and get hired faster.',
+    photo: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=600',
+    title: 'Small Businesses',
+    desc: 'Run a plumbing crew, salon, or repair shop? List your team and let NikoSoko bring you nearby jobs.',
+    cta: 'List Your Business',
+  },
+  {
+    photo: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=600',
+    title: 'Schools & Institutions',
+    desc: 'TVET colleges and trade schools can verify their trainees directly on the platform — verified graduates get hired faster.',
     cta: 'Partner Your School',
   },
   {
-    icon: '🏢',
-    title: 'For Companies & Brands',
-    desc: 'Partner with NikoSoko as a recruitment and quality platform. A paint company can train and certify NikoSoko painters as official installers — growing brand reach while ensuring every job is done right.',
+    photo: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=600',
+    title: 'Big Companies & Brands',
+    desc: 'Partner with NikoSoko as a recruitment and quality platform. A paint brand, for example, can certify NikoSoko painters as official installers — growing reach while every job is done right.',
     cta: 'Become a Brand Partner',
   },
 ];
+
+const SERVICE_CATEGORIES = [
+  { photo: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=500', label: 'Electrical' },
+  { photo: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=500', label: 'Plumbing' },
+  { photo: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?q=80&w=500', label: 'Braiding & Beauty' },
+  { photo: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4e?q=80&w=500', label: 'Water Delivery' },
+  { photo: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=500', label: 'Gas Refill' },
+  { photo: 'https://images.unsplash.com/photo-1593784991095-a205069470b6?q=80&w=500', label: 'TV Mounting' },
+];
+
+const PARTNER_PLACEHOLDERS = ['Paint Brand', 'Solar Co.', 'TVET College', 'Building Materials', 'Insurance Partner', 'Logistics Co.'];
 
 const VALUE_PROPS = [
   { icon: '🛠️', title: 'Monetize Any Skill', desc: 'TV mounting, gas delivery, plumbing, electrical, braiding & more.' },
@@ -81,7 +103,7 @@ const PhoneMockup: React.FC = () => (
           <div className="w-2.5 h-2.5 rounded-full border border-white/50" />
         </div>
         <div className="bg-black pt-2 pb-5 flex items-center justify-center">
-          <img src={LOGO_URL} alt="" className="h-4 object-contain opacity-95" />
+          <img src={LOGO_DARK} alt="" className="h-4 object-contain opacity-95" />
         </div>
         <div className="-mt-3 px-3 relative z-10">
           <div className="bg-white border border-gray-200 rounded-lg h-5 shadow-sm" />
@@ -117,149 +139,200 @@ const DesktopLandingPage: React.FC<{
   onOpenLogin: () => void;
 }> = ({ currentUser, onOpenSignUp, onOpenLogin }) => {
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
-      {/* Glow accent - the one soft spot of color on the page */}
-      <div className="fixed top-0 left-1/3 w-[32rem] h-[32rem] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen bg-black text-white font-sans">
       {/* NAV */}
-      <header className="relative z-10 flex items-center justify-between px-8 xl:px-16 py-6 border-b border-slate-800/80">
+      <header className="relative z-20 flex items-center justify-between px-8 xl:px-16 py-6 border-b border-white/10">
         <div className="w-28 aspect-[5/2] overflow-hidden">
-          <img src={LOGO_URL} alt="NikoSoko" className="w-full h-full object-cover object-center select-none" />
+          <img src={LOGO_DARK} alt="NikoSoko" className="w-full h-full object-cover object-center select-none" />
         </div>
         <div className="flex items-center gap-3">
           {!currentUser && (
-            <button onClick={onOpenLogin} className="text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer px-3 py-2">
+            <button onClick={onOpenLogin} className="text-sm font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer px-3 py-2">
               Sign In
             </button>
           )}
           <button
             onClick={currentUser ? onOpenLogin : onOpenSignUp}
-            className="bg-white hover:bg-slate-200 text-slate-950 font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+            className="bg-white hover:bg-zinc-200 text-black font-black text-sm px-5 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
           >
             {currentUser ? 'My Account' : 'Sign Up Free'}
           </button>
         </div>
       </header>
 
-      {/* HERO - text + phone mockup */}
-      <main className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 pt-16 pb-20">
-        <div className="flex flex-col lg:flex-row items-center gap-12">
-          <div className="flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Kenya's Hyperlocal Service &amp; Skill Marketplace
-            </div>
+      {/* HERO - photographic backdrop, dark overlay, phone mockup floating on top */}
+      <section className="relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=1600')" }}
+        />
+        <div className="absolute inset-0 bg-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
 
-            <h1 className="mt-6 text-4xl xl:text-5xl font-black tracking-tight leading-tight">
-              Find Skilled Help Nearby,<br />
-              or <span className="text-emerald-400">Get Hired</span> For What You Do Best.
-            </h1>
+        <div className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 pt-16 pb-20">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex-1 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Kenya's Hyperlocal Service &amp; Skill Marketplace
+              </div>
 
-            <p className="mt-5 text-slate-300 text-base leading-relaxed font-medium max-w-xl mx-auto lg:mx-0">
-              NikoSoko connects Kenyan households and businesses with verified local artisans, technicians,
-              and service providers — plumbers, electricians, painters, boda riders, braiders and more.
-              Sign up free and start getting hired today.
-            </p>
+              <h1 className="mt-6 text-4xl xl:text-5xl font-black tracking-tight leading-tight">
+                Find Skilled Help Nearby,<br />
+                or <span className="text-emerald-400">Get Hired</span> For What You Do Best.
+              </h1>
 
-            <div className="mt-8 flex items-center justify-center lg:justify-start gap-3">
-              <button
-                onClick={currentUser ? onOpenLogin : onOpenSignUp}
-                className="bg-white hover:bg-slate-200 text-slate-950 font-black py-3.5 px-7 rounded-xl text-sm uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-              >
-                {currentUser ? 'Manage My Account' : 'Create Free Account'}
-              </button>
-              {!currentUser && (
+              <p className="mt-5 text-zinc-300 text-base leading-relaxed font-medium max-w-xl mx-auto lg:mx-0">
+                NikoSoko connects Kenyan households, small businesses, schools and enterprise brands with
+                verified local artisans, technicians, and service providers. Sign up free — everyone is
+                welcome, from individuals to institutions.
+              </p>
+
+              <div className="mt-8 flex items-center justify-center lg:justify-start gap-3">
                 <button
-                  onClick={onOpenLogin}
-                  className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3.5 px-6 rounded-xl text-sm transition-all cursor-pointer"
+                  onClick={currentUser ? onOpenLogin : onOpenSignUp}
+                  className="bg-white hover:bg-zinc-200 text-black font-black py-3.5 px-7 rounded-xl text-sm uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                 >
-                  Sign In
+                  {currentUser ? 'Manage My Account' : 'Create Free Account'}
                 </button>
-              )}
+                {!currentUser && (
+                  <button
+                    onClick={onOpenLogin}
+                    className="bg-white/5 hover:bg-white/10 border border-white/20 text-white font-bold py-3.5 px-6 rounded-xl text-sm transition-all cursor-pointer"
+                  >
+                    Sign In
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-center lg:justify-start gap-4 text-[11px] text-zinc-400 font-semibold">
+                <span>🇰🇪 Built for Kenya</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span>Paid via M-Pesa</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                <span>0% Commission</span>
+              </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-center lg:justify-start gap-4 text-[11px] text-slate-500 font-semibold">
-              <span>🇰🇪 Built for Kenya</span>
-              <span className="w-1 h-1 rounded-full bg-slate-700" />
-              <span>Paid via M-Pesa</span>
-              <span className="w-1 h-1 rounded-full bg-slate-700" />
-              <span>0% Commission</span>
-            </div>
-          </div>
-
-          <PhoneMockup />
-        </div>
-
-        {/* Desktop <-> phone hand-off explainer */}
-        <div className="mt-14 max-w-2xl mx-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-left flex items-start gap-4">
-          <span className="text-3xl shrink-0">📱</span>
-          <div>
-            <h3 className="text-sm font-black text-white uppercase tracking-wide">Built for your phone</h3>
-            <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
-              Searching for professionals, browsing services, and booking all happen in the NikoSoko mobile
-              app — that part isn't available here on desktop. Create your account on this page, then open{' '}
-              <span className="text-emerald-400 font-bold">nikosoko.com</span> on your phone and log in with
-              the same details to get started.
-            </p>
+            <PhoneMockup />
           </div>
         </div>
-      </main>
+      </section>
 
-      {/* WHO IS NIKOSOKO FOR */}
-      <section className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 pb-20">
-        <h2 className="text-center text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Who NikoSoko Is For</h2>
-        <p className="text-center text-slate-400 text-sm max-w-xl mx-auto mb-8">
-          A hyperlocal marketplace built to connect three groups across the Kenyan market.
+      {/* BUILT FOR EVERYONE */}
+      <section className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 py-20">
+        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-2">Built For Everyone</h2>
+        <p className="text-center text-zinc-400 text-sm max-w-xl mx-auto mb-10">
+          Whether you're one person with a toolkit or an enterprise brand — there's a place for you on NikoSoko.
         </p>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {AUDIENCES.map(a => (
-            <div key={a.title} className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col">
-              <span className="text-2xl">{a.icon}</span>
-              <h3 className="text-sm font-black text-white mt-3">{a.title}</h3>
-              <p className="text-[13px] text-slate-400 mt-2 leading-relaxed flex-1">{a.desc}</p>
-              <button
-                onClick={currentUser ? onOpenLogin : onOpenSignUp}
-                className="mt-4 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer text-left flex items-center gap-1"
-              >
-                {a.cta} <span>&rarr;</span>
-              </button>
+            <div key={a.title} className="rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex flex-col">
+              <div className="h-28 overflow-hidden">
+                <img src={a.photo} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="text-sm font-black text-white">{a.title}</h3>
+                <p className="text-[12.5px] text-zinc-400 mt-2 leading-relaxed flex-1">{a.desc}</p>
+                <button
+                  onClick={currentUser ? onOpenLogin : onOpenSignUp}
+                  className="mt-4 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer text-left flex items-center gap-1"
+                >
+                  {a.cta} <span>&rarr;</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
+      {/* SERVICES TRADED ON THE PLATFORM */}
+      <section className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 pb-20">
+        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-10">Services Traded On NikoSoko</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {SERVICE_CATEGORIES.map(s => (
+            <div key={s.label} className="relative rounded-xl overflow-hidden aspect-square group">
+              <img src={s.photo} alt={s.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+              <span className="absolute bottom-2 left-2 right-2 text-[11px] font-bold text-white leading-tight">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PARTNERS */}
+      <section className="relative z-10 bg-zinc-950 border-y border-white/10 py-16">
+        <div className="max-w-6xl mx-auto px-8 xl:px-16">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-2">Brand &amp; Institution Partners</h2>
+            <p className="text-zinc-400 text-sm leading-relaxed">
+              Companies and institutions partner with NikoSoko to train, certify, and recruit skilled
+              professionals — ensuring products are installed and maintained correctly while growing reach
+              across Kenya.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {PARTNER_PLACEHOLDERS.map(p => (
+              <div key={p} className="aspect-[3/2] rounded-xl border border-dashed border-white/15 bg-white/5 flex items-center justify-center text-center px-2">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">{p}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-zinc-600 mt-4">Placeholder partner slots — replace with real logos as partnerships are confirmed.</p>
+        </div>
+      </section>
+
       {/* VALUE PROPS */}
-      <section className="relative z-10 max-w-5xl mx-auto px-8 xl:px-16 pb-20">
-        <h2 className="text-center text-xs font-black uppercase tracking-widest text-slate-500 mb-6">Why NikoSoko</h2>
+      <section className="relative z-10 max-w-5xl mx-auto px-8 xl:px-16 py-20">
+        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-6">Why NikoSoko</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {VALUE_PROPS.map(v => (
-            <div key={v.title} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
+            <div key={v.title} className="p-5 rounded-2xl bg-zinc-900 border border-white/10">
               <span className="inline-flex text-xl p-2 rounded-xl bg-white/5">{v.icon}</span>
               <h4 className="text-sm font-bold text-white mt-3">{v.title}</h4>
-              <p className="text-[13px] text-slate-400 mt-1 leading-relaxed">{v.desc}</p>
+              <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{v.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="relative z-10 max-w-3xl mx-auto px-8 xl:px-16 pb-24">
-        <h2 className="text-center text-xs font-black uppercase tracking-widest text-slate-500 mb-8">Getting Started</h2>
+      <section className="relative z-10 max-w-3xl mx-auto px-8 xl:px-16 pb-20">
+        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-8">Getting Started</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {HOW_IT_WORKS.map(s => (
             <div key={s.step} className="text-center">
-              <div className="w-9 h-9 mx-auto rounded-full bg-emerald-500 text-slate-950 font-black flex items-center justify-center text-sm">
+              <div className="w-9 h-9 mx-auto rounded-full bg-emerald-500 text-black font-black flex items-center justify-center text-sm">
                 {s.step}
               </div>
               <h4 className="text-sm font-bold text-white mt-3">{s.title}</h4>
-              <p className="text-[13px] text-slate-400 mt-1 leading-relaxed">{s.desc}</p>
+              <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{s.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
+      {/* LIGHT CTA BAND - inverse (dark-on-white) logo lives here */}
+      <section className="relative z-10 bg-white text-black py-16">
+        <div className="max-w-3xl mx-auto px-8 text-center">
+          <div className="w-32 aspect-[6/1] overflow-hidden mx-auto mb-6">
+            <img src={LOGO_LIGHT} alt="NikoSoko" className="w-full h-full object-cover object-center select-none" />
+          </div>
+          <h2 className="text-2xl xl:text-3xl font-black tracking-tight">Ready to join Kenya's hyperlocal marketplace?</h2>
+          <p className="mt-3 text-gray-600 text-sm max-w-lg mx-auto">
+            Individuals, small businesses, schools, and big brands all start the same way — one free account.
+          </p>
+          <button
+            onClick={currentUser ? onOpenLogin : onOpenSignUp}
+            className="mt-6 bg-black hover:bg-zinc-800 text-white font-black py-3.5 px-8 rounded-xl text-sm uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+          >
+            {currentUser ? 'Manage My Account' : 'Create Free Account'}
+          </button>
+        </div>
+      </section>
+
       {/* FOOTER */}
-      <footer className="relative z-10 border-t border-slate-800/80 px-8 xl:px-16 py-6 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+      <footer className="relative z-10 border-t border-white/10 px-8 xl:px-16 py-6 flex items-center justify-between text-[11px] text-zinc-500 font-semibold">
         <span>© NikoSoko Marketplace Platform</span>
         <span>Hyperlocal Service &amp; Skill Network — Kenya</span>
       </footer>
