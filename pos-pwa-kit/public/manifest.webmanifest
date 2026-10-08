@@ -1,0 +1,22 @@
+{
+  "name": "Tukosoko POS",
+  "short_name": "Tukosoko POS",
+  "description": "Tukosoko point of sale — sell, track stock and print receipts over Bluetooth.",
+  "start_url": "/home?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbf6e8",
+  "theme_color": "#C9A227",
+  "lang": "en-KE",
+  "icons": [
+    { "src": "/pwa/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New sale", "url": "/pos/create", "icons": [{ "src": "/pwa/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Sales", "url": "/sells" },
+    { "name": "Products", "url": "/products" }
+  ]
+}
