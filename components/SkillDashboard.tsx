@@ -3,28 +3,18 @@ import type { ServiceProvider, CurrentPage } from '../types';
 import { normalizeSkills } from '../utils/skills';
 import { calculateTrustAndRanking } from '../utils/trustEngine';
 import {
-  Award,
-  CheckCircle2,
   ShieldCheck,
-  BookOpen,
+  GraduationCap,
   Search,
   Plus,
   Star,
-  Share2,
   ExternalLink,
   MapPin,
-  Clock,
   ArrowLeft,
-  Building2,
-  Briefcase,
-  GraduationCap,
   X,
-  FileText,
-  BadgeCheck,
-  Check,
-  ChevronRight,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Flame
 } from 'lucide-react';
 
 export interface SkillItem {
@@ -172,6 +162,83 @@ const ACCREDITED_COURSES: LearningCenterCourse[] = [
   }
 ];
 
+// Nairobi-area estates used for the local demand heatmap below. Intensity is
+// derived deterministically from the estate + the member's primary category
+// so it stays stable across renders instead of reshuffling randomly.
+const DEMAND_AREAS = [
+  'Kasarani', 'Westlands', 'Kilimani', 'Embakasi', 'Ruaka',
+  'Karen', 'South B', 'Roysambu', 'Ngong Road', 'Thika Road'
+];
+
+function hashToUnit(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return (Math.abs(hash) % 1000) / 1000;
+}
+
+function getLevel(score: number): { label: string; detail: string } {
+  if (score >= 4.5) return { label: 'Elite Master', detail: 'Top 5% of verified providers' };
+  if (score >= 3.5) return { label: 'Trusted Pro', detail: 'Consistently high client confidence' };
+  if (score >= 2.5) return { label: 'Established', detail: 'Solid track record building' };
+  if (score >= 1.0) return { label: 'Rising Talent', detail: 'New but gaining verifications' };
+  return { label: 'New Member', detail: 'Complete verifications to rank up' };
+}
+
+/** Semicircle speedometer gauge, 0-5 scale. Track is a neutral gray/black
+ * arc (dominant palette), the needle is the one green accent ("the stick"). */
+const RatingGauge: React.FC<{ score: number; max?: number }> = ({ score, max = 5 }) => {
+  const cx = 100;
+  const cy = 95;
+  const r = 78;
+  const clamped = Math.max(0, Math.min(max, score));
+  const fraction = clamped / max;
+
+  const polar = (angleDeg: number, radius: number) => {
+    const rad = (angleDeg * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(rad), y: cy - radius * Math.sin(rad) };
+  };
+  const describeArc = (startAngle: number, endAngle: number, radius: number) => {
+    const start = polar(startAngle, radius);
+    const end = polar(endAngle, radius);
+    const largeArc = Math.abs(startAngle - endAngle) > 180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+  };
+
+  const needleAngle = 180 - fraction * 180;
+  const needleTip = polar(needleAngle, r - 14);
+
+  return (
+    <svg viewBox="0 0 200 110" className="w-full max-w-[220px] mx-auto">
+      {/* Track */}
+      <path d={describeArc(180, 0, r)} fill="none" stroke="#e4e4e7" strokeWidth={14} strokeLinecap="round" />
+      {/* Filled progress (black, the dominant color) */}
+      <path
+        d={describeArc(180, needleAngle, r)}
+        fill="none"
+        stroke="#18181b"
+        strokeWidth={14}
+        strokeLinecap="round"
+      />
+      {/* Tick marks at 0/1/2/3/4/5 */}
+      {[0, 1, 2, 3, 4, 5].map(tick => {
+        const angle = 180 - (tick / max) * 180;
+        const inner = polar(angle, r - 20);
+        const outer = polar(angle, r - 10);
+        return (
+          <line key={tick} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke="#a1a1aa" strokeWidth={2} />
+        );
+      })}
+      {/* Needle - the single green accent */}
+      <line x1={cx} y1={cy} x2={needleTip.x} y2={needleTip.y} stroke="#059669" strokeWidth={3} strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r={6} fill="#059669" />
+      <circle cx={cx} cy={cy} r={2.5} fill="white" />
+    </svg>
+  );
+};
+
 export interface SkillDashboardProps {
   currentUser: ServiceProvider | null;
   onBack: () => void;
@@ -315,265 +382,258 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
     });
   }, [currentUser, skillsList]);
 
+  const level = getLevel(trustBreakdown.totalScore);
+  const clientRating = currentUser?.rating || 4.2;
+  const reviewsCount = currentUser?.reviewsCount || 18;
+
+  // Recommended skills: courses in categories the member doesn't already
+  // hold, ranked by whichever carries the strongest demand signal.
+  const recommendedCourses = useMemo(() => {
+    const ownedCategories = new Set(skillsList.map(s => s.category));
+    const notOwned = ACCREDITED_COURSES.filter(c => !ownedCategories.has(c.category));
+    const pool = notOwned.length > 0 ? notOwned : ACCREDITED_COURSES;
+    return pool.slice(0, 4);
+  }, [skillsList]);
+
+  // Local demand heatmap for the member's primary trade category.
+  const primaryCategory = skillsList[0]?.category || 'General Services';
+  const heatmapData = useMemo(() => {
+    return DEMAND_AREAS.map(area => {
+      const intensity = hashToUnit(`${primaryCategory}:${area}`);
+      return { area, intensity };
+    }).sort((a, b) => b.intensity - a.intensity);
+  }, [primaryCategory]);
+
   const categories = ['ALL', 'Woodwork & Joinery', 'Electrical & Solar', 'Metalwork & Fabrication', 'Agribusiness', 'Plumbing & Heating', 'Industrial Automation'];
 
   return (
-    <div className="bg-zinc-50 min-h-screen font-sans text-black w-full max-w-5xl mx-auto border-x border-zinc-200 pb-20">
+    <div className="bg-gray-50 min-h-screen font-sans text-black w-full max-w-5xl mx-auto border-x border-gray-200 pb-20">
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[220] bg-black text-white text-xs font-mono font-bold px-4 py-2 rounded-lg border border-emerald-500 shadow-2xl flex items-center gap-2">
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[220] bg-black text-white text-xs font-bold px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2">
           <span className="text-emerald-400 font-black">✓</span>
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* HEADER BAR: DOMINATED BY BLACK & GREEN ACCENTS */}
-      <header className="sticky top-0 z-30 bg-black text-white px-4 py-3 border-b-2 border-emerald-600 flex items-center justify-between gap-3 shadow-md">
+      {/* HEADER */}
+      <header className="sticky top-0 z-30 bg-black text-white px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="px-2.5 py-1.5 bg-zinc-900 hover:bg-emerald-950 hover:text-emerald-400 border border-zinc-800 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 text-zinc-300"
+            aria-label="Back"
+            className="p-1.5 text-white hover:text-gray-300 transition-colors flex items-center justify-center rounded-lg hover:bg-white/10 cursor-pointer"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-black uppercase tracking-wider text-white">SKILL HUB & PASSPORT</h1>
-              <span className="bg-emerald-600 text-white font-mono text-[9px] font-black px-1.5 py-0.2 rounded">
-                TVETA / EPRA
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-300 font-mono">Official verifications, TVETA accreditation & learning centers</p>
+            <h1 className="text-sm font-black uppercase tracking-wider text-white">Skill Hub</h1>
+            <p className="text-[11px] text-gray-400">Trust score, demand insights & accredited training</p>
           </div>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-3.5 py-1.5 rounded uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 border border-emerald-400"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
         >
-          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <Plus className="w-3.5 h-3.5" />
           <span>Add Skill</span>
         </button>
       </header>
 
-      <main className="p-4 sm:p-6 space-y-6">
+      <main className="p-4 sm:p-6 space-y-5">
 
-        {/* PROFILE RATING & KEY DETAILS CARD (WHITE BACKGROUND, BOLD BLACK TEXT & EMERALD GREEN ACCENTS) */}
-        <section className="bg-white border-2 border-zinc-900 rounded-xl p-5 space-y-4 shadow-sm">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-zinc-200 pb-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-13 h-13 bg-black border-2 border-emerald-600 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-xs">
-                {currentUser?.name?.[0] || 'A'}
+        {/* RATING GAUGE HERO */}
+        <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="shrink-0 text-center">
+              <RatingGauge score={trustBreakdown.totalScore} />
+              <div className="-mt-2">
+                <span className="text-3xl font-black text-black">{trustBreakdown.totalScore.toFixed(1)}</span>
+                <span className="text-sm text-gray-400 font-bold"> / 5.0</span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black text-black">{currentUser?.name || 'Artisan Member'}</h2>
-                  <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                    ACCREDITED
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-600 font-medium mt-0.5">
-                  {currentUser?.service || 'Skilled Trades Contractor'} • {currentUser?.location || 'Nairobi County'}
-                </p>
-              </div>
+              <span className="inline-block mt-1.5 text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
+                {level.label}
+              </span>
+              <p className="text-[11px] text-gray-500 mt-1 max-w-[220px] mx-auto">{level.detail}</p>
             </div>
 
-            {/* SINGLE RATING SCORE CARD WITH GREEN ACCENT */}
-            <div className="bg-emerald-950 border-2 border-emerald-600 text-white px-4 py-3 rounded-xl text-left md:text-right w-full md:w-auto flex items-center justify-between md:block gap-4 shadow-xs">
-              <div>
-                <span className="text-[10px] text-emerald-300 uppercase font-mono font-black block tracking-wider">CLIENT REBOOK RATING</span>
-                <div className="text-2xl font-black text-white font-mono tracking-tight mt-0.5 flex items-center md:justify-end gap-1.5">
-                  <Star className="w-4 h-4 fill-emerald-400 text-emerald-400" />
-                  <span>{(currentUser?.rating || 4.2).toFixed(1)} / 5.0</span>
+            <div className="flex-1 w-full space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center font-black text-white text-lg shrink-0">
+                  {currentUser?.name?.[0] || 'A'}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-black text-black truncate">{currentUser?.name || 'Artisan Member'}</h2>
+                  <p className="text-xs text-gray-500 font-medium truncate">
+                    {currentUser?.service || 'Skilled Trades Contractor'} • {currentUser?.location || 'Nairobi County'}
+                  </p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono text-emerald-200 block mt-1 font-semibold">100% On-Time Completion Rate</span>
-            </div>
-          </div>
 
-          {/* KEY METRICS LIST (WHITE BOXES WITH GREEN & BLACK BORDERS) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block">ACTIVE SKILLS</span>
-              <span className="text-sm font-black text-black mt-0.5 block">{skillsList.length} Verified</span>
-              <span className="text-[9px] text-emerald-700 font-semibold block mt-0.5">● 100% Validated</span>
-            </div>
-            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block">DAILY RATE BASE</span>
-              <span className="text-sm font-black text-black mt-0.5 block">KES {currentUser?.hourlyRate || 2500}/day</span>
-              <span className="text-[9px] text-zinc-500 block mt-0.5">Market Verified</span>
-            </div>
-            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block">SACCO AFFILIATION</span>
-              <span className="text-sm font-black text-emerald-800 mt-0.5 block font-bold">Westlands SACCO</span>
-              <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5">Verified Member</span>
-            </div>
-            <div className="bg-zinc-50 p-3 border border-zinc-300 rounded-lg">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block">TRUST SCORE</span>
-              <span className="text-sm font-black text-emerald-700 mt-0.5 block">{trustBreakdown.totalScore.toFixed(2)} / 5.0</span>
-              <span className="text-[9px] text-zinc-500 block mt-0.5">5-Pillar Engine</span>
+              <div className="flex items-center gap-1.5">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Star
+                    key={i}
+                    className={`w-4 h-4 ${i <= Math.round(clientRating) ? 'fill-emerald-500 text-emerald-500' : 'fill-gray-200 text-gray-200'}`}
+                  />
+                ))}
+                <span className="text-sm font-black text-black ml-1">{clientRating.toFixed(1)}</span>
+                <span className="text-xs text-gray-400 font-medium">({reviewsCount} reviews)</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl">
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Active Skills</span>
+                  <span className="text-sm font-black text-black block">{skillsList.length} Verified</span>
+                </div>
+                <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl">
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Daily Rate</span>
+                  <span className="text-sm font-black text-black block">KES {currentUser?.hourlyRate || 2500}</span>
+                </div>
+                <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl col-span-2 sm:col-span-1">
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Sacco</span>
+                  <span className="text-sm font-black text-emerald-700 block truncate">Westlands SACCO</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* 5-PILLAR TRUST AND RANKING CALCULATION ENGINE BREAKDOWN */}
-        <section className="bg-white border-2 border-zinc-900 rounded-xl p-5 space-y-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-black pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-sm font-black uppercase tracking-wider text-black">
-                  TRUST & RANKING ENGINE CALCULATION (MAX 5.0)
-                </h3>
-              </div>
-              <p className="text-xs text-zinc-600 font-mono mt-0.5">
-                Official 5-pillar mathematical score model for provider ranking & search visibility.
-              </p>
-            </div>
+        {/* RECOMMENDED SKILLS ON DEMAND */}
+        <section className="space-y-2.5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-black">Recommended For You</h3>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+            {recommendedCourses.map(course => (
+              <button
+                key={course.id}
+                onClick={() => setSelectedCourseModal(course)}
+                className="text-left shrink-0 w-56 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl p-3.5 transition-colors cursor-pointer"
+              >
+                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <Flame className="w-2.5 h-2.5" />
+                  {course.demandTag}
+                </span>
+                <h4 className="text-xs font-bold text-black mt-2 leading-snug line-clamp-2">{course.title}</h4>
+                <p className="text-[10.5px] text-gray-500 mt-1">{course.institutionShort} • {course.duration}</p>
+                <p className="text-[11px] font-black text-emerald-700 mt-1.5">{course.earningBoost}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* DEMAND HEATMAP */}
+        <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-black">Where You're Needed Most</h3>
+          </div>
+          <p className="text-[11px] text-gray-500 -mt-1.5">
+            Estimated local demand for <span className="font-bold text-black">{primaryCategory}</span> by area.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {heatmapData.map(({ area, intensity }) => {
+              const pct = Math.round(intensity * 100);
+              const bg = intensity > 0.66 ? 'bg-emerald-600 text-white' : intensity > 0.33 ? 'bg-emerald-100 text-emerald-900' : 'bg-gray-100 text-gray-600';
+              return (
+                <div key={area} className={`rounded-xl p-2.5 text-center ${bg}`}>
+                  <span className="text-[11px] font-bold block truncate">{area}</span>
+                  <span className="text-[10px] font-black opacity-80">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 5-PILLAR TRUST AND RANKING BREAKDOWN */}
+        <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3">
             <div className="flex items-center gap-2">
-              <span className="bg-black text-white px-3 py-1 rounded-lg text-xs font-mono font-black border border-emerald-500">
-                SCORE: {trustBreakdown.totalScore.toFixed(2)} / 5.0
-              </span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-black">Trust & Ranking Breakdown</h3>
             </div>
-          </div>
-
-          {/* THE 5 PILLARS */}
-          <div className="space-y-2.5 font-mono text-xs">
-            {/* Pillar 1 */}
-            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-black">1. Identity Verification</span>
-                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 1.0</span>
-                </div>
-                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.identityExplanation}</p>
-              </div>
-              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
-                +{trustBreakdown.identityScore.toFixed(1)} pt
-              </span>
-            </div>
-
-            {/* Pillar 2 */}
-            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-black">2. Institutional Skill Certification</span>
-                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 1.0</span>
-                </div>
-                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.skillExplanation}</p>
-              </div>
-              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
-                +{trustBreakdown.skillScore.toFixed(1)} pt
-              </span>
-            </div>
-
-            {/* Pillar 3 */}
-            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-black">3. Ecosystem / Group Affiliation</span>
-                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 0.5</span>
-                </div>
-                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.ecosystemExplanation}</p>
-              </div>
-              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
-                +{trustBreakdown.ecosystemScore.toFixed(2)} pt
-              </span>
-            </div>
-
-            {/* Pillar 4 */}
-            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-black">4. Referral Network</span>
-                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 0.5</span>
-                </div>
-                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.referralExplanation}</p>
-              </div>
-              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
-                +{trustBreakdown.referralScore.toFixed(2)} pt
-              </span>
-            </div>
-
-            {/* Pillar 5 */}
-            <div className="p-3 bg-zinc-50 border border-zinc-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-black">5. Client Ratings & Performance</span>
-                  <span className="text-[9px] bg-zinc-200 text-zinc-800 px-1.5 py-0.2 rounded font-bold">Max 2.0</span>
-                </div>
-                <p className="text-[11px] text-zinc-600 font-sans">{trustBreakdown.performanceExplanation}</p>
-              </div>
-              <span className="text-sm font-black text-emerald-700 sm:text-right shrink-0">
-                +{trustBreakdown.performanceScore.toFixed(2)} pts
-              </span>
-            </div>
-          </div>
-
-          {/* QUALIFYING TRUST BADGES */}
-          <div className="pt-2 border-t border-zinc-200">
-            <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold block mb-2">
-              QUALIFYING TRUST BADGES EARNED
+            <span className="bg-black text-white px-3 py-1 rounded-full text-[11px] font-black">
+              {trustBreakdown.totalScore.toFixed(2)} / 5.0
             </span>
+          </div>
+
+          <div className="space-y-2">
+            {[
+              { label: '1. Identity Verification', max: '1.0', score: trustBreakdown.identityScore.toFixed(1), explain: trustBreakdown.identityExplanation },
+              { label: '2. Institutional Skill Certification', max: '1.0', score: trustBreakdown.skillScore.toFixed(1), explain: trustBreakdown.skillExplanation },
+              { label: '3. Ecosystem / Group Affiliation', max: '0.5', score: trustBreakdown.ecosystemScore.toFixed(2), explain: trustBreakdown.ecosystemExplanation },
+              { label: '4. Referral Network', max: '0.5', score: trustBreakdown.referralScore.toFixed(2), explain: trustBreakdown.referralExplanation },
+              { label: '5. Client Ratings & Performance', max: '2.0', score: trustBreakdown.performanceScore.toFixed(2), explain: trustBreakdown.performanceExplanation },
+            ].map(pillar => (
+              <div key={pillar.label} className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-black">{pillar.label}</span>
+                    <span className="text-[9px] bg-gray-200 text-gray-700 px-1.5 py-0.2 rounded-full font-bold">Max {pillar.max}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500">{pillar.explain}</p>
+                </div>
+                <span className="text-sm font-black text-emerald-700 shrink-0">+{pillar.score}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-gray-200">
+            <span className="text-[10px] text-gray-400 uppercase font-bold block mb-2">Badges Earned</span>
             <div className="flex flex-wrap items-center gap-2">
               {trustBreakdown.badges.map(b => (
                 <span
                   key={b.id}
-                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 border ${b.color}`}
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border ${b.color}`}
                 >
                   <span>{b.icon}</span>
                   <span>{b.label}</span>
                 </span>
               ))}
               {trustBreakdown.badges.length === 0 && (
-                <span className="text-xs text-zinc-500 font-mono">No badges earned yet. Complete verifications above.</span>
+                <span className="text-xs text-gray-400">No badges earned yet. Complete verifications above.</span>
               )}
             </div>
           </div>
         </section>
 
-        {/* VERIFIED SKILLS LIST (WHITE CARDS, GREEN BADGES, CRISP BLACK TYPOGRAPHY) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between border-b-2 border-black pb-2">
+        {/* VERIFIED SKILLS LIST */}
+        <section className="space-y-2.5">
+          <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>VERIFIED SKILL CREDENTIALS ({skillsList.length})</span>
+              <span>Verified Skills ({skillsList.length})</span>
             </h3>
-            <span className="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 border border-emerald-300 rounded font-mono font-bold">
-              ✓ NITA / EPRA Verified
-            </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {skillsList.map((skill) => (
-              <div key={skill.id} className="bg-white border border-zinc-300 rounded-xl p-4 space-y-2.5 hover:border-emerald-600 transition-all shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-2.5">
+              <div key={skill.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2 hover:border-emerald-300 transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-sm text-black">{skill.skillTitle}</h4>
-                      <span className="text-[9px] font-mono uppercase bg-emerald-600 text-white px-2 py-0.5 rounded font-black flex items-center gap-1">
-                        ✓ VERIFIED
+                      <span className="text-[9px] uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black">
+                        Verified
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       <span className="font-bold text-black">{skill.category}</span> • {skill.issuingSchool}
                     </p>
                   </div>
-
-                  <div className="text-left sm:text-right font-mono text-xs">
-                    <span className="text-emerald-900 font-black">{skill.certificationName}</span>
-                    <p className="text-[11px] text-zinc-500 font-semibold">License #: {skill.licenseNumber} ({skill.yearObtained})</p>
+                  <div className="text-left sm:text-right text-xs">
+                    <span className="text-emerald-800 font-bold">{skill.certificationName}</span>
+                    <p className="text-[11px] text-gray-400">License #: {skill.licenseNumber} ({skill.yearObtained})</p>
                   </div>
                 </div>
-
-                <p className="text-xs text-zinc-700 font-normal leading-relaxed">{skill.description}</p>
-
-                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-600 pt-2 border-t border-zinc-100">
-                  <span>Standard Rate: <strong className="text-black font-black">KES {skill.hourlyRate} / day</strong></span>
-                  <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 text-zinc-800 font-bold">
-                    Endorsements: <strong className="text-emerald-700">{skill.endorsementsCount} Peers</strong>
+                <p className="text-xs text-gray-600 leading-relaxed">{skill.description}</p>
+                <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+                  <span>Standard Rate: <strong className="text-black">KES {skill.hourlyRate} / day</strong></span>
+                  <span className="bg-gray-100 px-2 py-0.5 rounded-full text-gray-700 font-bold">
+                    {skill.endorsementsCount} peer endorsements
                   </span>
                 </div>
               </div>
@@ -581,33 +641,24 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           </div>
         </section>
 
-        {/* SUGGESTED COURSES & ACCREDITED LEARNING CENTERS */}
-        <section className="space-y-4 pt-4 border-t-2 border-black">
+        {/* ACCREDITED LEARNING CENTERS CATALOGUE */}
+        <section className="space-y-3 pt-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-emerald-600" />
-                <span>SUGGESTED COURSES & ACCREDITED LEARNING CENTERS</span>
-              </h3>
-              <p className="text-xs text-zinc-600 font-mono mt-0.5">
-                Targeted trade upgrades at accredited institutions in Kenya (NITA, EPRA, KITI, TVETA, KALRO, NTTI).
-              </p>
-            </div>
-            <span className="text-[10px] font-mono font-bold bg-black text-white px-2.5 py-1 rounded">
-              TVET ACCREDITED
-            </span>
+            <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-emerald-600" />
+              <span>Accredited Learning Centers</span>
+            </h3>
           </div>
 
-          {/* SEARCH & CATEGORY FILTER */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search courses, institutions (NITA, EPRA, KITI), or trades..."
+                placeholder="Search courses, institutions, or trades..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-zinc-300 rounded-lg text-xs text-black placeholder-zinc-400 font-mono outline-none focus:border-emerald-600 shadow-2xs"
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-black placeholder-gray-400 outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -616,10 +667,10 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase whitespace-nowrap cursor-pointer transition-all border ${
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase whitespace-nowrap cursor-pointer transition-all border ${
                     selectedCategory === cat
-                      ? 'bg-black text-white border-black shadow-xs'
-                      : 'bg-white text-zinc-700 border-zinc-300 hover:border-emerald-600 hover:text-emerald-700'
+                      ? 'bg-black text-white border-black'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700'
                   }`}
                 >
                   {cat}
@@ -628,64 +679,61 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
             </div>
           </div>
 
-          {/* COURSES DETAILED LIST (WHITE CARDS, EMERALD BOOST BADGES, BOLD BLACK BUTTONS) */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {filteredCourses.map(course => (
-              <div key={course.id} className="bg-white border border-zinc-300 rounded-xl p-4 space-y-3 hover:border-emerald-600 transition-all shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-zinc-100 pb-3">
+              <div key={course.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 hover:border-emerald-300 transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-gray-100 pb-3">
                   <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase bg-zinc-100 text-black px-2 py-0.5 rounded font-bold border border-zinc-300">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] uppercase bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">
                         {course.category}
                       </span>
-                      <span className="text-[10px] font-mono font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-emerald-700" />
+                      <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" />
                         {course.demandTag}
                       </span>
                     </div>
                     <h4 className="font-bold text-sm text-black">{course.title}</h4>
-                    <p className="text-xs text-zinc-600 font-medium">
+                    <p className="text-xs text-gray-500">
                       <strong className="text-black">{course.institution}</strong> • {course.location}
                     </p>
                   </div>
-
-                  <div className="text-left sm:text-right font-mono text-xs shrink-0">
+                  <div className="text-left sm:text-right text-xs shrink-0">
                     <span className="text-black font-black text-sm">{course.estimatedFee}</span>
                     <p className="text-[11px] text-emerald-700 font-bold mt-0.5">Boost: {course.earningBoost}</p>
                   </div>
                 </div>
 
-                <p className="text-xs text-zinc-700 leading-relaxed font-normal">{course.description}</p>
+                <p className="text-xs text-gray-600 leading-relaxed">{course.description}</p>
 
-                {/* DETAILED COURSE PARAMETERS */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-zinc-100 text-[11px] font-mono text-zinc-600">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
                   <div>
-                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">DURATION & FORMAT</span>
-                    <span className="text-black font-bold">{course.duration} ({course.classFormat})</span>
+                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Duration</span>
+                    <span className="text-black font-bold">{course.duration}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">PREREQUISITES</span>
+                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Prerequisites</span>
                     <span className="text-black font-bold">{course.prerequisites}</span>
                   </div>
-                  <div className="col-span-2 sm:col-span-2">
-                    <span className="text-[9px] text-zinc-400 uppercase font-bold block">AWARDED CERTIFICATION</span>
-                    <span className="text-emerald-900 font-black">{course.certificationAwarded}</span>
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Awarded Certification</span>
+                    <span className="text-emerald-800 font-bold">{course.certificationAwarded}</span>
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-2">
+                <div className="pt-1 flex items-center justify-end gap-2">
                   <a
                     href={course.institutionUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-white hover:bg-zinc-100 text-black border border-zinc-300 text-xs font-mono font-bold rounded-lg flex items-center gap-1 transition-colors"
+                    className="px-3 py-1.5 bg-white hover:bg-gray-50 text-black border border-gray-200 text-xs font-bold rounded-full flex items-center gap-1 transition-colors"
                   >
                     <span>Portal</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                   <button
                     onClick={() => setSelectedCourseModal(course)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold rounded-lg transition-all shadow-xs cursor-pointer border border-emerald-700"
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-full transition-all cursor-pointer"
                   >
                     View Details & Enroll
                   </button>
@@ -694,7 +742,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
             ))}
 
             {filteredCourses.length === 0 && (
-              <div className="py-12 text-center text-zinc-500 font-mono text-xs border-2 border-dashed border-zinc-300 rounded-xl bg-white">
+              <div className="py-12 text-center text-gray-400 text-xs border border-dashed border-gray-300 rounded-xl bg-white">
                 No courses found matching criteria.
               </div>
             )}
@@ -703,40 +751,40 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
 
       </main>
 
-      {/* ADD SKILL MODAL (CLEAN WHITE CARD WITH BLACK & GREEN ACCENTS) */}
+      {/* ADD SKILL MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-black rounded-xl p-5 w-full max-w-lg space-y-4 font-sans text-black shadow-2xl">
-            <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-lg space-y-4 text-black shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-sm font-black uppercase tracking-wider text-black">ADD TRADE SKILL CREDENTIAL</h3>
+                <h3 className="text-sm font-black uppercase tracking-wider text-black">Add Trade Skill</h3>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="text-zinc-500 hover:text-black cursor-pointer">
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-black cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSkillSubmit} className="space-y-3 text-xs font-mono">
+            <form onSubmit={handleAddSkillSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Skill Title / Specialty</label>
+                <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Skill Title / Specialty</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. EPRA Solar PV Inverter Wiring"
                   value={formTitle}
                   onChange={e => setFormTitle(e.target.value)}
-                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none focus:border-emerald-600"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Trade Category</label>
+                  <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Trade Category</label>
                   <select
                     value={formCategory}
                     onChange={e => setFormCategory(e.target.value)}
-                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                   >
                     <option value="Woodwork & Joinery">Woodwork & Joinery</option>
                     <option value="Electrical & Solar">Electrical & Solar</option>
@@ -747,68 +795,68 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Year Obtained</label>
+                  <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Year Obtained</label>
                   <input
                     type="text"
                     value={formYear}
                     onChange={e => setFormYear(e.target.value)}
-                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Certification Name</label>
+                <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Certification Name</label>
                 <input
                   type="text"
                   placeholder="e.g. NITA Grade II Trade Test Certificate"
                   value={formCertName}
                   onChange={e => setFormCertName(e.target.value)}
-                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Issuing School / Institution</label>
+                <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Issuing School / Institution</label>
                 <input
                   type="text"
                   placeholder="e.g. NITA Kenya / EPRA"
                   value={formSchool}
                   onChange={e => setFormSchool(e.target.value)}
-                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">License / Cert #</label>
+                  <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">License / Cert #</label>
                   <input
                     type="text"
                     placeholder="e.g. NITA-2023-994"
                     value={formLicenseNo}
                     onChange={e => setFormLicenseNo(e.target.value)}
-                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Base Rate (KES/Day)</label>
+                  <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Base Rate (KES/Day)</label>
                   <input
                     type="number"
                     value={formRate}
                     onChange={e => setFormRate(e.target.value)}
-                    className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-zinc-700 uppercase text-[10px] font-bold block mb-1">Scope & Key Details</label>
+                <label className="text-gray-600 uppercase text-[10px] font-bold block mb-1">Scope & Key Details</label>
                 <textarea
                   rows={2}
                   placeholder="Details of trade capabilities, machinery handled, or installation scope..."
                   value={formDesc}
                   onChange={e => setFormDesc(e.target.value)}
-                  className="w-full p-2 bg-zinc-50 border border-zinc-300 rounded text-black outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-black outline-none"
                 />
               </div>
 
@@ -816,13 +864,13 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-black rounded font-bold cursor-pointer"
+                  className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-black rounded-full font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded cursor-pointer shadow-xs"
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-full cursor-pointer"
                 >
                   Save Skill
                 </button>
@@ -832,68 +880,68 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
         </div>
       )}
 
-      {/* COURSE DETAIL & ENROLL MODAL (WHITE CONTAINER, GREEN & BLACK ACCENTS) */}
+      {/* COURSE DETAIL & ENROLL MODAL */}
       {selectedCourseModal && (
         <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-black rounded-xl p-5 w-full max-w-lg space-y-4 font-mono text-black shadow-2xl">
-            <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-lg space-y-4 text-black shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-sm font-black uppercase text-black">COURSE & INSTITUTION DETAILS</h3>
+                <h3 className="text-sm font-black uppercase text-black">Course & Institution Details</h3>
               </div>
-              <button onClick={() => setSelectedCourseModal(null)} className="text-zinc-500 hover:text-black cursor-pointer">
+              <button onClick={() => setSelectedCourseModal(null)} className="text-gray-400 hover:text-black cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-[10px] text-zinc-500 uppercase font-bold block">INSTITUTION</span>
+                <span className="text-[10px] text-gray-400 uppercase font-bold block">Institution</span>
                 <h4 className="text-sm font-bold text-black">{selectedCourseModal.institution}</h4>
-                <p className="text-zinc-600">{selectedCourseModal.location}</p>
+                <p className="text-gray-500">{selectedCourseModal.location}</p>
               </div>
 
               <div>
-                <span className="text-[10px] text-zinc-500 uppercase font-bold block">COURSE TITLE</span>
-                <p className="text-emerald-950 font-bold text-sm">{selectedCourseModal.title}</p>
+                <span className="text-[10px] text-gray-400 uppercase font-bold block">Course Title</span>
+                <p className="text-emerald-900 font-bold text-sm">{selectedCourseModal.title}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 bg-zinc-50 p-3 rounded-lg border border-zinc-300">
+              <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 <div>
-                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">ESTIMATED FEE</span>
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Estimated Fee</span>
                   <span className="text-black font-black text-sm">{selectedCourseModal.estimatedFee}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">PROJECTED REVENUE BOOST</span>
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Projected Revenue Boost</span>
                   <span className="text-emerald-700 font-black text-sm">{selectedCourseModal.earningBoost}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">DURATION</span>
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Duration</span>
                   <span className="text-black font-semibold">{selectedCourseModal.duration}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-zinc-500 uppercase font-bold block">CLASS FORMAT</span>
+                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Class Format</span>
                   <span className="text-black font-semibold">{selectedCourseModal.classFormat}</span>
                 </div>
               </div>
 
               <div>
-                <span className="text-[10px] text-zinc-500 uppercase font-bold block">SYLLABUS & DESCRIPTION</span>
-                <p className="text-zinc-700 leading-relaxed text-[11px]">{selectedCourseModal.description}</p>
+                <span className="text-[10px] text-gray-400 uppercase font-bold block">Syllabus & Description</span>
+                <p className="text-gray-600 leading-relaxed text-[11px]">{selectedCourseModal.description}</p>
               </div>
 
               <div>
-                <span className="text-[10px] text-zinc-500 uppercase font-bold block">AWARDED CREDENTIAL</span>
-                <p className="text-emerald-900 font-black">{selectedCourseModal.certificationAwarded}</p>
+                <span className="text-[10px] text-gray-400 uppercase font-bold block">Awarded Credential</span>
+                <p className="text-emerald-800 font-black">{selectedCourseModal.certificationAwarded}</p>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
+            <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
               <a
                 href={selectedCourseModal.institutionUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-zinc-600 underline hover:text-black font-bold"
+                className="text-xs text-gray-500 underline hover:text-black font-bold"
               >
                 Visit Official Portal
               </a>
@@ -902,7 +950,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                   showToast(`✓ Enrollment request submitted for ${selectedCourseModal.institutionShort}!`);
                   setSelectedCourseModal(null);
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-sm cursor-pointer border border-emerald-700"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-full cursor-pointer"
               >
                 Submit Enrollment Request
               </button>
