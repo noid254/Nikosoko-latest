@@ -6,6 +6,8 @@ import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
+import { createAuth, getAuth, signToken, rateLimit, isProd } from './serverAuth';
+import type { AuthInfo } from './serverAuth';
 
 const PORT = 3002;
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
@@ -225,8 +227,8 @@ async function initDatabase() {
     const defaultSuperAdmin = {
       id: 'super-admin-001',
       name: 'NikoSoko Admin',
-      phone: '0723119356',
-      email: 'admin@nikosoko.com',
+      phone: process.env.SUPERADMIN_PHONE || '',
+      email: process.env.SUPERADMIN_EMAIL || 'admin@nikosoko.com',
       service: 'Platform Support & Verification',
       category: 'TECHNICAL',
       rating: 5.0,
@@ -239,7 +241,6 @@ async function initDatabase() {
       role: 'SuperAdmin',
       skills: JSON.stringify(['Master Electrician', 'Plumbing Inspection', 'Solar Installation', 'Quality Assurance']),
       hourlyRate: 'Ksh 2,500/hr',
-      password: 'admin',
       createdAt: new Date().toISOString()
     };
 
@@ -261,7 +262,6 @@ async function initDatabase() {
         role: 'Provider',
         skills: JSON.stringify(['Domestic Wiring', 'EPRA Certified', 'Solar Inverters', 'Fault Finding']),
         hourlyRate: 'Ksh 1,500/hr',
-        password: 'password123',
         createdAt: new Date().toISOString()
       },
       {
@@ -281,7 +281,6 @@ async function initDatabase() {
         role: 'Provider',
         skills: JSON.stringify(['Leak Repair', 'Drainage Unblocking', 'Water Pump Fitting', 'Instant Showers']),
         hourlyRate: 'Ksh 1,200/hr',
-        password: 'password123',
         createdAt: new Date().toISOString()
       },
       {
@@ -301,16 +300,16 @@ async function initDatabase() {
         role: 'Provider',
         skills: JSON.stringify(['Kitchen Cabinets', 'Hardwood Doors', 'Wardrobes', 'Furniture Restoration']),
         hourlyRate: 'Ksh 1,800/hr',
-        password: 'password123',
         createdAt: new Date().toISOString()
       }
     ];
 
-    [defaultSuperAdmin, ...initialTradesPros].forEach(p => {
+    // The super admin is only seeded when SUPERADMIN_PHONE is configured; there is no default code or password.
+    [...(process.env.SUPERADMIN_PHONE ? [defaultSuperAdmin] : []), ...initialTradesPros].forEach(p => {
       runSql(
         `INSERT INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [p.id, p.name, p.phone, p.email, p.service, p.category, p.rating, p.reviewsCount, p.isVerified, p.location, p.bio, p.avatarUrl, p.coverImageUrl, p.role, p.skills, p.hourlyRate, p.password, p.createdAt]
+        [p.id, p.name, p.phone, p.email, p.service, p.category, p.rating, p.reviewsCount, p.isVerified, p.location, p.bio, p.avatarUrl, p.coverImageUrl, p.role, p.skills, p.hourlyRate, '', p.createdAt]
       );
     });
 
@@ -324,6 +323,12 @@ async function startServer() {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+
+  // Session auth. The role is read from the database on every request, never from the token.
+  const { optionalAuth, requireAuth, requireAdmin } = createAuth((providerId) => {
+    const row = queryOne('SELECT role FROM providers WHERE id = ?', [providerId]);
+    return row ? (row.role || 'Member') : null;
+  });
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
@@ -370,32 +375,34 @@ async function startServer() {
   }
 
   // OTP Verification Endpoints
-  const activeServerOtps = new Map<string, { code: string; expiresAt: number }>();
+  const activeServerOtps = new Map<string, { code: string; expiresAt: number; attempts: number }>();
+
+  const smsProviderConfigured = () => {
+    const cfg = getTwilioConfig();
+    return Boolean(cfg.accountSid && cfg.authToken && (cfg.verifyServiceSid || cfg.phoneNumber));
+  };
+  // Only when no SMS provider is configured AND this is not production is the code returned to the caller (local development).
+  const isDevOtpMode = () => !isProd && !smsProviderConfigured();
 
   app.post('/api/auth/send-otp', async (req, res) => {
     try {
       const { target } = req.body;
       if (!target) return res.status(400).json({ error: 'Target phone number is required' });
       const cleanTarget = String(target).trim().toLowerCase();
-      const normDigits = cleanTarget.replace(/\D/g, '');
-      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
-      
-      const formattedPhone = formatToE164(cleanTarget);
-
-      // Super Admin default code 3232 bypass
-      if (isSuperAdmin) {
-        activeServerOtps.set(cleanTarget, { code: '3232', expiresAt: Date.now() + 10 * 60 * 1000 });
-        return res.json({
-          success: true,
-          message: `OTP requested for Super Admin (${cleanTarget})`,
-          smsSent: false,
-          devCode: '3232'
-        });
+      if (!rateLimit(`otp-send:${cleanTarget}`, 5, 10 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Too many code requests. Please try again in a few minutes.' });
       }
 
+      const formattedPhone = formatToE164(cleanTarget);
       const cfg = getTwilioConfig();
       let smsSent = false;
       let twilioError = '';
+
+      const storeLocalCode = () => {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
+        return code;
+      };
 
       if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
         try {
@@ -409,9 +416,7 @@ async function startServer() {
           twilioError = err.message || 'Twilio Verify request failed';
         }
       } else if (cfg.accountSid && cfg.authToken && cfg.phoneNumber) {
-        // Fallback to Twilio Messaging API if Verify Service SID is not provided
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+        const code = storeLocalCode();
         try {
           const client = twilio(cfg.accountSid, cfg.authToken);
           await client.messages.create({
@@ -425,16 +430,16 @@ async function startServer() {
           twilioError = err.message;
         }
       } else {
-        // Credentials not configured yet fallback
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
-        console.log(`[Twilio Unconfigured Notice] Local OTP code generated for ${cleanTarget}: ${code}`);
+        const code = storeLocalCode();
+        if (!isProd) console.log(`[Dev OTP] Code for ${cleanTarget}: ${code}`);
       }
 
       res.json({
         success: true,
-        message: smsSent ? `Verification SMS sent via Twilio to ${formattedPhone}` : `OTP code generated for ${cleanTarget}`,
+        message: smsSent ? `Verification SMS sent to ${formattedPhone}` : `OTP code generated for ${cleanTarget}`,
         smsSent,
+        // Dev mode only: no SMS provider configured and not production.
+        devCode: isDevOtpMode() ? activeServerOtps.get(cleanTarget)?.code : undefined,
         error: twilioError || undefined
       });
     } catch (e: any) {
@@ -443,7 +448,7 @@ async function startServer() {
   });
 
   // Admin Twilio SMS Settings API
-  app.get('/api/admin/sms-settings', (req, res) => {
+  app.get('/api/admin/sms-settings', requireAdmin, (req, res) => {
     try {
       const cfg = getTwilioConfig();
       const maskedCfg = {
@@ -456,7 +461,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/sms-settings', (req, res) => {
+  app.post('/api/admin/sms-settings', requireAdmin, (req, res) => {
     try {
       const { accountSid, authToken, phoneNumber, verifyServiceSid } = req.body;
       const saveKey = (key: string, val: any) => {
@@ -474,7 +479,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/test-sms', async (req, res) => {
+  app.post('/api/admin/test-sms', requireAdmin, async (req, res) => {
     try {
       const { testPhone } = req.body;
       const recipient = (testPhone || '0723119356').trim();
@@ -509,69 +514,120 @@ async function startServer() {
     }
   });
 
+  // --- Provider helpers (shared by auth and provider routes) ---
+  const SENSITIVE_PROVIDER_FIELDS = ['email', 'idNumber', 'nationalId', 'govIdNumber', 'idDocumentUrl', 'govIdUrl', 'selfieUrl', 'idType', 'adminNotes', 'systemIntelligence', 'ratingDisputes'];
+  // Only an admin may change these. Everyone else's values for them are ignored.
+  const PRIVILEGED_PROVIDER_FIELDS = ['role', 'isVerified', 'password', 'isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'adminNotes', 'systemIntelligence', 'isSaccoVerified', 'ownerId'];
+  // Anyone signed in may update these on someone else's profile (the client still computes ratings). Phase 2 moves ratings onto completed interactions.
+  const METRIC_PROVIDER_FIELDS = ['rating', 'reviewsCount', 'ratingCount', 'views', 'flagCount', 'trustScore', 'completionRate'];
+
+  function parseRaw(row: any): any {
+    if (row && row.rawData && typeof row.rawData === 'string') {
+      try { return JSON.parse(row.rawData); } catch (_) {}
+    }
+    return {};
+  }
+
+  function formatProviderRow(row: any) {
+    const raw = parseRaw(row);
+    let skills: any = row.skills;
+    if (typeof skills === 'string') {
+      try { skills = JSON.parse(skills || '[]'); } catch { skills = []; }
+    }
+    return {
+      ...raw,
+      ...row,
+      about: row.about || row.bio || raw.about || '',
+      skills: skills || raw.skills || [],
+      isVerified: Boolean(row.isVerified),
+      isOnline: Boolean(row.isOnline),
+      latitude: typeof row.latitude === 'number' ? row.latitude : (raw.latitude ?? null),
+      longitude: typeof row.longitude === 'number' ? row.longitude : (raw.longitude ?? null)
+    };
+  }
+
+  /** Removes secrets always, and private identity fields unless the viewer is the owner or an admin. */
+  function redactProvider(p: any, auth: AuthInfo | null) {
+    const { password: _pw, rawData: _raw, ...rest } = p;
+    const canSeePrivate = Boolean(auth && (auth.isAdmin || auth.sub === p.id || p.ownerId === auth.sub));
+    if (!canSeePrivate) {
+      for (const k of SENSITIVE_PROVIDER_FIELDS) delete (rest as any)[k];
+    }
+    return rest;
+  }
+
+  /** Profile ids this account controls: its own plus any profile it created. */
+  function ownedIds(auth: AuthInfo): string[] {
+    const rows = queryAll('SELECT id, rawData FROM providers WHERE rawData LIKE ?', [`%"ownerId":"${auth.sub.replace(/[^\w-]/g, '')}"%`]);
+    const ids = rows.filter(r => parseRaw(r).ownerId === auth.sub).map(r => r.id as string);
+    return [auth.sub, ...ids];
+  }
+
+  function canManageProvider(providerId: string, auth: AuthInfo): boolean {
+    if (auth.isAdmin || providerId === auth.sub) return true;
+    const row = queryOne('SELECT id, rawData FROM providers WHERE id = ?', [providerId]);
+    return Boolean(row && parseRaw(row).ownerId === auth.sub);
+  }
+
+  function phoneVariants(target: string): string[] {
+    const digits = target.replace(/\D/g, '');
+    const last9 = digits.slice(-9);
+    if (last9.length < 9) return [target];
+    return [target, `0${last9}`, `254${last9}`, `+254${last9}`, last9];
+  }
+
+  function findProviderByContact(cleanTarget: string): any | null {
+    if (cleanTarget.includes('@')) {
+      return queryOne('SELECT * FROM providers WHERE lower(email) = ?', [cleanTarget]);
+    }
+    const variants = phoneVariants(cleanTarget);
+    const placeholders = variants.map(() => '?').join(',');
+    return queryOne(`SELECT * FROM providers WHERE phone IN (${placeholders})`, variants);
+  }
+
   app.post('/api/auth/verify-otp', async (req, res) => {
     try {
       const { target, code } = req.body;
       if (!target || !code) return res.status(400).json({ error: 'Target phone number and OTP code are required' });
       const cleanTarget = String(target).trim().toLowerCase();
-      const normDigits = cleanTarget.replace(/\D/g, '');
       const inputCode = String(code).trim();
+      if (!rateLimit(`otp-verify:${cleanTarget}`, 10, 10 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Too many attempts. Please request a new code in a few minutes.' });
+      }
 
-      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
-      
       let isValid = false;
+      const cfg = getTwilioConfig();
 
-      if (isSuperAdmin && inputCode === '3232') {
-        isValid = true;
-      } else {
-        const cfg = getTwilioConfig();
-        const formattedPhone = formatToE164(cleanTarget);
+      if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
+        try {
+          const client = twilio(cfg.accountSid, cfg.authToken);
+          const check = await client.verify.v2.services(cfg.verifyServiceSid)
+            .verificationChecks.create({ to: formatToE164(cleanTarget), code: inputCode });
+          if (check.status === 'approved') isValid = true;
+        } catch (err: any) {
+          console.error('Twilio Verify check error:', err);
+        }
+      }
 
-        if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
-          try {
-            const client = twilio(cfg.accountSid, cfg.authToken);
-            const check = await client.verify.v2.services(cfg.verifyServiceSid)
-              .verificationChecks.create({ to: formattedPhone, code: inputCode });
-            
-            if (check.status === 'approved') {
-              isValid = true;
-            }
-          } catch (err: any) {
-            console.error('Twilio Verify check error:', err);
-            // Fallback check against activeServerOtps
-            const stored = activeServerOtps.get(cleanTarget);
-            if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
-              isValid = true;
-            }
-          }
-        } else {
-          const stored = activeServerOtps.get(cleanTarget);
-          if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
+      if (!isValid) {
+        const stored = activeServerOtps.get(cleanTarget);
+        if (stored && Date.now() < stored.expiresAt) {
+          if (stored.code === inputCode) {
             isValid = true;
+          } else {
+            stored.attempts += 1;
+            if (stored.attempts >= 5) activeServerOtps.delete(cleanTarget);
           }
         }
       }
 
       if (!isValid) {
-        if (isSuperAdmin) {
-          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
-        }
-        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
+        return res.status(400).json({ error: 'Incorrect or expired verification code.' });
       }
-
       activeServerOtps.delete(cleanTarget);
 
-      if (!isValid) {
-        if (isSuperAdmin) {
-          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
-        }
-        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
-      }
-
-      activeServerOtps.delete(cleanTarget);
-      
-      // Lookup or auto-create provider
-      let provider = queryOne('SELECT * FROM providers WHERE email = ? OR phone = ? OR phone LIKE ?', [cleanTarget, cleanTarget, `%${cleanTarget}%`]);
+      // Lookup or auto-create the profile (exact phone/email match only)
+      let provider = findProviderByContact(cleanTarget);
       if (!provider) {
         const id = `pro-${Date.now()}`;
         const isEmail = cleanTarget.includes('@');
@@ -592,7 +648,6 @@ async function startServer() {
           role: 'Member',
           skills: JSON.stringify(['General Trades']),
           hourlyRate: 'Ksh 1,000/hr',
-          password: 'password123',
           createdAt: new Date().toISOString()
         };
 
@@ -603,215 +658,142 @@ async function startServer() {
             provider.id, provider.name, provider.phone, provider.email, provider.service, provider.category,
             provider.rating, provider.reviewsCount, provider.isVerified, provider.location, provider.bio,
             provider.avatarUrl, provider.coverImageUrl, provider.role, provider.skills, provider.hourlyRate,
-            provider.password, provider.createdAt
+            '', provider.createdAt
           ]
         );
       }
 
-      res.json({ message: 'OTP verified successfully', provider, token: `valid-token-for-${cleanTarget}` });
+      // The configured super admin number is promoted on first successful OTP sign-in.
+      const adminPhone = (process.env.SUPERADMIN_PHONE || '').replace(/\D/g, '').slice(-9);
+      if (adminPhone.length === 9 && !cleanTarget.includes('@') && cleanTarget.replace(/\D/g, '').slice(-9) === adminPhone && provider.role !== 'SuperAdmin') {
+        runSql('UPDATE providers SET role = ? WHERE id = ?', ['SuperAdmin', provider.id]);
+        provider = { ...provider, role: 'SuperAdmin' };
+      }
+
+      const self: AuthInfo = { sub: provider.id, role: provider.role || 'Member', isAdmin: provider.role === 'SuperAdmin' };
+      res.json({
+        message: 'OTP verified successfully',
+        provider: redactProvider(formatProviderRow(provider), self),
+        token: signToken(provider.id)
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  // Authentication & Profile Persistence Routes
-  app.post('/api/auth/register', (req, res) => {
+  // The signed-in account's own profile (used to restore a session on app start).
+  app.get('/api/auth/me', requireAuth, (req, res) => {
     try {
-      const { name, phone, email, service, category, location, bio, password, role } = req.body;
-      if (!name || !phone) {
-        return res.status(400).json({ error: 'Name and Phone number are required' });
-      }
-
-      // Check if user with phone already exists
-      const existing = queryOne('SELECT * FROM providers WHERE phone = ? OR (email = ? AND email != "")', [phone, email || '']);
-      if (existing) {
-        // Return existing profile
-        return res.json({ message: 'User profile retrieved', provider: existing });
-      }
-
-      const id = `pro-${Date.now()}`;
-      const newProvider = {
-        id,
-        name,
-        phone,
-        email: email || '',
-        service: service || 'General Trades Professional',
-        category: category || 'GENERAL',
-        rating: 0,
-        reviewsCount: 0,
-        isVerified: 1,
-        location: location || 'Nairobi, Kenya',
-        bio: bio || 'Skilled trades professional listed on NikoSoko Marketplace.',
-        avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300`,
-        coverImageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800',
-        role: role || 'Provider',
-        skills: JSON.stringify(['Trades Specialist']),
-        hourlyRate: 'Ksh 1,000/hr',
-        password: password || 'password123',
-        createdAt: new Date().toISOString()
-      };
-
-      runSql(
-        `INSERT INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          newProvider.id, newProvider.name, newProvider.phone, newProvider.email, newProvider.service,
-          newProvider.category, newProvider.rating, newProvider.reviewsCount, newProvider.isVerified,
-          newProvider.location, newProvider.bio, newProvider.avatarUrl, newProvider.coverImageUrl,
-          newProvider.role, newProvider.skills, newProvider.hourlyRate, newProvider.password, newProvider.createdAt
-        ]
-      );
-
-      res.json({ message: 'User registered successfully', provider: newProvider });
+      const auth = getAuth(req)!;
+      const row = queryOne('SELECT * FROM providers WHERE id = ?', [auth.sub]);
+      if (!row) return res.status(401).json({ error: 'Account not found' });
+      res.json(redactProvider(formatProviderRow(row), auth));
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message || 'Failed to register user' });
+      res.status(500).json({ error: e.message });
     }
   });
 
-  app.post('/api/auth/login', (req, res) => {
-    try {
-      const { phone, email } = req.body;
-      if (!phone && !email) {
-        return res.status(400).json({ error: 'Phone or Email is required' });
-      }
-
-      const user = queryOne(
-        'SELECT * FROM providers WHERE (phone = ? AND phone != "") OR (email = ? AND email != "") OR (phone LIKE ?)',
-        [phone || '', email || '', `%${phone}%`]
-      );
-
-      if (!user) {
-        return res.status(444).json({ error: 'User profile not found. Please create an account.' });
-      }
-
-      // Parse JSON fields
-      if (user.skills && typeof user.skills === 'string') {
-        try { user.skills = JSON.parse(user.skills); } catch { user.skills = []; }
-      }
-
-      res.json({ message: 'Login successful', provider: user });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message || 'Login failed' });
-    }
-  });
+  // Password-less login and open registration were removed: they returned any profile for a phone number alone.
+  app.post('/api/auth/register', (_req, res) => res.status(410).json({ error: 'Please sign in with a phone OTP.' }));
+  app.post('/api/auth/login', (_req, res) => res.status(410).json({ error: 'Please sign in with a phone OTP.' }));
 
   // Providers Endpoints
-  app.get('/api/providers', (req, res) => {
+  app.get('/api/providers', optionalAuth, (req, res) => {
     try {
+      const auth = getAuth(req);
       const rows = queryAll('SELECT * FROM providers ORDER BY isVerified DESC, rating DESC');
-      const formatted = rows.map(r => {
-        let raw: any = {};
-        if (r.rawData && typeof r.rawData === 'string') {
-          try { raw = JSON.parse(r.rawData); } catch (_) {}
-        }
-        return {
-          ...raw,
-          ...r,
-          about: r.about || r.bio || raw.about || '',
-          skills: typeof r.skills === 'string' ? JSON.parse(r.skills || '[]') : (r.skills || raw.skills || []),
-          isVerified: Boolean(r.isVerified),
-          isOnline: Boolean(r.isOnline),
-          latitude: typeof r.latitude === 'number' ? r.latitude : (raw.latitude ?? null),
-          longitude: typeof r.longitude === 'number' ? r.longitude : (raw.longitude ?? null)
-        };
-      });
-      res.json(formatted);
+      res.json(rows.map(r => redactProvider(formatProviderRow(r), auth)));
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.get('/api/providers/:id', (req, res) => {
+  app.get('/api/providers/:id', optionalAuth, (req, res) => {
     try {
       const row = queryOne('SELECT * FROM providers WHERE id = ?', [req.params.id]);
       if (!row) return res.status(404).json({ error: 'Provider not found' });
-      let raw: any = {};
-      if (row.rawData && typeof row.rawData === 'string') {
-        try { raw = JSON.parse(row.rawData); } catch (_) {}
+      res.json(redactProvider(formatProviderRow(row), getAuth(req)));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** Create or update a profile, enforcing who may change what. */
+  function saveProvider(id: string, incoming: any, auth: AuthInfo) {
+    const existingRow = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
+    const existing = existingRow ? formatProviderRow(existingRow) : null;
+    const patch: any = { ...incoming };
+    delete patch.rawData;
+
+    if (!auth.isAdmin) {
+      for (const k of PRIVILEGED_PROVIDER_FIELDS) delete patch[k];
+      if (existingRow && !canManageProvider(id, auth)) {
+        for (const k of Object.keys(patch)) {
+          if (!METRIC_PROVIDER_FIELDS.includes(k)) delete patch[k];
+        }
       }
-      res.json({
-        ...raw,
-        ...row,
-        about: row.about || row.bio || raw.about || '',
-        skills: typeof row.skills === 'string' ? JSON.parse(row.skills || '[]') : (row.skills || raw.skills || []),
-        isVerified: Boolean(row.isVerified),
-        isOnline: Boolean(row.isOnline),
-        latitude: typeof row.latitude === 'number' ? row.latitude : (raw.latitude ?? null),
-        longitude: typeof row.longitude === 'number' ? row.longitude : (raw.longitude ?? null)
-      });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
     }
-  });
 
-  app.post('/api/providers', (req, res) => {
-    try {
-      const p = req.body;
-      const id = p.id || `pro-${Date.now()}`;
-      const skillsJson = JSON.stringify(p.skills || []);
-      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
-      const rawDataJson = JSON.stringify(safeP);
-
-      runSql(
-        `INSERT OR REPLACE INTO providers (
-          id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, about, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline, latitude, longitude, lastCheckInAt, lastCheckInLocation, rawData, createdAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id, p.name || '', p.phone || '', p.email || '', p.service || '', p.category || '',
-          p.rating || 0, p.reviewsCount || 0, p.isVerified ? 1 : 0, p.location || '',
-          p.bio || p.about || '', p.about || p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
-          skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0,
-          p.latitude || null, p.longitude || null, p.lastCheckInAt || null, p.lastCheckInLocation || null, rawDataJson, p.createdAt || new Date().toISOString()
-        ]
-      );
-
-      const saved = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
-      res.json(saved);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.put('/api/providers/:id', (req, res) => {
-    try {
-      const id = req.params.id;
-      const p = req.body;
-      const existing = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
-      
-      let existingRaw: any = {};
-      if (existing?.rawData && typeof existing.rawData === 'string') {
-        try { existingRaw = JSON.parse(existing.rawData); } catch (_) {}
+    const updated: any = { ...(existing || {}), ...patch, id };
+    if (!existing) {
+      updated.ownerId = auth.sub;
+      if (!auth.isAdmin) {
+        updated.role = 'Provider';
+        updated.isVerified = false;
+        for (const k of METRIC_PROVIDER_FIELDS) updated[k] = 0;
+      } else {
+        updated.role = incoming.role || 'Provider';
+        updated.isVerified = Boolean(incoming.isVerified);
+        updated.ownerId = incoming.ownerId || auth.sub;
       }
+    }
 
-      const updated = { ...existingRaw, ...(existing || {}), ...p, id };
-      const skillsJson = JSON.stringify(updated.skills || []);
-      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, ...safeForRawData } = updated;
-      const rawDataJson = JSON.stringify(safeForRawData);
+    const skillsJson = JSON.stringify(updated.skills || []);
+    const { avatarUrl: _a, coverImageUrl: _c, password: _p, rawData: _r, ...safeForRawData } = updated;
+    const rawDataJson = JSON.stringify(safeForRawData);
 
-      runSql(
-        `INSERT OR REPLACE INTO providers (
-          id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, about, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline, latitude, longitude, lastCheckInAt, lastCheckInLocation, rawData, createdAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id, updated.name || '', updated.phone || '', updated.email || '', updated.service || '', updated.category || '',
-          updated.rating ?? 0, updated.reviewsCount ?? 0, updated.isVerified ? 1 : 0, updated.location || '',
-          updated.bio || updated.about || '', updated.about || updated.bio || '', updated.avatarUrl || '', updated.coverImageUrl || '', updated.role || 'Provider',
-          skillsJson, updated.hourlyRate || '', updated.password || '', updated.isOnline ? 1 : 0,
-          updated.latitude || null, updated.longitude || null, updated.lastCheckInAt || null, updated.lastCheckInLocation || null,
-          rawDataJson, updated.createdAt || new Date().toISOString()
-        ]
-      );
+    runSql(
+      `INSERT OR REPLACE INTO providers (
+        id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, about, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, isOnline, latitude, longitude, lastCheckInAt, lastCheckInLocation, rawData, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, updated.name || '', updated.phone || '', updated.email || '', updated.service || '', updated.category || '',
+        updated.rating ?? 0, updated.reviewsCount ?? 0, updated.isVerified ? 1 : 0, updated.location || '',
+        updated.bio || updated.about || '', updated.about || updated.bio || '', updated.avatarUrl || '', updated.coverImageUrl || '', updated.role || 'Provider',
+        skillsJson, updated.hourlyRate || '', existingRow?.password || '', updated.isOnline ? 1 : 0,
+        updated.latitude || null, updated.longitude || null, updated.lastCheckInAt || null, updated.lastCheckInLocation || null,
+        rawDataJson, updated.createdAt || new Date().toISOString()
+      ]
+    );
 
-      res.json({ message: 'Provider updated', provider: updated });
+    const saved = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
+    return redactProvider(formatProviderRow(saved), auth);
+  }
+
+  app.post('/api/providers', requireAuth, (req, res) => {
+    try {
+      const auth = getAuth(req)!;
+      const id = req.body.id || `pro-${Date.now()}`;
+      res.json(saveProvider(id, req.body, auth));
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.delete('/api/providers/:id', (req, res) => {
+  app.put('/api/providers/:id', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
+      const provider = saveProvider(req.params.id, req.body, auth);
+      res.json({ message: 'Provider updated', provider });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/providers/:id', requireAuth, (req, res) => {
+    try {
+      const auth = getAuth(req)!;
+      if (!canManageProvider(req.params.id, auth)) return res.status(403).json({ error: 'You can only delete your own profiles' });
       runSql('DELETE FROM providers WHERE id = ?', [req.params.id]);
       res.json({ success: true });
     } catch (e: any) {
@@ -833,47 +815,67 @@ async function startServer() {
       res.status(500).json({ error: e.message });
     }
   });
+
   // Image Upload Endpoint - saves base64 images to persistent disk storage
-  app.post('/api/upload', (req, res) => {
+  const ALLOWED_IMAGE_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+  const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
+
+  app.post('/api/upload', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
       const { dataUrl, path: uploadPath } = req.body;
       if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
         return res.status(400).json({ error: 'Invalid or missing dataUrl' });
       }
-      const matches = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+      const matches = dataUrl.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/);
       if (!matches) {
         return res.status(400).json({ error: 'Invalid data URL format' });
       }
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      const ext = mimeType.split('/')[1].replace('jpeg', 'jpg');
-      const buffer = Buffer.from(base64Data, 'base64');
-      const safePath = (uploadPath || `misc/upload_${Date.now()}`).replace(/[^a-zA-Z0-9_\-\/]/g, '_');
-      const fileName = `${safePath}.${ext}`;
-      const fullPath = path.join(process.cwd(), 'uploads', fileName);
-      const fullDir = path.dirname(fullPath);
-      fs.mkdirSync(fullDir, { recursive: true });
+      const ext = ALLOWED_IMAGE_TYPES[matches[1].toLowerCase()];
+      if (!ext) {
+        return res.status(415).json({ error: 'Only JPEG, PNG, WebP and GIF images are allowed' });
+      }
+      const buffer = Buffer.from(matches[2], 'base64');
+      if (buffer.length > MAX_UPLOAD_BYTES) {
+        return res.status(413).json({ error: 'Image is too large (6 MB maximum)' });
+      }
+      // Each account writes inside its own folder so it cannot overwrite another account's files.
+      const safePath = (uploadPath || `misc/upload_${Date.now()}`).replace(/[^a-zA-Z0-9_\-\/]/g, '_').replace(/^\/+/, '');
+      const owner = auth.sub.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `${owner}/${safePath}.${ext}`;
+      const uploadsRoot = path.join(process.cwd(), 'uploads');
+      const fullPath = path.join(uploadsRoot, fileName);
+      if (!fullPath.startsWith(uploadsRoot + path.sep)) {
+        return res.status(400).json({ error: 'Invalid upload path' });
+      }
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
       fs.writeFileSync(fullPath, buffer);
-      const publicUrl = `/uploads/${fileName}`;
-      res.json({ success: true, url: publicUrl });
+      res.json({ success: true, url: `/uploads/${fileName}` });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-
-  app.post('/api/catalogue', (req, res) => {
+  app.post('/api/catalogue', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
       const item = req.body;
       const id = item.id || `cat-${Date.now()}`;
+      if (!item.providerId || !canManageProvider(item.providerId, auth)) {
+        return res.status(403).json({ error: 'You can only add items to your own profiles' });
+      }
+      const prev = queryOne('SELECT providerId FROM catalogue_items WHERE id = ?', [id]);
+      if (prev && !canManageProvider(prev.providerId, auth)) {
+        return res.status(403).json({ error: 'You can only edit your own items' });
+      }
       const imagesJson = JSON.stringify(item.imageUrls || item.images || []);
 
       runSql(
         `INSERT OR REPLACE INTO catalogue_items (id, providerId, title, category, price, description, isVerified, images, serialNumber, duration, discountInfo, externalLink, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          id, item.providerId || '', item.title || '', item.category || '', item.price || '',
-          item.description || '', item.isVerified ? 1 : 0, imagesJson, item.serialNumber || '',
+          id, item.providerId, item.title || '', item.category || '', item.price || '',
+          item.description || '', auth.isAdmin && item.isVerified ? 1 : 0, imagesJson, item.serialNumber || '',
           item.duration || '', item.discountInfo || '', item.externalLink || '', new Date().toISOString()
         ]
       );
@@ -884,8 +886,13 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/catalogue/:id', (req, res) => {
+  app.delete('/api/catalogue/:id', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
+      const item = queryOne('SELECT providerId FROM catalogue_items WHERE id = ?', [req.params.id]);
+      if (item && !canManageProvider(item.providerId, auth)) {
+        return res.status(403).json({ error: 'You can only delete your own items' });
+      }
       runSql('DELETE FROM catalogue_items WHERE id = ?', [req.params.id]);
       res.json({ success: true });
     } catch (e: any) {
@@ -893,24 +900,35 @@ async function startServer() {
     }
   });
 
-  // Messages Endpoints
-  app.get('/api/messages', (req, res) => {
+  // Messages Endpoints (a person only sees conversations they are part of)
+  app.get('/api/messages', requireAuth, (req, res) => {
     try {
-      const rows = queryAll('SELECT * FROM messages ORDER BY timestamp ASC');
+      const auth = getAuth(req)!;
+      if (auth.isAdmin) {
+        return res.json(queryAll('SELECT * FROM messages ORDER BY timestamp ASC'));
+      }
+      const ids = ownedIds(auth);
+      const marks = ids.map(() => '?').join(',');
+      const rows = queryAll(
+        `SELECT * FROM messages WHERE senderId IN (${marks}) OR recipientId IN (${marks}) ORDER BY timestamp ASC`,
+        [...ids, ...ids]
+      );
       res.json(rows);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.post('/api/messages', (req, res) => {
+  app.post('/api/messages', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
       const m = req.body;
-      const id = m.id || `msg-${Date.now()}`;
+      const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const senderId = auth.isAdmin && m.senderId ? m.senderId : (m.senderId && ownedIds(auth).includes(m.senderId) ? m.senderId : auth.sub);
       runSql(
         `INSERT INTO messages (id, senderId, recipientId, senderName, recipientName, text, timestamp, isRead)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, m.senderId, m.recipientId, m.senderName, m.recipientName, m.text, m.timestamp || new Date().toISOString(), m.isRead ? 1 : 0]
+        [id, senderId, m.recipientId, m.senderName, m.recipientName, m.text, new Date().toISOString(), 0]
       );
       res.json({ success: true, id });
     } catch (e: any) {
@@ -928,10 +946,10 @@ async function startServer() {
     }
   });
 
-  app.post('/api/gigs', (req, res) => {
+  app.post('/api/gigs', requireAuth, (req, res) => {
     try {
       const g = req.body;
-      const id = g.id || `gig-${Date.now()}`;
+      const id = `gig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       runSql(
         `INSERT INTO gigs (id, title, category, location, budget, description, posterName, posterPhone, status, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -943,7 +961,7 @@ async function startServer() {
     }
   });
 
-  // Banners Endpoints
+  // Banners Endpoints (admin-managed)
   app.get('/api/banners', (req, res) => {
     try {
       const rows = queryAll('SELECT * FROM special_banners');
@@ -953,7 +971,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/banners', (req, res) => {
+  app.post('/api/banners', requireAdmin, (req, res) => {
     try {
       const b = req.body;
       const id = b.id || `banner-${Date.now()}`;
@@ -968,7 +986,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/banners/:id', (req, res) => {
+  app.delete('/api/banners/:id', requireAdmin, (req, res) => {
     try {
       runSql('DELETE FROM special_banners WHERE id = ?', [req.params.id]);
       res.json({ success: true });
@@ -1042,7 +1060,10 @@ async function startServer() {
   });
 
   // M-Pesa STK Push Endpoint
-  app.post('/api/mpesa/stkpush', async (req, res) => {
+  app.post('/api/mpesa/stkpush', requireAuth, async (req, res) => {
+    if (!rateLimit(`stk:${getAuth(req)!.sub}`, 5, 60 * 1000)) {
+      return res.status(429).json({ error: 'Too many payment requests. Please wait a minute.' });
+    }
     try {
       const { phone, amount, bookingId, providerName, serviceTitle } = req.body;
       const rawPhone = phone ? String(phone).trim() : '';
@@ -1204,7 +1225,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/mpesa/query', (req, res) => {
+  app.post('/api/mpesa/query', requireAuth, (req, res) => {
     try {
       const { checkoutRequestId } = req.body;
       if (!checkoutRequestId) {
@@ -1240,9 +1261,24 @@ async function startServer() {
   });
 
   // --- Bookings API Endpoints ---
-  app.get('/api/bookings', (req, res) => {
+  // A booking can be seen or changed only by its client, its provider (or the provider's owner), or an admin.
+  function canTouchBooking(bookingId: string, auth: AuthInfo): boolean {
+    if (auth.isAdmin) return true;
+    const b = queryOne('SELECT clientId, providerId FROM bookings WHERE id = ?', [bookingId]);
+    if (!b) return true; // let the handler answer 404
+    const ids = ownedIds(auth);
+    return ids.includes(b.clientId) || ids.includes(b.providerId);
+  }
+
+  app.get('/api/bookings', requireAuth, (req, res) => {
     try {
-      const { userId, providerId, status } = req.query;
+      const auth = getAuth(req)!;
+      let { userId, providerId, status } = req.query as any;
+      if (!auth.isAdmin) {
+        const mine = ownedIds(auth);
+        userId = userId && mine.includes(String(userId)) ? userId : auth.sub;
+        providerId = undefined;
+      }
       let sql = 'SELECT * FROM bookings WHERE 1=1';
       const params: any[] = [];
 
@@ -1276,9 +1312,11 @@ async function startServer() {
     }
   });
 
-  app.post('/api/bookings', (req, res) => {
+  app.post('/api/bookings', requireAuth, (req, res) => {
     try {
-      const b = req.body;
+      const auth = getAuth(req)!;
+      const b = { ...req.body };
+      if (!auth.isAdmin) b.clientId = auth.sub;
       const id = b.id || `book-${Date.now()}`;
       const now = new Date().toISOString();
 
@@ -1313,7 +1351,8 @@ async function startServer() {
     }
   });
 
-  app.put('/api/bookings/:id', (req, res) => {
+  app.put('/api/bookings/:id', requireAuth, (req, res) => {
+    if (!canTouchBooking(req.params.id, getAuth(req)!)) return res.status(403).json({ error: 'Not your booking' });
     try {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
@@ -1353,7 +1392,8 @@ async function startServer() {
   });
 
   // Dedicated Cancel Booking Endpoint
-  app.put('/api/bookings/:id/cancel', (req, res) => {
+  app.put('/api/bookings/:id/cancel', requireAuth, (req, res) => {
+    if (!canTouchBooking(req.params.id, getAuth(req)!)) return res.status(403).json({ error: 'Not your booking' });
     try {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
@@ -1387,7 +1427,8 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/bookings/:id', (req, res) => {
+  app.delete('/api/bookings/:id', requireAuth, (req, res) => {
+    if (!canTouchBooking(req.params.id, getAuth(req)!)) return res.status(403).json({ error: 'Not your booking' });
     try {
       runSql('DELETE FROM bookings WHERE id = ?', [req.params.id]);
       res.json({ success: true });
@@ -1471,8 +1512,9 @@ async function startServer() {
   }
 
   // Record a Location Check-In
-  app.post('/api/locations/checkin', (req, res) => {
+  app.post('/api/locations/checkin', requireAuth, (req, res) => {
     try {
+      const auth = getAuth(req)!;
       const {
         userId,
         providerId,
@@ -1488,7 +1530,10 @@ async function startServer() {
         notes
       } = req.body;
 
-      const targetId = userId || providerId || `usr_${Date.now()}`;
+      const requestedId = userId || providerId;
+      const targetId = auth.isAdmin
+        ? (requestedId || `usr_${Date.now()}`)
+        : (requestedId && ownedIds(auth).includes(requestedId) ? requestedId : auth.sub);
       const resolved = resolveServerLocation(locationName, Number(latitude), Number(longitude));
       const logId = `chk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const now = new Date().toISOString();
@@ -1569,9 +1614,14 @@ async function startServer() {
   });
 
   // Query Check-in Logs
-  app.get('/api/locations/logs', (req, res) => {
+  app.get('/api/locations/logs', requireAuth, (req, res) => {
     try {
-      const { userId, location, limit = 50 } = req.query;
+      const auth = getAuth(req)!;
+      const q = req.query as any;
+      // Area-wide logs contain other people's names and phone numbers, so only admins may query by location.
+      const userId = auth.isAdmin ? q.userId : (q.userId && ownedIds(auth).includes(String(q.userId)) ? q.userId : auth.sub);
+      const location = auth.isAdmin ? q.location : undefined;
+      const limit = Math.min(Number(q.limit) || 50, 200);
       let sql = 'SELECT * FROM location_checkin_logs';
       const params: any[] = [];
 

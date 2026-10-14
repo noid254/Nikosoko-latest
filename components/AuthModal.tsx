@@ -167,27 +167,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     }
   };
 
+  // Google sign-in used to accept any email address with no verification. It is disabled until it is
+  // backed by real Google authentication that the server verifies.
   const handleGoogleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = googleEmail.trim() || 'user@gmail.com';
-    const cleanName = googleName.trim() || cleanEmail.split('@')[0] || 'Google Member';
-    
-    setIsLoading(true);
-    setTimeout(() => {
-      const mockResponse: api.VerifyOtpResponse = {
-        success: true,
-        user: null,
-        token: `google_token_${Date.now()}`,
-        isSuperAdmin: false
-      };
-      setTempAuthResponse(mockResponse);
-      setPhoneNum(cleanEmail);
-      setFullName(cleanName);
-      setNickname(cleanName);
-      setStep(3);
-      setStep3Mode('choice');
-      setIsLoading(false);
-    }, 400);
+    setError('Google sign-in is not available yet. Please sign in with your phone number.');
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {

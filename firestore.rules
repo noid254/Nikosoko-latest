@@ -1,11 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if true;
-    }
+    // Locked down. The previous rules allowed anyone on the internet to read and write every document,
+    // including users' phone numbers, ID numbers and selfies.
+    // The app's source of truth is the server database behind /api, which enforces signed-in access.
+    // Client-side Firestore access is denied until the app signs users in with Firebase Auth and these
+    // rules are rewritten per collection (for example: a user may read and write only their own document).
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -1,3 +1,4 @@
+import { authFetch } from '../services/authFetch';
 import React, { useState, useEffect } from 'react';
 import type { ServiceProvider, Booking, CurrentPage } from '../types';
 import { 
@@ -95,7 +96,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     const loadBookings = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/bookings');
+            const res = await authFetch('/api/bookings');
             const contentType = res.headers.get('content-type');
             if (res.ok && contentType && contentType.includes('application/json')) {
                 const data = await res.json();
@@ -233,7 +234,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         localStorage.setItem('nikosoko_db_bookings', JSON.stringify(updatedList));
 
         try {
-            await fetch(`/api/bookings/${bookingId}`, {
+            await authFetch(`/api/bookings/${bookingId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -292,7 +293,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
         // 3. Call server cancellation API
         try {
-            await fetch(`/api/bookings/${booking.id}/cancel`, {
+            await authFetch(`/api/bookings/${booking.id}/cancel`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

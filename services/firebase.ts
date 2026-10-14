@@ -1,3 +1,4 @@
+import { authFetch } from './authFetch';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
@@ -72,7 +73,7 @@ export async function uploadImageToStorage(
       img.src = dataUrl;
     });
     const res = await withTimeout(
-      fetch('/api/upload', {
+      authFetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dataUrl: compressedDataUrl, path: storagePath })

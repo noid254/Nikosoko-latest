@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+export { authFetch };
 import { API_BASE_URL } from '../config';
 import type { ServiceProvider, CatalogueItem, Document, SpecialBanner, InboxMessage, Event, Gig, Ticket, SetupData, UnitDetails, LocationCheckInLog } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockSpecialBanners, mockInboxMessages, mockEvents, mockGigs, mockTickets, mockCategories } from './mockData';
@@ -91,7 +93,7 @@ const initDB = async () => {
 
     // Attempt sync with SQLite backend server
     try {
-        const res = await fetch('/api/providers');
+        const res = await authFetch('/api/providers');
         if (res.ok) {
             const sqliteProviders: ServiceProvider[] = await res.json();
             if (sqliteProviders && sqliteProviders.length > 0) {
@@ -139,37 +141,24 @@ export const getToken = (): string | null => localStorage.getItem('authToken');
 export const setToken = (token: string): void => localStorage.setItem('authToken', token);
 export const clearToken = (): void => localStorage.removeItem('authToken');
 
-// --- Auth API & Active OTP Store ---
-const activeOtpStore = new Map<string, { code: string; expiresAt: number }>();
-
-export const sendOtp = async (target: string): Promise<{ success: boolean; devCode: string; message: string }> => {
-    await delay(150);
+// --- Auth API ---
+// OTP codes are created and checked only on the server. The client never generates or validates one.
+export const sendOtp = async (target: string): Promise<{ success: boolean; devCode?: string; message: string }> => {
     const cleanTarget = String(target).trim().toLowerCase();
-    const cleanNum = cleanTarget.replace(/\D/g, '');
-    const last9 = cleanNum.slice(-9);
-    const isSuperAdminPhone = last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
-
-    // Generate 6-digit OTP code (or 3232 for superadmin default)
-    const devCode = isSuperAdminPhone ? '3232' : Math.floor(100000 + Math.random() * 900000).toString();
-    activeOtpStore.set(cleanTarget, {
-        code: devCode,
-        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes expiry
+    const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: cleanTarget })
     });
-
-    try {
-        await fetch('/api/auth/send-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: cleanTarget })
-        });
-    } catch {
-        // Fallback
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data.error || 'Could not send the verification code. Please try again.');
     }
-
     return {
         success: true,
-        devCode: isSuperAdminPhone ? '3232' : devCode,
-        message: `OTP verification code dispatched to ${target}`
+        // The server only returns this in local development when no SMS provider is configured.
+        devCode: data.devCode,
+        message: data.message || `Verification code sent to ${target}`
     };
 };
 
@@ -180,158 +169,49 @@ export interface VerifyOtpResponse {
     token: string;
 }
 
-export const quickSuperAdminLogin = async (): Promise<VerifyOtpResponse> => {
-    await delay(100);
-    const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-    let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
-    if (!saUser) saUser = SUPER_ADMIN_PROVIDER;
-
-    saveToProfilesIndex(saUser);
-
-    const token = 'valid-token-for-254723119356';
-    setToken(token);
-
-    return {
-        success: true,
-        user: saUser,
-        isSuperAdmin: true,
-        token
-    };
-};
-
 export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpResponse> => {
-    await delay(200);
     const cleanTarget = String(target).trim().toLowerCase();
-    const cleanNum = (p: string) => (p ? p.replace(/\D/g, '') : '');
-    const normPhone = cleanNum(cleanTarget);
-    const last9 = normPhone.slice(-9);
-
-    if (!otp || otp.trim().length < 4) {
+    const trimmedOtp = String(otp || '').trim();
+    if (trimmedOtp.length < 4) {
         throw new Error('Please enter a valid OTP verification code.');
     }
 
-    const trimmedOtp = otp.trim();
-
-    // Check if target is SuperAdmin phone
-    const isSuperAdminPhone = normPhone === '254723119356' || normPhone === '0723119356' || last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
-
-    if (isSuperAdminPhone) {
-        const storedOtp = activeOtpStore.get(cleanTarget);
-        const isSaCodeValid = trimmedOtp === '3232' || (storedOtp && storedOtp.code === trimmedOtp);
-        if (!isSaCodeValid) {
-            throw new Error('Incorrect code for Super Admin. Default code is 3232.');
-        }
-
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
-        if (!saUser) saUser = SUPER_ADMIN_PROVIDER;
-
-        saveToProfilesIndex(saUser);
-        const token = 'valid-token-for-254723119356';
-        setToken(token);
-
-        return {
-            success: true,
-            user: saUser,
-            isSuperAdmin: true,
-            token
-        };
+    const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: cleanTarget, code: trimmedOtp })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.token) {
+        throw new Error(data.error || 'Incorrect OTP verification code. Please enter the valid code sent to your phone.');
     }
 
-    // Verify OTP against active store & backend
-    const storedOtp = activeOtpStore.get(cleanTarget);
-    const isLocalValid = storedOtp && storedOtp.code === trimmedOtp && Date.now() < storedOtp.expiresAt;
-
-    let backendOk = false;
-    let existingUser: ServiceProvider | null = null;
-
-    try {
-        const res = await fetch('/api/auth/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: cleanTarget, code: trimmedOtp })
-        });
-        if (res.ok) {
-            backendOk = true;
-            const data = await res.json();
-            if (data.provider) {
-                existingUser = data.provider;
-            }
-        }
-    } catch {
-        // Fallback
-    }
-
-    if (!isLocalValid && !backendOk) {
-        throw new Error('Incorrect OTP verification code. Please enter the valid code sent to your phone.');
-    }
-
-    // Clear used OTP
-    activeOtpStore.delete(cleanTarget);
-
-    // 2. Fallback to local persistent index or localStorage table
-    if (!existingUser) {
-        const index = getPersistentProfilesIndex();
-        if (index[cleanTarget] || index[`phone_${normPhone}`] || index[`phone_${last9}`]) {
-            existingUser = index[cleanTarget] || index[`phone_${normPhone}`] || index[`phone_${last9}`];
-        }
-    }
-
-    if (!existingUser) {
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        existingUser = providers.find(p => {
-            if (p.email && p.email.toLowerCase() === cleanTarget) return true;
-            if (!p.phone) return false;
-            const pClean = cleanNum(p.phone);
-            return pClean === normPhone || (last9.length === 9 && pClean.endsWith(last9));
-        }) || null;
-    }
-
-    if (existingUser) {
-        saveToProfilesIndex(existingUser);
-    }
-
-    const token = 'valid-token-for-' + (existingUser?.phone || existingUser?.email || cleanTarget);
-    setToken(token);
+    const user: ServiceProvider | null = data.provider || null;
+    if (user) saveToProfilesIndex(user);
+    setToken(data.token);
 
     return {
         success: true,
-        user: existingUser || null,
-        isSuperAdmin: false,
-        token
+        user,
+        // Admin status comes from the server's record of the account, never from a phone number in the client.
+        isSuperAdmin: user?.role === 'SuperAdmin',
+        token: data.token
     };
 };
 
 export const getMyProfile = async (): Promise<ServiceProvider> => {
-    await delay(100);
-    const token = getToken();
-    if (token && token.startsWith('valid-token-for-')) {
-        const phone = token.replace('valid-token-for-', '');
-        const normPhone = phone.replace(/\D/g, '');
-        const index = getPersistentProfilesIndex();
-        
-        if (index[`phone_${normPhone}`]) {
-            return index[`phone_${normPhone}`];
-        }
-
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        if (normPhone.endsWith('723119356') || phone === '254723119356' || phone === '0723119356') {
-            return providers.find(p => p.phone === '254723119356' || p.phone === '0723119356') || SUPER_ADMIN_PROVIDER;
-        }
-
-        const user = providers.find(p => p.phone && p.phone.replace(/\D/g, '').endsWith(normPhone.slice(-9)));
-        if (user) {
-            saveToProfilesIndex(user);
-            return user;
-        }
-    }
-    throw new Error("No valid token or profile");
+    if (!getToken()) throw new Error('Not signed in');
+    const res = await authFetch('/api/auth/me');
+    if (!res.ok) throw new Error('No valid session');
+    const user: ServiceProvider = await res.json();
+    saveToProfilesIndex(user);
+    return user;
 };
 
 // --- Data Fetching (GET) ---
 export const getProviders = async (): Promise<ServiceProvider[]> => {
     try {
-        const res = await fetch('/api/providers');
+        const res = await authFetch('/api/providers');
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -353,7 +233,7 @@ export const getEvents = async (): Promise<Event[]> => {
 
 export const getGigs = async (): Promise<Gig[]> => {
     try {
-        const res = await fetch('/api/gigs');
+        const res = await authFetch('/api/gigs');
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -369,7 +249,7 @@ export const getGigs = async (): Promise<Gig[]> => {
 
 export const getCatalogueItems = async (): Promise<CatalogueItem[]> => {
     try {
-        const res = await fetch('/api/catalogue');
+        const res = await authFetch('/api/catalogue');
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -390,7 +270,7 @@ export const getDocuments = async (): Promise<Document[]> => {
 
 export const getSpecialBanners = async (): Promise<SpecialBanner[]> => {
     try {
-        const res = await fetch('/api/banners');
+        const res = await authFetch('/api/banners');
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -406,7 +286,7 @@ export const getSpecialBanners = async (): Promise<SpecialBanner[]> => {
 
 export const getInboxMessages = async (): Promise<InboxMessage[]> => {
     try {
-        const res = await fetch('/api/messages');
+        const res = await authFetch('/api/messages');
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -427,7 +307,7 @@ export const addInboxMessage = async (messageData: Omit<InboxMessage, 'id'>): Pr
     };
     
     try {
-        await fetch('/api/messages', {
+        await authFetch('/api/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newMessage)
@@ -462,7 +342,7 @@ export const createProvider = async (providerData: Omit<ServiceProvider, 'id'>):
     saveToProfilesIndex(newProvider);
 
     try {
-        await fetch('/api/providers', {
+        await authFetch('/api/providers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newProvider)
@@ -489,7 +369,7 @@ export const addEvent = async (eventData: Omit<Event, 'id'>): Promise<Event> => 
 export const createGig = async (gigData: Omit<Gig, 'id' | 'providerId'>): Promise<Gig> => {
     const newGig: Gig = { ...gigData, id: `gig_${Date.now()}`, providerId: 'pro-001' };
     try {
-        await fetch('/api/gigs', {
+        await authFetch('/api/gigs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newGig)
@@ -541,7 +421,7 @@ export const updateProvider = async (updatedProvider: ServiceProvider): Promise<
     saveToProfilesIndex(updatedProvider);
 
     try {
-        await fetch(`/api/providers/${updatedProvider.id}`, {
+        await authFetch(`/api/providers/${updatedProvider.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedProvider)
@@ -567,7 +447,7 @@ export const updateProvider = async (updatedProvider: ServiceProvider): Promise<
 
 export const updateCatalogueItem = async (updatedItem: CatalogueItem): Promise<CatalogueItem> => {
     try {
-        await fetch('/api/catalogue', {
+        await authFetch('/api/catalogue', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedItem)
@@ -586,7 +466,7 @@ export const updateCatalogueItem = async (updatedItem: CatalogueItem): Promise<C
 };
 export const addCatalogueItem = async (newItem: CatalogueItem): Promise<CatalogueItem> => {
     try {
-        await fetch('/api/catalogue', {
+        await authFetch('/api/catalogue', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newItem)
@@ -607,7 +487,7 @@ export const addCatalogueItem = async (newItem: CatalogueItem): Promise<Catalogu
 
 export const deleteCatalogueItem = async (id: string): Promise<void> => {
     try {
-        await fetch(`/api/catalogue/${id}`, { method: 'DELETE' });
+        await authFetch(`/api/catalogue/${id}`, { method: 'DELETE' });
     } catch {
         // Fallback
     }
@@ -618,7 +498,7 @@ export const deleteCatalogueItem = async (id: string): Promise<void> => {
 
 export const deleteProvider = async (id: string): Promise<void> => {
     try {
-        await fetch(`/api/providers/${id}`, { method: 'DELETE' });
+        await authFetch(`/api/providers/${id}`, { method: 'DELETE' });
     } catch {
         // Fallback
     }
@@ -631,7 +511,7 @@ export const deleteProvider = async (id: string): Promise<void> => {
 
 export const recordLocationCheckIn = async (data: Partial<LocationCheckInLog> & { providerId?: string }): Promise<{ success: boolean; log: LocationCheckInLog; resolvedCoords?: any }> => {
     try {
-        const res = await fetch('/api/locations/checkin', {
+        const res = await authFetch('/api/locations/checkin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -669,7 +549,7 @@ export const getLocationCheckInLogs = async (query?: { userId?: string; location
         if (query?.location) params.append('location', query.location);
         if (query?.limit) params.append('limit', String(query.limit));
 
-        const res = await fetch(`/api/locations/logs?${params.toString()}`);
+        const res = await authFetch(`/api/locations/logs?${params.toString()}`);
         if (res.ok) {
             return await res.json();
         }
@@ -694,7 +574,7 @@ export const getCalculatedDistance = async (
         if (lat2 !== undefined) params.append('lat2', String(lat2));
         if (lon2 !== undefined) params.append('lon2', String(lon2));
 
-        const res = await fetch(`/api/locations/distance?${params.toString()}`);
+        const res = await authFetch(`/api/locations/distance?${params.toString()}`);
         if (res.ok) {
             return await res.json();
         }

@@ -480,7 +480,7 @@ function App() {
             if (user && isMounted) {
               setCurrentUser(user);
               setIsAuthenticated(true);
-              if (user.phone === '254723119356' || user.phone === '0723119356') setIsSuperAdmin(true);
+              setIsSuperAdmin(user.role === 'SuperAdmin');
             }
         }
         const [providersData, catalogueData, docsData, bannersData] = await Promise.all([
@@ -656,6 +656,13 @@ function App() {
     }
     setCurrentPage('home');
   };
+
+  // The server rejected our session token (missing, expired or from an old login): sign out so the user logs in again.
+  useEffect(() => {
+    const onAuthExpired = () => handleLogout();
+    window.addEventListener('nikosoko:auth-expired', onAuthExpired);
+    return () => window.removeEventListener('nikosoko:auth-expired', onAuthExpired);
+  }, []);
 
   const handleApproveSaccoRequest = (orgId: string, userId: string) => {
     setProviders(prev => prev.map(p => {

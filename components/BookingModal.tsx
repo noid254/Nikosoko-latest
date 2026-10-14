@@ -1,3 +1,4 @@
+import { authFetch } from '../services/authFetch';
 import React, { useState, useEffect } from 'react';
 import type { ServiceProvider, InboxMessage, Booking } from '../types';
 import { 
@@ -221,7 +222,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('/api/mpesa/stkpush', {
+            const res = await authFetch('/api/mpesa/stkpush', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -329,7 +330,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         // 3. Save to server backend `/api/bookings`
         try {
-            await fetch('/api/bookings', {
+            await authFetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newBooking)

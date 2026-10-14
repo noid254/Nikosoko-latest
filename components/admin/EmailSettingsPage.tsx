@@ -1,3 +1,4 @@
+import { authFetch } from '../../services/authFetch';
 import React, { useState, useEffect } from 'react';
 
 export const EmailSettingsPage: React.FC = () => {
@@ -25,7 +26,7 @@ export const EmailSettingsPage: React.FC = () => {
   const fetchSmsSettings = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/sms-settings');
+      const res = await authFetch('/api/admin/sms-settings');
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
@@ -43,7 +44,7 @@ export const EmailSettingsPage: React.FC = () => {
     setSaveMessage(null);
 
     try {
-      const res = await fetch('/api/admin/sms-settings', {
+      const res = await authFetch('/api/admin/sms-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
@@ -70,7 +71,7 @@ export const EmailSettingsPage: React.FC = () => {
     setTestResult(null);
 
     try {
-      const res = await fetch('/api/admin/test-sms', {
+      const res = await authFetch('/api/admin/test-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ testPhone: testPhoneRecipient.trim() })
