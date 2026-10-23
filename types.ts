@@ -315,6 +315,8 @@ export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qarib
 
 export interface Booking {
   id: string;
+  // Set by the platform: whether the signed-in person is the client or the professional on this booking.
+  role?: 'client' | 'provider';
   providerId: string;
   providerName: string;
   providerPhone?: string;

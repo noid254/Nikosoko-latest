@@ -9,6 +9,8 @@ import {
     googleSignOut 
 } from '../services/googleCalendar';
 import { User } from 'firebase/auth';
+import { USE_PLATFORM } from '../services/backend';
+import * as platform from '../services/platform';
 
 interface BookingModalProps {
     provider: ServiceProvider;
@@ -190,7 +192,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         }
     };
 
+    // On the platform a booking is a request the professional answers; no payment is taken until real M-Pesa payments exist.
+    const handleSendRequest = async () => {
+        setErrorMessage(null);
+        setIsSubmitting(true);
+        try {
+            const made = await platform.makeBooking({ providerId: provider.id, date, time, serviceTitle: provider.service, notes: notes.trim() });
+            if (onBookingSuccess) onBookingSuccess(made);
+            setConfirmedBookingData(made);
+            setStep(3);
+        } catch (err: any) {
+            setErrorMessage(err.message || 'Could not send your booking. Try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const handleProceedToPayment = () => {
+        if (USE_PLATFORM) {
+            if (!date || !time) {
+                setErrorMessage('Please pick a valid booking date and time slot.');
+                return;
+            }
+            void handleSendRequest();
+            return;
+        }
         if (!date || !time) {
             setErrorMessage('Please pick a valid booking date and time slot.');
             return;
@@ -391,12 +417,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                             <h3 className="font-bold text-xs uppercase tracking-tight text-white">
                                 {step === 1 && 'Book Service Appointment'}
                                 {step === 2 && 'Confirm Slot & M-Pesa Deposit'}
-                                {step === 3 && 'Booking Confirmed'}
+                                {step === 3 && (USE_PLATFORM ? 'Booking Requested' : 'Booking Confirmed')}
                             </h3>
                             <p className="text-[10px] text-neutral-400 font-normal">
                                 {step === 1 && 'Google Calendar Availability Sync'}
                                 {step === 2 && `Minimum Booking Fee: KES ${minBookingFee.toLocaleString()}`}
-                                {step === 3 && 'Calendar & M-Pesa Verified'}
+                                {step === 3 && (USE_PLATFORM ? 'Waiting for the professional to confirm' : 'Calendar & M-Pesa Verified')}
                             </p>
                         </div>
                     </div>
@@ -415,9 +441,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     <div className="flex items-center justify-between text-[10px] font-semibold text-neutral-500 border-b border-neutral-100 pb-2">
                         <span className={step >= 1 ? 'text-black font-bold' : ''}>1. Schedule & Calendar</span>
                         <span>→</span>
-                        <span className={step >= 2 ? 'text-emerald-700 font-bold' : ''}>2. M-Pesa Minimum Fee</span>
-                        <span>→</span>
-                        <span className={step === 3 ? 'text-black font-bold' : ''}>3. Confirmed</span>
+                        {!USE_PLATFORM && <span className={step >= 2 ? 'text-emerald-700 font-bold' : ''}>2. M-Pesa Minimum Fee</span>}
+                        {!USE_PLATFORM && <span>→</span>}
+                        <span className={step === 3 ? 'text-black font-bold' : ''}>{USE_PLATFORM ? '2. Requested' : '3. Confirmed'}</span>
                     </div>
 
                     {/* Error Notice */}
@@ -445,9 +471,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-neutral-500 truncate">{provider.service}</p>
-                                    <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">
-                                        Required Minimum Deposit: KES {minBookingFee.toLocaleString()}
-                                    </p>
+                                    {!USE_PLATFORM && (
+                                        <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                                            Required Minimum Deposit: KES {minBookingFee.toLocaleString()}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -596,7 +624,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                                 onClick={handleProceedToPayment}
                                 className="w-full py-3 bg-black text-white hover:bg-neutral-800 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                             >
-                                <span>Proceed to M-Pesa Deposit (KES {minBookingFee.toLocaleString()})</span>
+                                <span>{USE_PLATFORM ? (isSubmitting ? 'Sending…' : 'Send booking request') : `Proceed to M-Pesa Deposit (KES ${minBookingFee.toLocaleString()})`}</span>
                                 <span>&rarr;</span>
                             </button>
                         </div>
@@ -770,10 +798,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                             </div>
                             <div>
                                 <h3 className="text-base font-bold text-neutral-900 uppercase">
-                                    Appointment Confirmed!
+                                    {USE_PLATFORM ? 'Request sent' : 'Appointment Confirmed!'}
                                 </h3>
                                 <p className="text-xs text-neutral-500 mt-0.5">
-                                    Deposit secured via M-Pesa & added to Google Calendar.
+                                    {USE_PLATFORM ? `${provider.name} will confirm or suggest another time. You will see the answer in My Bookings.` : 'Deposit secured via M-Pesa & added to Google Calendar.'}
                                 </p>
                             </div>
 
@@ -782,15 +810,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                                 <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
                                     <span className="font-bold text-neutral-900">{confirmedBookingData.serviceTitle}</span>
                                     <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                                        Confirmed
+                                        {USE_PLATFORM ? 'Pending' : 'Confirmed'}
                                     </span>
                                 </div>
 
                                 <div className="space-y-1 text-neutral-600 text-[11px]">
                                     <p><strong>Provider:</strong> {confirmedBookingData.providerName}</p>
                                     <p><strong>Date & Time:</strong> 📅 {confirmedBookingData.date} @ {confirmedBookingData.time}</p>
-                                    <p><strong>M-Pesa Receipt:</strong> <span className="font-mono font-bold text-neutral-900">{confirmedBookingData.mpesaReceiptNumber}</span></p>
-                                    <p><strong>Deposit Paid:</strong> <span className="font-mono font-bold text-emerald-700">KES {confirmedBookingData.paidDepositAmount.toLocaleString()}</span></p>
+                                    {!USE_PLATFORM && <p><strong>M-Pesa Receipt:</strong> <span className="font-mono font-bold text-neutral-900">{confirmedBookingData.mpesaReceiptNumber}</span></p>}
+                                    {!USE_PLATFORM && <p><strong>Deposit Paid:</strong> <span className="font-mono font-bold text-emerald-700">KES {confirmedBookingData.paidDepositAmount.toLocaleString()}</span></p>}
                                     {confirmedBookingData.isCalendarSynced && (
                                         <p className="text-emerald-700 font-semibold">✓ Synced to Google Calendar</p>
                                     )}
