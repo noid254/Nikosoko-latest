@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '../config';
 import type { ServiceProvider, CatalogueItem, Document, SpecialBanner, InboxMessage, Event, Gig, Ticket, SetupData, UnitDetails, LocationCheckInLog } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockSpecialBanners, mockInboxMessages, mockEvents, mockGigs, mockTickets, mockCategories } from './mockData';
+import { USE_PLATFORM } from './backend';
+import * as platform from './platform';
 import { saveUserProfileToFirestore, getUserProfileFromFirestore, getAllUserProfilesFromFirestore } from './firebase';
 
 // --- Database Configuration (LocalStorage & SQLite Mirror) ---
@@ -143,6 +145,11 @@ export const clearToken = (): void => localStorage.removeItem('authToken');
 const activeOtpStore = new Map<string, { code: string; expiresAt: number }>();
 
 export const sendOtp = async (target: string): Promise<{ success: boolean; devCode: string; message: string }> => {
+    if (USE_PLATFORM) {
+        // The server issues and checks the code; nothing about it is known here.
+        await platform.requestCode(target);
+        return { success: true, devCode: '', message: `A sign-in code was sent to ${target} if it can sign in.` };
+    }
     await delay(150);
     const cleanTarget = String(target).trim().toLowerCase();
     const cleanNum = cleanTarget.replace(/\D/g, '');
@@ -181,6 +188,7 @@ export interface VerifyOtpResponse {
 }
 
 export const quickSuperAdminLogin = async (): Promise<VerifyOtpResponse> => {
+    if (USE_PLATFORM) throw new Error('This shortcut is not available.');
     await delay(100);
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
     let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
@@ -200,6 +208,11 @@ export const quickSuperAdminLogin = async (): Promise<VerifyOtpResponse> => {
 };
 
 export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpResponse> => {
+    if (USE_PLATFORM) {
+        const { token } = await platform.verifyCode(target, otp.trim());
+        setToken(token);
+        return { success: true, user: await platform.getMyProvider(), isSuperAdmin: false, token };
+    }
     await delay(200);
     const cleanTarget = String(target).trim().toLowerCase();
     const cleanNum = (p: string) => (p ? p.replace(/\D/g, '') : '');
@@ -303,6 +316,7 @@ export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpR
 };
 
 export const getMyProfile = async (): Promise<ServiceProvider> => {
+    if (USE_PLATFORM) return platform.getMyProvider();
     await delay(100);
     const token = getToken();
     if (token && token.startsWith('valid-token-for-')) {
@@ -330,6 +344,7 @@ export const getMyProfile = async (): Promise<ServiceProvider> => {
 
 // --- Data Fetching (GET) ---
 export const getProviders = async (): Promise<ServiceProvider[]> => {
+    if (USE_PLATFORM) return platform.getProfessionals().catch(() => []);
     try {
         const res = await fetch('/api/providers');
         if (res.ok) {

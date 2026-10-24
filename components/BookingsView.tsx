@@ -9,6 +9,8 @@ import {
     googleSignOut 
 } from '../services/googleCalendar';
 import { User } from 'firebase/auth';
+import { USE_PLATFORM } from '../services/backend';
+import * as platform from '../services/platform';
 
 interface BookingsViewProps {
     currentUser: ServiceProvider | null;
@@ -94,6 +96,17 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     // Load bookings from SQLite backend and local cache
     const loadBookings = async () => {
         setIsLoading(true);
+        if (USE_PLATFORM) {
+            try {
+                setBookings(await platform.listBookings());
+            } catch (e) {
+                console.warn('Could not load bookings:', e);
+                setBookings([]);
+            } finally {
+                setIsLoading(false);
+            }
+            return;
+        }
         try {
             const res = await fetch('/api/bookings');
             const contentType = res.headers.get('content-type');
@@ -227,6 +240,17 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     };
 
     const handleUpdateBookingStatus = async (bookingId: string, newStatus: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled') => {
+        if (USE_PLATFORM) {
+            const action = newStatus === 'Confirmed' ? 'confirm' : newStatus === 'Completed' ? 'complete' : newStatus === 'Cancelled' ? 'decline' : null;
+            if (!action) return;
+            try {
+                await platform.changeBooking(bookingId, action);
+            } catch (e: any) {
+                alert(e.message || 'That did not work.');
+            }
+            await loadBookings();
+            return;
+        }
         const now = new Date().toISOString();
         const updatedList = bookings.map(b => b.id === bookingId ? { ...b, status: newStatus, updatedAt: now } : b);
         setBookings(updatedList);
@@ -256,6 +280,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         setIsCancelling(true);
 
         const booking = cancellingBooking;
+        if (USE_PLATFORM) {
+            const reasonText = customCancelNote.trim() ? `${selectedCancelReason} - ${customCancelNote.trim()}` : selectedCancelReason;
+            try {
+                await platform.changeBooking(booking.id, booking.role === 'provider' && booking.status === 'Pending' ? 'decline' : 'cancel', { reason: reasonText.slice(0, 200) });
+            } catch (e: any) {
+                alert(e.message || 'That did not work.');
+            }
+            await loadBookings();
+            setIsCancelling(false);
+            setCancellingBooking(null);
+            return;
+        }
         const now = new Date().toISOString();
         const combinedReason = customCancelNote.trim() 
             ? `${selectedCancelReason} - ${customCancelNote.trim()}`
@@ -325,11 +361,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
     // Filter user's bookings vs provider's received appointments
     const clientBookings = bookings.filter(b => {
+        if (USE_PLATFORM) return b.role === 'client';
         if (!currentUser) return true;
         return b.clientId === currentUser.id || b.clientPhone === currentUser.phone || !currentUser.isVerified;
     });
 
     const receivedBookings = bookings.filter(b => {
+        if (USE_PLATFORM) return b.role === 'provider';
         if (!currentUser) return false;
         return b.providerId === currentUser.id || b.providerPhone === currentUser.phone;
     });
