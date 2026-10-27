@@ -46,3 +46,23 @@ export function normalizeSkills(rawSkills: any): Skill[] {
     };
   });
 }
+
+// Default titles new accounts got at sign-up. They are not real skills or professions.
+export const PLACEHOLDER_TITLES = /^(general trades?( professional)?|trades? specialist|general skill|service skill|skilled service|professional artisan|general tradesperson)$/i;
+
+export function isPlaceholderTitle(value?: string | null): boolean {
+  return !value || PLACEHOLDER_TITLES.test(value.trim());
+}
+
+/**
+ * For display: a skill still titled with a sign-up placeholder (e.g. "General Trades")
+ * takes the person's listed profession instead (e.g. "Interior designer").
+ * Rate, description and certificates on the skill are kept. Stored data is not changed.
+ */
+export function withProfessionTitles(skills: Skill[], profession?: string | null): Skill[] {
+  const prof = isPlaceholderTitle(profession) ? '' : (profession || '').trim();
+  return skills.map((s) => {
+    if (!isPlaceholderTitle(s.skillTitle || s.name)) return s;
+    return prof ? { ...s, skillTitle: prof, name: prof } : s;
+  });
+}

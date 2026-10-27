@@ -590,7 +590,7 @@ async function startServer() {
           avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300',
           coverImageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800',
           role: 'Member',
-          skills: JSON.stringify(['General Trades']),
+          skills: JSON.stringify([]),
           hourlyRate: 'Ksh 1,000/hr',
           password: 'password123',
           createdAt: new Date().toISOString()
@@ -645,7 +645,7 @@ async function startServer() {
         avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300`,
         coverImageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800',
         role: role || 'Provider',
-        skills: JSON.stringify(['Trades Specialist']),
+        skills: JSON.stringify([]),
         hourlyRate: 'Ksh 1,000/hr',
         password: password || 'password123',
         createdAt: new Date().toISOString()
@@ -1524,8 +1524,23 @@ async function startServer() {
         ]
       );
 
-      // Update provider table location & coordinates if provider exists
+      // Update provider table location & coordinates if provider exists.
+      // The last check-in is the user's location, but only real coordinates are stored:
+      // live GPS from the device, or a recognised estate. Unknown text keeps the previous coordinates.
+      const latNum = Number(latitude), lngNum = Number(longitude);
+      const hasGps = latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null &&
+        !isNaN(latNum) && !isNaN(lngNum) && !(latNum === 0 && lngNum === 0) &&
+        latNum >= -5 && latNum <= 5 && lngNum >= 33 && lngNum <= 42;
+      const cleanName = (locationName || '').toLowerCase();
+      // Generic "Nairobi" (the sign-up default) is not a location; only specific estates count.
+      const matchedEstate = Object.keys(KENYA_ESTATES_MAP).some(k => k !== 'nairobi' && cleanName.includes(k));
       try {
+        if (!hasGps && !matchedEstate) {
+          runSql(
+            `UPDATE providers SET location = ?, lastCheckInAt = ?, lastCheckInLocation = ? WHERE id = ?`,
+            [locationName || resolved.name, now, locationName || resolved.name, targetId]
+          );
+        } else
         runSql(
           `UPDATE providers SET 
             location = ?, 

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ServiceProvider } from '../types';
-import { normalizeSkills } from '../utils/skills';
+import { normalizeSkills, isPlaceholderTitle, withProfessionTitles } from '../utils/skills';
 import { getDisplayRating } from '../utils/trustEngine';
 
 const StarIcon: React.FC<{ className?: string }> = ({ className = "w-3 h-3" }) => (
@@ -57,7 +57,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     isItemVerified
 }) => {
     const activeQuery = (searchTerm || '').toLowerCase().trim();
-    const normalizedSkills = normalizeSkills(provider?.skills);
+    // Placeholder values given to new accounts at sign-up; never shown as someone's skill or profession.
+    const isPlaceholder = isPlaceholderTitle;
+    // Placeholder skill titles ("General Trades") take the person's profession; any left over are dropped.
+    const normalizedSkills = withProfessionTitles(normalizeSkills(provider?.skills), provider?.service)
+        .filter(s => !isPlaceholder(s.skillTitle || s.name));
     const matchedSkill = normalizedSkills.find(s => {
         if (!activeQuery) return false;
         const title = (s.skillTitle || s.name || '').toLowerCase();
@@ -82,7 +86,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     // Distance display: realistic distance e.g. "13.8 km away", "0.5 km away"
     const distanceDisplay = typeof provider?.distanceKm === 'number'
         ? `${provider.distanceKm.toFixed(1)} km away`
-        : 'Nearby';
+        : 'No location';
 
     const displayRating = getDisplayRating(provider);
 
@@ -100,12 +104,20 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     const displayImage = isProfessionalProfile ? professionalImage : serviceOfferedImage;
 
     // Titles & details based on thumbnail type
-    const displayProfession = matchedSkill?.certificationName || matchedSkill?.skillTitle || provider?.service || 'Professional Artisan';
+    // Profession = what the person wrote as their title on their profile (provider.service).
+    const profession = isPlaceholder(provider?.service) ? '' : (provider?.service || '').trim();
+    // Bold title on a professional card: their listed skill first, then their profession.
+    const displayProfession = matchedSkill?.skillTitle || matchedSkill?.certificationName || profession || 'New member';
     const displayServiceTitle = serviceTitle || matchedSkill?.skillTitle || provider?.service || 'Skilled Service';
     const displayDesc = serviceDescription || matchedSkill?.description || provider?.about || provider?.service || '';
     const displayRate = matchedSkill?.hourlyRate || provider?.hourlyRate || 0;
     const displayCurrency = matchedSkill?.currency || provider?.currency || 'KES';
-    const displayCategory = serviceCategory || matchedSkill?.category || provider?.category || 'Trade Service';
+    const rawCategory = serviceCategory || matchedSkill?.category || '';
+    const serviceCategoryLabel = /^general$/i.test(rawCategory.trim()) ? '' : rawCategory;
+    // Small line next to the name: profession on professional cards (only if it adds something), category on service cards.
+    const displayCategory = isProfessionalProfile
+        ? (profession && profession.toLowerCase() !== displayProfession.toLowerCase() ? profession : '')
+        : serviceCategoryLabel;
 
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         e.currentTarget.onerror = null;
@@ -185,8 +197,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                         <div className="text-[10px] font-normal text-gray-500 lowercase tracking-tight truncate flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full bg-gray-400 inline-block shrink-0"></span>
                             <span className="truncate font-medium">{realName}</span>
-                            <span className="text-gray-400">•</span>
-                            <span className="text-[9px] text-gray-400 uppercase tracking-widest truncate">{displayCategory}</span>
+                            {displayCategory && (
+                                <>
+                                    <span className="text-gray-400">•</span>
+                                    <span className="text-[9px] text-gray-400 uppercase tracking-widest truncate">{displayCategory}</span>
+                                </>
+                            )}
                         </div>
                     </div>
 

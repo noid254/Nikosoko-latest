@@ -374,46 +374,82 @@ export function calculateDistanceBetweenLocations(
   };
 }
 
+/** True when the pair is a real GPS fix inside (roughly) Kenya, not a missing/zero value. */
+export function isValidKenyaCoords(lat?: number | null, lng?: number | null): boolean {
+  return (
+    typeof lat === 'number' && typeof lng === 'number' &&
+    !isNaN(lat) && !isNaN(lng) &&
+    !(lat === 0 && lng === 0) &&
+    lat >= -5 && lat <= 5 && lng >= 33 && lng <= 42
+  );
+}
+
 /**
- * Recalculates and updates provider list distances relative to a given user check-in location
+ * Matches a location string to a specific estate in the curated list.
+ * Generic text such as "Nairobi, Kenya" (the default given to new accounts) is NOT treated
+ * as a location, because it would put everyone at the same CBD point.
+ * Returns null when nothing specific matches.
+ */
+export function matchSpecificEstate(locationString?: string | null): Coordinates | null {
+  const clean = (locationString || '').toLowerCase().trim();
+  if (!clean) return null;
+  for (const estate of KENYAN_ESTATES) {
+    if (estate.name === 'Nairobi CBD') {
+      if (clean.includes('cbd')) return { lat: estate.lat, lng: estate.lng };
+      continue;
+    }
+    if (clean.includes(estate.name.toLowerCase()) || estate.aliases.some((alias) => clean.includes(alias))) {
+      return { lat: estate.lat, lng: estate.lng };
+    }
+  }
+  return null;
+}
+
+/**
+ * Where a person actually is, best evidence first:
+ * 1. GPS saved by their last check-in (latitude/longitude),
+ * 2. the estate named in their last check-in,
+ * 3. a specific estate named in their profile location.
+ * Returns null when we don't know, so no made-up distance is shown.
+ */
+export function getProviderCoords(provider: Partial<ServiceProvider>): Coordinates | null {
+  if (isValidKenyaCoords(provider.latitude, provider.longitude)) {
+    return { lat: provider.latitude as number, lng: provider.longitude as number };
+  }
+  return matchSpecificEstate(provider.lastCheckInLocation) || matchSpecificEstate(provider.location);
+}
+
+/**
+ * Recalculates provider distances relative to the viewer's location.
+ * The viewer's live/last check-in GPS is used when available, else a specific estate they named.
+ * Providers whose location is unknown get distanceKm = undefined (shown as "No location") and sort last.
  */
 export function recalculateProvidersDistances(
   providers: ServiceProvider[],
   userLocation: string,
   userCoords?: Coordinates
 ): ServiceProvider[] {
-  const userGeo = userCoords && typeof userCoords.lat === 'number' && typeof userCoords.lng === 'number' && userCoords.lat !== 0
-    ? { lat: userCoords.lat, lng: userCoords.lng, estateName: userLocation }
-    : resolveLocationCoordinates(userLocation);
+  const viewer: Coordinates | null = userCoords && isValidKenyaCoords(userCoords.lat, userCoords.lng)
+    ? { lat: userCoords.lat, lng: userCoords.lng }
+    : matchSpecificEstate(userLocation);
 
   return providers.map((provider) => {
-    // Resolves provider geo based on provider's stated location
-    const proGeo = resolveLocationCoordinates(provider.location || '');
-    let proLat = proGeo.lat;
-    let proLng = proGeo.lng;
-
-    if (
-      typeof provider.latitude === 'number' &&
-      typeof provider.longitude === 'number' &&
-      provider.latitude >= -5 &&
-      provider.latitude <= 5 &&
-      provider.longitude >= 33 &&
-      provider.longitude <= 42 &&
-      !provider.location
-    ) {
-      proLat = provider.latitude;
-      proLng = provider.longitude;
-    }
-
-    const distanceKm = calculateHaversineDistance(userGeo.lat, userGeo.lng, proLat, proLng);
-
-    return {
-      ...provider,
-      distanceKm,
-      latitude: proLat,
-      longitude: proLng
-    };
+    const pro = getProviderCoords(provider);
+    const distanceKm = viewer && pro
+      ? calculateHaversineDistance(viewer.lat, viewer.lng, pro.lat, pro.lng)
+      : undefined;
+    return { ...provider, distanceKm };
   });
+}
+
+/** Sort helper: nearest first, unknown distances last. */
+export function compareByDistance(a: { distanceKm?: number }, b: { distanceKm?: number }): number {
+  const ak = typeof a.distanceKm === 'number';
+  const bk = typeof b.distanceKm === 'number';
+  if (ak && bk) return (a.distanceKm as number) - (b.distanceKm as number);
+  if (ak) return -1;
+  if (bk) return 1;
+  return 0;
 }
 
 /**
@@ -477,13 +513,17 @@ export async function recordLocationCheckIn(
   // Save to local storage
   saveLocalCheckInLog(newLog);
 
-  // Send to API server
+  // Send to API server. Only send coordinates we trust (live GPS or a recognised estate);
+  // otherwise the server would store a made-up default point as this person's location.
+  const trusted = coords && isValidKenyaCoords(coords.lat, coords.lng) ? coords : matchSpecificEstate(locationName);
   try {
     const res = await fetch('/api/locations/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...newLog,
+        latitude: trusted ? trusted.lat : undefined,
+        longitude: trusted ? trusted.lng : undefined,
         providerId: user.id
       })
     });
