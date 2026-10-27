@@ -261,7 +261,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     };
 
     const displayName = profileData.name || 'Guest User';
-    const displayId = (displayName && profileData.id) ? `${displayName.split(' ')[0].toUpperCase()}-${profileData.id.slice(0,4)}` : 'ID-N/A';
+    // Profile heading: the user's name, first two names only (e.g. "Jane Wanjiru Kamau" -> "Jane Wanjiru")
+    const headingName = displayName.trim().split(/\s+/).slice(0, 2).join(' ') || 'Guest User';
 
     const handleCall = () => {
         if (!isAuthenticated) onContactClick();
@@ -696,7 +697,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     ) : (
                         <div className="space-y-1">
                             <div className="flex items-center justify-center gap-1.5">
-                                <h1 className="text-xl font-black text-black">{isOwner ? `SKILL ID: ${displayId}` : displayName}</h1>
+                                <h1 className="text-xl font-black text-black">{headingName}</h1>
                                 {(() => {
                                     const isSaccoConfirmed = profileData.isSaccoVerified || profileData.saccoMember?.status === 'Confirmed' || profileData.saccoMember?.status === 'Approved';
                                     if (!isSaccoConfirmed && profileData.isVerified) {
