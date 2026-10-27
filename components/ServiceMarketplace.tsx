@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { compareByDistance } from '../utils/geoLocations';
 import type { ServiceProvider, SpecialBanner, CurrentPage } from '../types';
 import ServiceCard from './ServiceCard';
 import OrgDetailModal from './OrgDetailModal';
@@ -121,7 +122,7 @@ const ServiceMarketplace: React.FC<ServiceMarketplaceProps> = ({ providers, spec
                 p.service.toLowerCase().includes(searchTerm.toLowerCase())
             ) : childFiltered;
 
-        return filtered.sort((a, b) => a.distanceKm - b.distanceKm);
+        return filtered.sort(compareByDistance);
     }, [providers, activeParent, activeChild, searchTerm]);
 
     const bannerData = useMemo(() => {

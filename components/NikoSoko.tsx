@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig, Coordinates } from '../types';
 import { normalizeSkills } from '../utils/skills';
-import { recalculateProvidersDistances, findNearestEstate } from '../utils/geoLocations';
+import { recalculateProvidersDistances, findNearestEstate, compareByDistance } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -188,7 +188,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             const aSacco = a.isSaccoVerified || a.saccoMember?.status === 'Confirmed' ? 1 : 0;
             const bSacco = b.isSaccoVerified || b.saccoMember?.status === 'Confirmed' ? 1 : 0;
             if (bSacco !== aSacco) return bSacco - aSacco;
-            return a.distanceKm - b.distanceKm;
+            return compareByDistance(a, b);
         });
     }, [providersWithDistances, searchTerm, localSearch]);
 

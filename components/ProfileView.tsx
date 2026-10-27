@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage, Coordinates } from '../types';
 import { normalizeSkills } from '../utils/skills';
 import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
-import { resolveLocationCoordinates, recordLocationCheckIn, getLocalCheckInLogs } from '../utils/geoLocations';
+import { resolveLocationCoordinates, recordLocationCheckIn, getLocalCheckInLogs, isValidKenyaCoords, matchSpecificEstate } from '../utils/geoLocations';
 import LocationPromptModal from './LocationPromptModal';
 import SkillDetailModal from './SkillDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -99,12 +99,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
     const handleConfirmLocationPrompt = (newLocation: string, coords?: Coordinates) => {
         const resolved = resolveLocationCoordinates(newLocation, coords);
+        // Last check-in is the user's location: live GPS first, else a recognised estate, else keep what we had.
+        const trusted = coords && isValidKenyaCoords(coords.lat, coords.lng) ? coords : matchSpecificEstate(newLocation);
         const updatedProfile: ServiceProvider = {
             ...profileData,
             isOnline: true,
             location: newLocation,
-            latitude: coords?.lat || resolved.lat,
-            longitude: coords?.lng || resolved.lng,
+            latitude: trusted ? trusted.lat : profileData.latitude,
+            longitude: trusted ? trusted.lng : profileData.longitude,
             lastCheckInAt: new Date().toISOString(),
             lastCheckInLocation: resolved.estateName
         };
@@ -113,7 +115,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         recordLocationCheckIn(
             profileData,
             newLocation,
-            coords || { lat: resolved.lat, lng: resolved.lng },
+            trusted || undefined,
             'live_status',
             `User checked in at ${newLocation} and went Live`
         ).catch(() => {});
@@ -796,7 +798,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 {/* Quick stats / Rating Row */}
                 <div className="mt-3 flex justify-around items-center text-gray-600 border-t border-b border-gray-100 py-2 bg-white shadow-xs">
                     <div className="text-center"><div className="flex items-center justify-center gap-0.5"><StarIcon className="w-3.5 h-3.5 text-yellow-500" /><span className="font-bold text-xs text-brand-navy">{profileData.rating.toFixed(1)}</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Rating</p></div>
-                    <div className="text-center"><div className="flex items-center justify-center gap-0.5"><LocationIcon className="w-3.5 h-3.5 text-red-500" /><span className="font-bold text-xs text-brand-navy">{typeof profileData.distanceKm === 'number' ? `${profileData.distanceKm.toFixed(1)}km` : 'Nearby'}</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Dist.</p></div>
+                    <div className="text-center"><div className="flex items-center justify-center gap-0.5"><LocationIcon className="w-3.5 h-3.5 text-red-500" /><span className="font-bold text-xs text-brand-navy">{typeof profileData.distanceKm === 'number' ? `${profileData.distanceKm.toFixed(1)}km` : 'N/A'}</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Dist.</p></div>
                     <div className="text-center"><div className="flex items-center justify-center gap-0.5"><RateIcon className="w-3.5 h-3.5 text-green-500" /><span className="font-bold text-xs text-brand-navy">{profileData.currency}{profileData.hourlyRate}/{rateSuffix[profileData.rateType]}</span></div><p className="text-[8px] uppercase font-black text-gray-400 mt-0.5">Rate</p></div>
                 </div>
 

@@ -187,7 +187,7 @@ export interface ServiceProvider {
   catalogueBannerUrl?: string;
   rating: number;
   ratingCount?: number;
-  distanceKm: number;
+  distanceKm?: number; // undefined when the provider's location is unknown
   hourlyRate: number;
   rateType: 'per hour' | 'per day' | 'per task' | 'per month' | 'per piece work' | 'per km' | 'per sqm' | 'per cbm' | 'per appearance';
   currency: string;
