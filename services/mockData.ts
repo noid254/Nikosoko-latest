@@ -1,4 +1,4 @@
-import type { ServiceProvider, CatalogueItem, Document, QaRibuRequest, Ticket, Gig, Event, SpecialBanner, InboxMessage, Premise, UnitKey } from '../types';
+import type { ServiceProvider, CatalogueItem, Document, InboxMessage } from '../types';
 
 export const SUPER_ADMIN_PROVIDER: ServiceProvider = {
     id: 'superadmin-0723119356',
@@ -7,7 +7,8 @@ export const SUPER_ADMIN_PROVIDER: ServiceProvider = {
     service: 'Master Systems Administrator & Marketplace Director',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400',
     coverImageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=800',
-    rating: 5.0,
+    rating: 0,
+    reviewsCount: 0,
     distanceKm: 0.1,
     hourlyRate: 5000,
     rateType: 'per hour',
@@ -20,7 +21,7 @@ export const SUPER_ADMIN_PROVIDER: ServiceProvider = {
     isOnline: true,
     accountType: 'individual',
     flagCount: 0,
-    views: 1250,
+    views: 0,
     role: 'SuperAdmin',
     cta: ['call', 'whatsapp', 'book', 'catalogue', 'save'],
     skills: [
@@ -74,16 +75,5 @@ export const mockProviders: ServiceProvider[] = [
 export const mockCatalogueItems: CatalogueItem[] = [];
 
 export const mockDocuments: Document[] = [];
-
-export const mockQaRibuRequests: QaRibuRequest[] = [];
-
-export const mockTickets: Ticket[] = [];
-export const mockGigs: Gig[] = [];
-export const mockEvents: Event[] = [];
-export const mockCategories: string[] = ['HOME', 'TRANSPORT', 'HEALTH', 'EDUCATION', 'PROFESSIONAL'];
-
-export const mockSpecialBanners: SpecialBanner[] = [];
-
-export const mockPremises: Premise[] = [];
 
 export const mockInboxMessages: InboxMessage[] = [];

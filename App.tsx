@@ -3,26 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { recalculateProvidersDistances } from './utils/geoLocations';
 import * as api from './services/api';
 import { 
-  ServiceProvider, CatalogueItem, Document, SpecialBanner, 
-  InboxMessage, UnitDetails, SetupData, CurrentPage, OrderData, UnitKey, RatingDispute, AdminNote,
-  AppBrandingConfig, AppFeatureConfig
+  ServiceProvider, CatalogueItem, Document, 
+  InboxMessage, CurrentPage, RatingDispute, AdminNote,
+  AppBrandingConfig
 } from './types';
 
 import AuthModal from './components/AuthModal';
 import SideMenu from './components/SideMenu';
 import NikoSoko from './components/NikoSoko';
-import ServiceMarketplace from './components/ServiceMarketplace';
-import JourneyPage from './components/JourneyPage';
 import Tukosoko from './components/Tukosoko';
-import PendingRatingsView from './components/PendingRatingsView';
 import MyContactsView, { SavedContactItem } from './components/MyContactsView';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
-import CreatePostView from './components/CreatePostView';
-import AddServiceCardView from './components/AddServiceCardView';
 import MessageCenterView from './components/MessageCenterView';
-import RegisterAssetView from './components/RegisterAssetView';
-import OwnershipCheckView from './components/OwnershipCheckView';
-import QRScannerView from './components/QRScannerView';
 import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
 import SkillDashboard from './components/SkillDashboard';
@@ -31,7 +23,6 @@ import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
 import BookingsView from './components/BookingsView';
 import SEOHead from './components/SEOHead';
-import SEOMapModal from './components/SEOMapModal';
 import DesktopBannerLayout from './components/DesktopBannerLayout';
 
 function App() {
@@ -111,63 +102,9 @@ function App() {
   const [reviewModalSubtitle, setReviewModalSubtitle] = useState<string>('');
   const [reviewPostponeCount, setReviewPostponeCount] = useState<number>(0);
   const [pendingCtaAction, setPendingCtaAction] = useState<(() => void) | null>(null);
-  const [simulated6HOverdueId, setSimulated6HOverdueId] = useState<string | null>(null);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [specialBanners, setSpecialBanners] = useState<SpecialBanner[]>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_special_banners');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      {
-        id: 'banner_nairobi',
-        title: 'NAIROBI SKILLED PROS',
-        subtitle: 'Connecting you with verified electricians, boda & plumbers in Nairobi',
-        imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200',
-        targetLocation: 'Nairobi',
-        isHeaderHero: true,
-        badgeText: 'NAIROBI HUBS',
-        priority: 10
-      },
-      {
-        id: 'banner_electrician',
-        title: 'POWER & WIRING EXPERTS',
-        subtitle: 'Certified electrical contractors & solar installers in your area',
-        imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1200',
-        targetCategory: 'Electrician',
-        isHeaderHero: true,
-        badgeText: 'ELECTRICIAN PROMO',
-        priority: 9
-      },
-      {
-        id: 'banner_new_member',
-        title: 'WELCOME TO NIKOSOKO!',
-        subtitle: 'Complete your profile & publish your service listing to start earning',
-        imageUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1200',
-        targetJoiningTenure: 'new_members',
-        isHeaderHero: true,
-        badgeText: 'NEW MEMBER',
-        priority: 8
-      },
-      {
-        id: 'banner_top_rated',
-        title: '★ 4.0+ VIP EXPERTS',
-        subtitle: 'Featured showcase for top-rated artisans & professionals',
-        imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200',
-        minRating: 4.0,
-        isHeaderHero: true,
-        badgeText: '★ TOP RATED',
-        priority: 7
-      }
-    ];
-  });
   const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
     const defaultBranding: AppBrandingConfig = {
       appName: 'NikoSoko',
@@ -196,43 +133,9 @@ function App() {
       return defaultBranding;
     }
   });
-  const [featureConfig, setFeatureConfig] = useState<AppFeatureConfig>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_feature_config');
-      return saved ? JSON.parse(saved) : {
-        enableTimeline: true,
-        enableQaRibuGatePass: false,
-        enableGigs: true,
-        enableEvents: true,
-        enableSaccos: true,
-        enableAssetVerification: true,
-        enableCourses: true,
-        enableCatalogue: true
-      };
-    } catch {
-      return {
-        enableTimeline: true,
-        enableQaRibuGatePass: false,
-        enableGigs: true,
-        enableEvents: true,
-        enableSaccos: true,
-        enableAssetVerification: true,
-        enableCourses: true,
-        enableCatalogue: true
-      };
-    }
-  });
   const [viewingProvider, setViewingProvider] = useState<ServiceProvider | null>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_viewing_provider');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [viewingCatalogueProvider, setViewingCatalogueProvider] = useState<ServiceProvider | null>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_viewing_catalogue_provider');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -246,9 +149,7 @@ function App() {
       return null;
     }
   });
-  const [selectedTools, setSelectedTools] = useState<CurrentPage[]>(['home', 'journey', 'admin']);
   const [bookingTargetProvider, setBookingTargetProvider] = useState<ServiceProvider | null>(null);
-  const [isSEOMapOpen, setIsSEOMapOpen] = useState(false);
   const [guestCoords, setGuestCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [savedContactsMap, setSavedContactsMap] = useState<Record<string, SavedContactItem>>(() => {
     try {
@@ -260,7 +161,6 @@ function App() {
     return {};
   });
   const [pendingBackAction, setPendingBackAction] = useState<(() => void) | null>(null);
-  const [pendingCtaTargetProvider, setPendingCtaTargetProvider] = useState<ServiceProvider | null>(null);
   const [ctaToast, setCtaToast] = useState<{ id: number; show: boolean; text: string; providerId?: string } | null>(null);
   const ctaToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -347,8 +247,6 @@ function App() {
       setCtaToast(prev => (prev && prev.id === id ? { ...prev, show: false } : prev));
     }, durationMs);
   };
-
-  const contactedProviderIds = contactHistory.map(c => c.providerId);
 
   const handleOpenCompleteSignUp = () => {
     setAuthAccountType('individual');
@@ -443,16 +341,6 @@ function App() {
 
   useEffect(() => {
     try {
-      if (viewingCatalogueProvider) {
-        localStorage.setItem('nikosoko_viewing_catalogue_provider', JSON.stringify(viewingCatalogueProvider));
-      } else {
-        localStorage.removeItem('nikosoko_viewing_catalogue_provider');
-      }
-    } catch (e) { console.error(e); }
-  }, [viewingCatalogueProvider]);
-
-  useEffect(() => {
-    try {
       if (selectedDocument) {
         localStorage.setItem('nikosoko_selected_document', JSON.stringify(selectedDocument));
       } else {
@@ -483,17 +371,15 @@ function App() {
               if (user.phone === '254723119356' || user.phone === '0723119356') setIsSuperAdmin(true);
             }
         }
-        const [providersData, catalogueData, docsData, bannersData] = await Promise.all([
+        const [providersData, catalogueData, docsData] = await Promise.all([
           api.getProviders().catch(() => []), 
           api.getCatalogueItems().catch(() => []), 
-          api.getDocuments().catch(() => []), 
-          api.getSpecialBanners().catch(() => [])
+          api.getDocuments().catch(() => [])
         ]);
         if (isMounted) {
           if (providersData.length) setProviders(providersData);
           if (catalogueData.length) setCatalogueItems(catalogueData);
           if (docsData.length) setDocuments(docsData);
-          if (bannersData.length) setSpecialBanners(bannersData);
         }
       } catch (error) { 
         console.error("Failed to load data", error); 
@@ -814,21 +700,11 @@ function App() {
           gateAuth(() => setCurrentPage('skill_id'));
           return;
       }
-      if (['createPost', 'messages'].includes(page)) {
+      if (page === 'messages') {
           gateAuth(() => setCurrentPage(page));
       } else {
           setCurrentPage(page);
       }
-  };
-
-  const handleScanSuccess = async (data: string) => {
-    if (data.startsWith('PROFILE:')) {
-        const userId = data.split(':')[1];
-        const provider = providers.find(p => p.id === userId);
-        if (provider) { setViewingProvider(provider); setCurrentPage('profile'); }
-    } else {
-        alert("Scanned Code: " + data);
-    }
   };
 
   const handleVerifyCatalogueItem = (itemId: string, isVerified: boolean) => {
@@ -840,34 +716,6 @@ function App() {
       setCatalogueItems(prev => prev.filter(item => item.id !== itemId));
   };
 
-  const handleAddBannerAdmin = (newBannerData: Omit<SpecialBanner, 'id'>) => {
-    const banner: SpecialBanner = {
-      ...newBannerData,
-      id: `banner_${Date.now()}`
-    };
-    setSpecialBanners(prev => {
-      const updated = [banner, ...prev];
-      try {
-        localStorage.setItem('nikosoko_special_banners', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
-    });
-  };
-
-  const handleDeleteBannerAdmin = (bannerId: string) => {
-    setSpecialBanners(prev => {
-      const updated = prev.filter(b => b.id !== bannerId);
-      try {
-        localStorage.setItem('nikosoko_special_banners', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
-    });
-  };
-
   const handleSaveBrandingAdmin = (config: AppBrandingConfig) => {
     setBrandingConfig(config);
     try {
@@ -877,14 +725,6 @@ function App() {
     }
   };
 
-  const handleSaveFeatureAdmin = (config: AppFeatureConfig) => {
-    setFeatureConfig(config);
-    try {
-      localStorage.setItem('nikosoko_feature_config', JSON.stringify(config));
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const recordContact = (providerId: string) => {
       setContactHistory(prev => {
@@ -938,21 +778,6 @@ function App() {
 
       if (actionCallback) actionCallback();
       return true;
-  };
-
-  const handleUpdateUnitDetails = async (details: Partial<UnitDetails>) => {
-    if (!currentUser) return;
-    const updatedUser = {
-      ...currentUser,
-      unitDetails: {
-        ...(currentUser.unitDetails || { type: 'Business', availabilityStatus: 'Available' }),
-        ...details
-      }
-    };
-    const saved = await api.updateProvider(updatedUser);
-    setCurrentUser(saved);
-    setProviders(prev => prev.map(p => p.id === saved.id ? saved : p));
-    alert("Door details updated successfully!");
   };
 
   const handleUpdateProviderAdmin = async (provider: ServiceProvider) => {
@@ -1019,12 +844,10 @@ function App() {
     switch (currentPage) {
       case 'home':
       case 'tukosoko':
-      case 'services':
         return (
           <NikoSoko 
             providers={publicProviders} 
             catalogueItems={catalogueItems}
-            specialBanners={specialBanners}
             onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} 
             searchTerm={""} 
             setSearchTerm={() => {}} 
@@ -1112,8 +935,6 @@ function App() {
             onResolveDispute={handleResolveDispute} 
           />
         );
-      case 'qrScan':
-        return <QRScannerView onBack={() => setCurrentPage('home')} onScanSuccess={handleScanSuccess} />;
       case 'skill_id':
         return <SkillDashboard currentUser={currentUser} onBack={() => setCurrentPage('home')} onNavigate={handleNavigate} onUpdateUser={(u: ServiceProvider) => { setCurrentUser(u); setProviders(prev => prev.map(p => p.id === u.id ? u : p)); }} onBookProvider={(p: ServiceProvider) => setBookingTargetProvider(p)} />;
       case 'messages':
@@ -1135,8 +956,6 @@ function App() {
             }}
           />
         );
-      case 'journey':
-        return <JourneyPage providers={providers} currentUser={currentUser} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} onBack={() => setCurrentPage('home')} />;
       case 'mycontacts':
         return (
           <MyContactsView 
@@ -1164,35 +983,6 @@ function App() {
             }}
           />
         );
-      case 'pendingRatings': {
-        const unratedIds = contactHistory.map(c => c.providerId).filter(id => !ratedProviderIds.includes(id));
-        const unratedProviders = providers.filter(p => unratedIds.includes(p.id));
-        return (
-          <PendingRatingsView
-            unratedProviders={unratedProviders.length > 0 ? unratedProviders : providers.slice(0, 3)}
-            targetProvider={pendingCtaTargetProvider}
-            onRateProvider={(providerId, rating, comment) => {
-              handleRateProvider(providerId, rating, comment);
-            }}
-            onFlagProvider={(providerId, reason) => {
-              handleFlagProvider(providerId, reason);
-            }}
-            onSnoozeProvider={(providerId) => {
-              snoozeRatingPrompt(providerId, 6);
-              showCtaToast("⏰ Prompt snoozed. Will return in 6 hours if unrated.");
-            }}
-            onBack={() => {
-              setCurrentPage('home');
-            }}
-            onContinueAction={() => {
-              if (pendingCtaAction) {
-                pendingCtaAction();
-                setPendingCtaAction(null);
-              }
-            }}
-          />
-        );
-      }
       case 'admin':
         return <SuperAdminDashboard 
           onBack={() => setCurrentPage('home')} 
@@ -1204,9 +994,6 @@ function App() {
           onAddCategory={() => {}} 
           onDeleteCategory={() => {}} 
           onBroadcast={() => {}} 
-          specialBanners={specialBanners} 
-          onAddBanner={handleAddBannerAdmin} 
-          onDeleteBanner={handleDeleteBannerAdmin} 
           onCreateOrganization={() => {}} 
           onApproveRequest={() => {}} 
           onRejectRequest={() => {}} 
@@ -1215,11 +1002,9 @@ function App() {
           onDeleteCatalogueItem={handleDeleteCatalogueItem}
           brandingConfig={brandingConfig}
           onSaveBrandingConfig={handleSaveBrandingAdmin}
-          featureConfig={featureConfig}
-          onSaveFeatureConfig={handleSaveFeatureAdmin}
         />;
       default:
-        return <NikoSoko providers={providers} catalogueItems={catalogueItems} specialBanners={specialBanners} brandingConfig={brandingConfig} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} guestCoords={guestCoords} />;
+        return <NikoSoko providers={providers} catalogueItems={catalogueItems} brandingConfig={brandingConfig} onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }} searchTerm={""} setSearchTerm={() => {}} onBack={handleOpenSideMenu} onMessagesClick={() => gateAuth(() => setCurrentPage('messages'))} hasNewMessages={false} onNavigate={handleNavigate} currentUser={currentUser} guestCoords={guestCoords} />;
     }
   };
 
@@ -1237,9 +1022,6 @@ function App() {
           localStorage.setItem('nikosoko_contact_history_v2', JSON.stringify(updated));
           return updated;
       });
-      if (simulated6HOverdueId === providerId) {
-          setSimulated6HOverdueId(null);
-      }
   };
 
   const handleCloseReviewModal = () => {
@@ -1290,11 +1072,12 @@ function App() {
       setRatedProviderIds(newRated);
       localStorage.setItem('nikosoko_rated_provider_ids', JSON.stringify(newRated));
 
-      setProviders(prev => prev.map(p => p.id === providerId ? {
-          ...p,
-          rating: Math.min(5, Math.max(1, (p.rating * 10 + rating) / 11)),
-          reviewsCount: (p.reviewsCount || 0) + 1
-      } : p));
+      api.submitRating(providerId, rating, comment, currentUser?.id).then(result => {
+          if (!result || 'error' in result) return;
+          setProviders(prev => prev.map(p => p.id === providerId
+              ? { ...p, rating: result.rating, reviewsCount: result.reviewsCount, ratingCount: result.reviewsCount }
+              : p));
+      });
 
       setContactHistory(prev => {
           const updated = prev.filter(c => c.providerId !== providerId);
@@ -1302,9 +1085,6 @@ function App() {
           return updated;
       });
 
-      if (simulated6HOverdueId === providerId) {
-          setSimulated6HOverdueId(null);
-      }
 
       const updatedPending = pendingReviews.filter(p => p.id !== providerId);
       setPendingReviews(updatedPending);
@@ -1336,9 +1116,6 @@ function App() {
           return updated;
       });
 
-      if (simulated6HOverdueId === providerId) {
-          setSimulated6HOverdueId(null);
-      }
 
       const updatedPending = pendingReviews.filter(p => p.id !== providerId);
       setPendingReviews(updatedPending);
@@ -1369,9 +1146,6 @@ function App() {
           return updated;
       });
 
-      if (simulated6HOverdueId === providerId) {
-          setSimulated6HOverdueId(null);
-      }
 
       const updatedPending = pendingReviews.filter(p => p.id !== providerId);
       setPendingReviews(updatedPending);
@@ -1384,7 +1158,6 @@ function App() {
   const active6HourItem = contactHistory.find(c => {
       if (ratedProviderIds.includes(c.providerId)) return false;
       if (dismissedProviderIds.includes(c.providerId)) return false;
-      if (simulated6HOverdueId === c.providerId) return true;
       const now = Date.now();
       if (c.snoozedUntil && now < c.snoozedUntil) return false;
       const hoursPassed = (now - c.contactedAt) / (1000 * 3600);
@@ -1502,17 +1275,11 @@ function App() {
         isSuperAdmin={isSuperAdmin} 
         onLogout={handleLogout} 
         onOpenCompleteSignUp={handleOpenCompleteSignUp}
-        onOpenSEOMap={() => setIsSEOMapOpen(true)}
         onUpdateUser={(updated) => {
             setCurrentUser(updated);
             setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
             api.updateProvider(updated);
         }}
-      />
-      <SEOMapModal 
-        isOpen={isSEOMapOpen} 
-        onClose={() => setIsSEOMapOpen(false)} 
-        onNavigate={(page) => handleNavigate(page)} 
       />
       {showReviewModal && (
         <ReviewModal 

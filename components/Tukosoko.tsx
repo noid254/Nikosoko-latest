@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { CatalogueItem, ServiceProvider, CurrentPage } from '../types';
-import { BookingModal } from './BookingModal';
+import { getDisplayRating } from '../utils/trustEngine';
 
 const BackIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,8 +52,8 @@ interface TukosokoItemCardProps {
 
 const TukosokoItemCard: React.FC<TukosokoItemCardProps> = ({ item, provider, onClick }) => {
   const photoCount = item.imageUrls?.length || 1;
-  const rating = provider?.rating || 4.9;
-  const distance = provider?.distanceKm || 0.8;
+  const dr = getDisplayRating(provider);
+  const distance = provider?.distanceKm;
   const isRefill = item.category?.toLowerCase().includes('water') || item.category?.toLowerCase().includes('gas') || item.category === 'Refills';
 
   return (
@@ -120,15 +120,17 @@ const TukosokoItemCard: React.FC<TukosokoItemCardProps> = ({ item, provider, onC
                   {provider.shopDetails?.name || provider.name}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5 text-[9px] font-bold text-gray-600">
-                <StarIcon />
-                <span>{rating.toFixed(1)}</span>
-              </div>
+              {dr.show && (
+                <div className="flex items-center gap-0.5 text-[9px] font-bold text-gray-600">
+                  <StarIcon />
+                  <span>{dr.value.toFixed(1)}</span>
+                </div>
+              )}
             </div>
           )}
 
           <div className="flex items-center justify-between text-[8px] text-gray-400 font-semibold">
-            <span>📍 {distance} km away</span>
+            <span>{distance != null ? `📍 ${distance} km away` : ''}</span>
             <span className="text-blue-600 font-extrabold uppercase tracking-wider group-hover:underline">Order ➔</span>
           </div>
         </div>
@@ -312,7 +314,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 <span className="text-base">⭐</span>
                 <div>
                   <p className="text-[9px] font-black text-gray-400 uppercase">Professional Rating</p>
-                  <p className="font-bold text-gray-800">{provider?.rating || 4.9} / 5.0</p>
+                  <p className="font-bold text-gray-800">{getDisplayRating(provider).show ? `${getDisplayRating(provider).value.toFixed(1)} / 5.0` : 'New'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -524,16 +526,16 @@ const OFFER_PRESETS = [
 ];
 
 const DESCRIPTION_TEMPLATES: Record<string, string> = {
-  'Tutoring': 'Comprehensive one-on-one lessons tailored to the student\'s learning pace. Covers core concepts, past paper practice, and exam techniques. Flexible online or doorstep home visits.',
-  'TV Mounting': 'Professional wall mounting for TV sizes 32 to 75 inches. Includes sturdy wall bracket fitting, precise leveling, cable trunking/concealing, and device testing.',
-  'Key Cutter': 'Precision key duplication using modern key cutting machines. Quick turnaround at your doorstep or shop location. Fits all standard door locks, padlocks, and cabinet locks.',
-  'Braiding': 'Neat and durable braiding services with maximum attention to hair health and edge protection. Customer can provide hair extensions or request them in advance.',
-  'Water Refill': 'Clean, lab-tested purified drinking water delivered directly to your house or office. Fast doorstep delivery with bottle washing and hygiene handling.',
-  'Gas Refill': 'Safe and authentic cooking gas refill and delivery. Free safety checks for gas leakages, regulator fit, and hose tightness included with every delivery.',
-  'Electrical': 'Licensed electrical repairs, fault troubleshooting, light fixture fitting, and power outlet repairs. Safe compliance with national safety standards.',
-  'Plumbing': 'Prompt plumbing solutions for leaking pipes, clogged drainage, tap replacements, and bathroom fittings. Quality materials and clean workmanship guaranteed.',
-  'Shoe Repair': 'Expert shoe restoration including sole re-glueing, stitching, heel taps, leather conditioning, and deep cleaning for all footwear types.',
-  'Other Service': 'Reliable, professional service delivered with strict quality controls, clear upfront pricing, and customer satisfaction guarantee.'
+  'Tutoring': 'One-on-one lessons at the student\'s pace, online or at home. Covers school topics, past papers and exam technique.',
+  'TV Mounting': 'Wall mounting for TVs from 32 to 75 inches: bracket fitting, levelling, hiding the cables, and a test of the connected devices.',
+  'Key Cutter': 'Key duplication for door locks, padlocks and cabinet locks, at your doorstep or at the shop.',
+  'Braiding': 'Braiding with care for your hair and edges. Bring your own extensions or ask me to get them in advance.',
+  'Water Refill': 'Drinking water delivered to your home or office.',
+  'Gas Refill': 'Cooking gas refill and delivery to your door.',
+  'Electrical': 'Electrical repairs, fault finding, light fittings and socket repairs.',
+  'Plumbing': 'Repairs for leaking pipes, blocked drains and taps, plus bathroom fittings.',
+  'Shoe Repair': 'Shoe repair: soles, stitching, heel taps, leather conditioning and cleaning.',
+  'Other Service': 'Handyman and home repair jobs. Message me the details of the job for a quote.'
 };
 
 const SellServicePage: React.FC<SellServicePageProps> = ({

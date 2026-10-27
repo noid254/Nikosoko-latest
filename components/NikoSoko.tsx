@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig, Coordinates } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, AppBrandingConfig, Coordinates, HeroBanner } from '../types';
+import { getHeroBanners } from '../services/api';
 import { normalizeSkills } from '../utils/skills';
-import { recalculateProvidersDistances, findNearestEstate, compareByDistance } from '../utils/geoLocations';
+import { recalculateProvidersDistances, findNearestEstate, compareByDistance, calculateHaversineDistance } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -64,7 +65,6 @@ const BellIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-
 interface NikoSokoProps {
     providers: ServiceProvider[];
     catalogueItems?: CatalogueItem[];
-    specialBanners?: SpecialBanner[];
     brandingConfig?: AppBrandingConfig;
     onSelectProvider: (p: ServiceProvider) => void;
     searchTerm: string;
@@ -105,7 +105,7 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, catalogueItems = [], specialBanners = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick,
+    providers, catalogueItems = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick,
     hasNewMessages, onNavigate, currentUser, guestCoords, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
     const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
@@ -136,6 +136,28 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             setUserHubLocation(nearest.displayName);
         }
     }, [currentUser?.latitude, currentUser?.longitude, guestCoords?.lat, guestCoords?.lng]);
+
+    // Location-targeted hero banner: nearest banner whose radius covers the user, else one
+    // matching the user's area name, else a banner with no location (shown everywhere).
+    const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([]);
+    React.useEffect(() => { getHeroBanners().then(setHeroBanners); }, []);
+    const activeHero = useMemo(() => {
+        const hasGeo = (b: HeroBanner) => typeof b.latitude === 'number' && typeof b.longitude === 'number';
+        if (userHubCoords) {
+            const inRange = heroBanners
+                .filter(hasGeo)
+                .map(b => ({ b, d: calculateHaversineDistance(userHubCoords.lat, userHubCoords.lng, b.latitude as number, b.longitude as number) }))
+                .filter(x => x.d <= (x.b.radiusKm || 5))
+                .sort((a, c) => a.d - c.d);
+            if (inRange.length) return inRange[0].b;
+        }
+        const here = (userHubLocation || '').toLowerCase();
+        if (here) {
+            const byName = heroBanners.find(b => b.area && here.includes(b.area.toLowerCase()));
+            if (byName) return byName;
+        }
+        return heroBanners.find(b => !hasGeo(b) && !b.area) || null;
+    }, [heroBanners, userHubCoords, userHubLocation]);
 
     // Dynamically recalculate distances for all providers based on the user's active location
     const providersWithDistances = useMemo(() => {
@@ -220,106 +242,6 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     const activeItemProvider = selectedCatalogueItem 
         ? providers.find(p => p.id === selectedCatalogueItem.providerId) || null 
         : null;
-
-    // DYNAMIC TARGETED HEADER HERO BANNER ENGINE
-    const targetedHeaderBanner = useMemo(() => {
-        if (!specialBanners || specialBanners.length === 0) return null;
-
-        const candidates = specialBanners.filter(banner => {
-            // 1. Date range filter
-            if (banner.startDate && new Date(banner.startDate).getTime() > Date.now()) return false;
-            if (banner.endDate && new Date(banner.endDate).getTime() < Date.now()) return false;
-
-            // 2. User Role Segment Filter
-            if (banner.targetRole && banner.targetRole !== 'all') {
-                if (banner.targetRole === 'guest' && currentUser) return false;
-                if (banner.targetRole === 'provider' && (!currentUser || currentUser.role !== 'Provider')) return false;
-                if (banner.targetRole === 'client' && (!currentUser || currentUser.role !== 'Member')) return false;
-            }
-
-            // 3. Location / Area Targeting Filter
-            if (banner.targetLocation && banner.targetLocation.trim() !== '') {
-                const locTarget = banner.targetLocation.toLowerCase().trim();
-                const userLoc = (currentUser?.location || '').toLowerCase();
-                const searchLoc = (localSearch || '').toLowerCase();
-                const selCategory = (selectedCategory || '').toLowerCase();
-
-                const matchesUserLoc = userLoc.includes(locTarget) || locTarget.includes(userLoc);
-                const matchesSearchLoc = searchLoc.includes(locTarget);
-                const matchesCategoryLoc = selCategory.includes(locTarget);
-
-                if (!matchesUserLoc && !matchesSearchLoc && !matchesCategoryLoc && locTarget !== 'all') {
-                    return false;
-                }
-            }
-
-            // 4. Profession / Category Targeting Filter
-            if (banner.targetCategory && banner.targetCategory.trim() !== '') {
-                const catTarget = banner.targetCategory.toLowerCase().trim();
-                const userProf = ((currentUser as any)?.profession || currentUser?.service || currentUser?.category || '').toLowerCase();
-                const activeCat = (selectedCategory || '').toLowerCase();
-                const searchTxt = (localSearch || '').toLowerCase();
-
-                const matchesUserProf = userProf.includes(catTarget) || catTarget.includes(userProf);
-                const matchesSelectedCat = activeCat.includes(catTarget) || catTarget.includes(activeCat);
-                const matchesSearchTxt = searchTxt.includes(catTarget);
-
-                if (!matchesUserProf && !matchesSelectedCat && !matchesSearchTxt && catTarget !== 'all') {
-                    return false;
-                }
-            }
-
-            // 5. Min Rating Filter
-            if (banner.minRating && banner.minRating > 0) {
-                const userRating = currentUser?.rating || 0;
-                if (userRating < banner.minRating) return false;
-            }
-
-            // 6. Member Tenure / Time of Joining Filter
-            if (banner.targetJoiningTenure && banner.targetJoiningTenure !== 'all') {
-                const joinedAt = (currentUser as any)?.createdAt ? new Date((currentUser as any).createdAt).getTime() : Date.now();
-                const daysSinceJoining = (Date.now() - joinedAt) / (1000 * 60 * 60 * 24);
-
-                if (banner.targetJoiningTenure === 'new_members' && daysSinceJoining > 30 && currentUser) {
-                    return false;
-                }
-                if (banner.targetJoiningTenure === 'tenured' && daysSinceJoining <= 30) {
-                    return false;
-                }
-            }
-
-            // 7. Verified Profile Filter
-            if (banner.isVerifiedTarget !== undefined) {
-                if (banner.isVerifiedTarget && !currentUser?.isVerified) return false;
-                if (!banner.isVerifiedTarget && currentUser?.isVerified) return false;
-            }
-
-            return true;
-        });
-
-        if (candidates.length === 0) return null;
-
-        // Sort candidates by priority descending
-        candidates.sort((a, b) => (b.priority || 1) - (a.priority || 1));
-        return candidates[0];
-    }, [specialBanners, currentUser, selectedCategory, localSearch]);
-
-    const handleBannerClick = (banner: SpecialBanner) => {
-        if (banner.actionUrl) {
-            if (banner.actionUrl.startsWith('http')) {
-                window.open(banner.actionUrl, '_blank');
-            } else if (banner.actionUrl.startsWith('/')) {
-                const route = banner.actionUrl.replace('/', '') as CurrentPage;
-                onNavigate(route);
-            } else {
-                setLocalSearch(banner.actionUrl);
-            }
-        } else if (banner.targetCategory) {
-            setSelectedCategory(banner.targetCategory);
-        } else if (banner.targetLocation) {
-            setLocalSearch(banner.targetLocation);
-        }
-    };
 
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [customLocInput, setCustomLocInput] = useState('');
@@ -497,16 +419,17 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                 </div>
             </div>
 
-            {/* PROMO BANNER - TOP PROVIDERS SPOTLIGHT */}
-            {brandingConfig?.heroBannerUrl && (
+            {/* HERO BANNER - location-targeted, falls back to the generic branding banner */}
+            {(activeHero || brandingConfig?.heroBannerUrl) && (
                 <div className="px-3 pt-3">
                     <div className="relative rounded-2xl overflow-hidden shadow-md h-36">
-                        <img src={brandingConfig.heroBannerUrl} alt="NikoSoko - Top providers near you" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+                        <img src={activeHero?.imageUrl || brandingConfig?.heroBannerUrl} alt={activeHero?.title || 'NikoSoko'} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
                         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
                         <div className="relative z-10 h-full flex flex-col justify-center px-4 max-w-[70%]">
-                            <h3 className="text-white font-black text-base leading-tight">Top Pros Near You</h3>
-                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">Discover the highest-rated verified professionals in your area</p>
-                            <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Explore Now</button>
+                            {activeHero?.area && <span className="self-start mb-1 bg-white/20 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">{activeHero.area}</span>}
+                            <h3 className="text-white font-black text-base leading-tight">{activeHero?.title || 'Top Pros Near You'}</h3>
+                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">{activeHero ? activeHero.subtitle : 'See ratings and verification before you call'}</p>
+                            <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Find a pro</button>
                         </div>
                     </div>
                 </div>
@@ -605,7 +528,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                             service: item.title,
                                             avatarUrl: photo,
                                             coverImageUrl: photo,
-                                            rating: 5.0,
+                                            rating: 0,
                                             distanceKm: 4,
                                             hourlyRate: 0,
                                             rateType: 'per day',

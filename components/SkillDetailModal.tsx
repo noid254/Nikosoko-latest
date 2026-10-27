@@ -60,25 +60,14 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
     (skill.certificationName || '').toLowerCase().includes('customer service');
 
   // Defaults based on type
-  const certName = skill.certificationName || (
-    titleLower.includes('driver') || titleLower.includes('taxi')
-      ? 'PSV Driving Badge & Chauffeur License'
-      : 'NITA Certified Qualification'
-  );
+  // Only show what the provider actually supplied.
+  const certName = skill.certificationName || '';
+  const school = skill.issuingSchool || '';
+  const year = skill.yearObtained || '';
+  const licenseNo = skill.licenseNumber || '';
 
-  const school = skill.issuingSchool || (
-    titleLower.includes('driver') || titleLower.includes('taxi')
-      ? 'NTSA & AA Driving School of Kenya'
-      : 'National Industrial Training Authority (NITA)'
-  );
-
-  const year = skill.yearObtained || '2024';
-  const licenseNo = skill.licenseNumber || (
-    titleLower.includes('driver') || titleLower.includes('taxi') ? 'NTSA/PSV/2024/9910' : 'KMTC/2024/8812'
-  );
-
-  const rating = skill.rating || 4.9;
-  const reviewsCount = skill.reviewsCount || 84;
+  const rating = skill.rating || 0;
+  const reviewsCount = skill.reviewsCount || 0;
   const description = skill.description || 'Verified service with quality execution, prompt delivery and field safety compliance.';
   const rate = skill.hourlyRate ? `${skill.currency || 'KES'} ${skill.hourlyRate.toLocaleString()} / ${skill.rateType || 'hour'}` : 'Rate on inquiry';
   
@@ -134,13 +123,13 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
               <div className="p-2.5 bg-neutral-50 border border-black rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[8.5px] font-black text-neutral-500 uppercase tracking-wider">
                   <span>Customer Service Rating</span>
-                  <span className="text-black font-mono font-bold">★ {rating} / 5.0</span>
+                  <span className="text-black font-mono font-bold">{reviewsCount > 0 ? `★ ${Number(rating).toFixed(1)} / 5.0` : 'No ratings yet'}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-black text-black">Customer Care & Quality Rating</p>
-                    <p className="text-[10px] text-neutral-600 font-medium">{reviewsCount}+ Verified Client Feedback Ratings</p>
+                    <p className="text-[10px] text-neutral-600 font-medium">{reviewsCount > 0 ? `${reviewsCount} client rating${reviewsCount === 1 ? '' : 's'}` : 'Be the first to rate this service'}</p>
                   </div>
                   <span className="text-[9px] font-mono text-black font-bold bg-white px-2 py-0.5 rounded border border-neutral-300 shrink-0">
                     Safety Checked
@@ -149,7 +138,6 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
 
                 <div className="p-1.5 bg-white rounded border border-dashed border-neutral-300 text-[9.5px] text-neutral-700 flex items-center justify-between font-bold">
                   <span>🚴 Smooth Dispatch & Rental Service</span>
-                  <span className="text-emerald-700 font-mono">100% On-time</span>
                 </div>
               </div>
             ) : (
@@ -157,16 +145,16 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
               <div className="p-2.5 bg-neutral-50 border border-black rounded-lg space-y-1.5">
                 <div className="flex justify-between items-center text-[8.5px] font-black text-neutral-500 uppercase tracking-wider">
                   <span>Certification & Institution</span>
-                  <span className="text-black font-mono">Class of {year}</span>
+                  {year && <span className="text-black font-mono">Class of {year}</span>}
                 </div>
 
                 <div>
-                  <p className="text-xs font-black text-black">{certName}</p>
+                  <p className="text-xs font-black text-black">{certName || 'No certificate details added'}</p>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
                     <p className="text-[10.5px] font-bold text-neutral-700">{school}</p>
-                    <span className="text-[8.5px] font-mono text-black font-bold bg-white px-1.5 py-0.5 rounded border border-neutral-300 shrink-0">
+                    {licenseNo && <span className="text-[8.5px] font-mono text-black font-bold bg-white px-1.5 py-0.5 rounded border border-neutral-300 shrink-0">
                       Lic #{licenseNo}
-                    </span>
+                    </span>}
                   </div>
                 </div>
 

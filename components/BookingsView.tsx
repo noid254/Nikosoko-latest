@@ -71,7 +71,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     const [activeTab, setActiveTab] = useState<'my_bookings' | 'received_bookings' | 'calendar_sync'>('my_bookings');
     const [statusFilter, setStatusFilter] = useState<'all' | 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'>('all');
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [googleUser, setGoogleUser] = useState<User | null>(auth.currentUser);
     const [accessToken, setAccessToken] = useState<string | null>(getCachedAccessToken());
     const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -95,15 +94,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
     // Load bookings from SQLite backend and local cache
     const loadBookings = async () => {
-        setIsLoading(true);
         if (USE_PLATFORM) {
             try {
                 setBookings(await platform.listBookings());
             } catch (e) {
                 console.warn('Could not load bookings:', e);
                 setBookings([]);
-            } finally {
-                setIsLoading(false);
             }
             return;
         }
@@ -187,8 +183,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             }
         } catch (e) {
             console.error('Error loading local bookings:', e);
-        } finally {
-            setIsLoading(false);
         }
     };
 

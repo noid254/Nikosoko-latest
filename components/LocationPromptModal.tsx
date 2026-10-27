@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { resolveLocationCoordinates, calculateHaversineDistance, KENYAN_ESTATES } from '../utils/geoLocations';
+import { resolveLocationCoordinates, calculateHaversineDistance } from '../utils/geoLocations';
 import type { Coordinates } from '../types';
 
 interface LocationPromptModalProps {

@@ -1,6 +1,6 @@
 {
   "name": "niko-soko-pwa",
-  "description": "Secure, fast, and local. Simple gateway to neighborhood services and verified skilled professionals.",
+  "description": "Digital business cards, ratings and verification for Kenyan tradespeople, and a way for clients to find them nearby.",
   "requestFramePermissions": [
     "geolocation",
     "camera"

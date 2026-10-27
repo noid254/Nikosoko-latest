@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getDisplayRating } from '../utils/trustEngine';
 import type { ServiceProvider } from '../types';
 
 export interface SavedContactItem {
@@ -165,8 +166,8 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
             {filteredContacts.map(({ provider, label }, idx) => {
               const isEditing = editingProviderId === provider.id;
               const serviceName = (provider.service || provider.category || 'Skill Expert').toLowerCase();
-              const ratingVal = provider.rating || 4.7;
-              const distanceVal = provider.distanceKm || 0.2;
+              const dr = getDisplayRating(provider);
+              const distanceVal = provider.distanceKm;
               const isOnline = Boolean(provider.isOnline);
 
               return (
@@ -212,10 +213,10 @@ const MyContactsView: React.FC<MyContactsViewProps> = ({
                         {/* Format e.g. "carpenter • ★ 4.7 • 0.2km away" */}
                         <p className="text-[11px] text-neutral-500 truncate leading-tight">
                           <span className="capitalize">{serviceName}</span>
-                          <span className="mx-1 text-neutral-300">•</span>
-                          <span className="text-amber-600 font-medium">★ {ratingVal}</span>
-                          <span className="mx-1 text-neutral-300">•</span>
-                          <span>{distanceVal}km away</span>
+                          {dr.show && (<><span className="mx-1 text-neutral-300">•</span>
+                          <span className="text-amber-600 font-medium">★ {dr.value.toFixed(1)}</span></>)}
+                          {distanceVal != null && (<><span className="mx-1 text-neutral-300">•</span>
+                          <span>{distanceVal}km away</span></>)}
                         </p>
                       </div>
                     </div>

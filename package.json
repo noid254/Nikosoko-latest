@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.2.4",
   "type": "module",
-  "description": "A PWA to find and connect with essential service providers near you. This project is ready for local development and export.",
+  "description": "Digital business cards, ratings and verification for Kenyan tradespeople, and a way for clients to find them nearby.",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",

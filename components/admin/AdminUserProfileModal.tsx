@@ -15,8 +15,8 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
   currentUserEmail = 'Noid254@gmail.com'
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [adminAuthorName, setAdminAuthorName] = useState('Super Admin');
-  const [adminAuthorRole, setAdminAuthorRole] = useState('SuperAdmin');
+  const adminAuthorName = 'Super Admin';
+  const adminAuthorRole = 'SuperAdmin';
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSuccess, setNoteSuccess] = useState('');
 
@@ -24,7 +24,7 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
   const [showRaiseCaseForm, setShowRaiseCaseForm] = useState(false);
   const [caseReason, setCaseReason] = useState('');
   const [caseReviewer, setCaseReviewer] = useState('Client / Customer Report');
-  const [caseRating, setCaseRating] = useState(1);
+  const caseRating = 1;
   const [caseComment, setCaseComment] = useState('');
 
   // Inferred contact email if missing
@@ -43,8 +43,8 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
     totalGigsPosted: 2,
     verificationAuditTrail: [
       user.isVerified ? '✓ Document Scan Audit Approved' : '⏳ Identity Verification Pending',
-      user.idNumber ? `✓ National ID / Passport #${user.idNumber} Logged` : '⚠️ ID Number Not Submitted',
-      user.selfieUrl ? '✓ Live Selfie Facial Match Passed' : '⚠️ Live Selfie Pending'
+      user.idSubmitted ? '✓ ID details submitted' : '⚠️ ID not submitted',
+      user.idSubmitted ? '✓ Identity document on file' : '⚠️ Identity document pending'
     ],
     systemFlags: user.flagCount > 0 ? [`${user.flagCount} User Flag Reports Received`] : ['Clean Account Standing'],
     termsAcceptedAt: new Date().toISOString(),

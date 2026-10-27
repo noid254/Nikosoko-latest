@@ -38,58 +38,6 @@ export interface Skill {
   };
 }
 
-export interface Premise {
-  id: string;
-  name: string;
-  tagline: string;
-  logoUrl: string;
-  bannerImageUrl: string;
-  galleryImages?: string[];
-  about: string;
-  location: string;
-  street?: string;
-  gps?: { lat: number; lng: number };
-  town?: string;
-  county?: string;
-  lrNumber?: string;
-  type?: 'Residential' | 'Commercial' | 'Mixed' | 'Education' | 'Hospitality' | 'Retail' | 'Industrial';
-  totalUnits?: number;
-  floors?: number;
-  amenities: { name: string; imageUrl?: string }[]; 
-  contactEmail: string;
-  contactPhone: string;
-  visitorReportEmail?: string;
-  operatingHours?: string; 
-  vacancies: UnitKey[]; 
-  buildingManagerId: string;
-  tenants: string[]; 
-  verificationStatus: 'Pending' | 'Verified' | 'Rejected';
-  noticeBoard?: {
-      id: string;
-      title: string;
-      content: string;
-      date: string;
-      type: 'Info' | 'Alert' | 'Promo';
-  }[];
-}
-
-export interface UnitKey {
-    id: string;
-    unitNumber: string;
-    floor: string;
-    type: 'Residential' | 'Commercial' | 'Gate' | 'Warehouse' | 'Shop' | 'Office' | 'Retail' | 'Apartment' | 'Education' | 'Hospitality';
-    configuration: string;
-    size?: string;
-    status: 'Occupied' | 'Vacant';
-    isListed?: boolean;
-    tenantId?: string; 
-    tenantName?: string; 
-    rentAmount?: number;
-    description?: string;
-    amenities?: string[]; 
-    images?: string[];
-}
-
 export interface UnitDetails {
   type: 'Business' | 'Residence';
   operatingHours?: string;
@@ -232,6 +180,8 @@ export interface ServiceProvider {
   isProfileCompleted?: boolean;
   idVerificationStatus?: 'Unverified' | 'Pending' | 'Verified';
   idType?: 'National ID' | 'Passport' | 'Alien Card' | 'Driving License';
+  idSubmitted?: boolean; // server-computed; ID details themselves are never sent back
+  // Write-only (sent at signup, never returned by the API):
   idNumber?: string;
   idDocumentUrl?: string;
   selfieUrl?: string;
@@ -288,30 +238,7 @@ export interface LocationCheckInLog {
   isActive?: boolean;
 }
 
-export interface QaRibuRequest {
-  id: string;
-  accessCode?: string;
-  premiseId: string;
-  premiseName?: string;
-  tenantId?: string;
-  hostId: string;
-  hostName: string;
-  targetUnit?: string;
-  visitorName: string;
-  visitorPhone: string;
-  visitorId?: string;
-  visitorAvatar?: string;
-  visitorPurpose?: string;
-  vehicleReg?: string;
-  createdAt?: string;
-  expiresAt?: string;
-  status: 'Pending' | 'Approved' | 'CheckedIn' | 'Expired' | 'Killed' | 'Denied';
-  requestType?: 'Direct' | 'Mediated';
-  premiseType?: 'Residential' | 'Commercial' | 'Mixed' | 'Education' | 'Hospitality' | 'Retail' | 'Industrial' | 'Residence';
-  isDigitalKey?: boolean;
-}
-
-export type CurrentPage = 'home' | 'nikosoko' | 'services' | 'myplaces' | 'qaribu' | 'journey' | 'profile' | 'tukosoko' | 'sellService' | 'mycontacts' | 'mycatalogue' | 'bookings' | 'settings' | 'admin' | 'addService' | 'messages' | 'createPost' | 'mytoolkit' | 'login' | 'qrScan' | 'premiseLanding' | 'hostSetup' | 'doorProfile' | 'courses' | 'skill_id' | 'pendingRatings' | 'sacco_dashboard';
+export type CurrentPage = 'home' | 'tukosoko' | 'sellService' | 'profile' | 'skill_id' | 'mycontacts' | 'bookings' | 'sacco_dashboard' | 'admin' | 'messages' | 'login';
 
 export interface Booking {
   id: string;
@@ -348,25 +275,6 @@ export interface Booking {
   updatedAt?: string;
 }
 
-export interface BusinessAssets {
-  name: string;
-  address: string;
-  logo: string | null;
-  tagline?: string;
-  phone?: string;
-  email?: string;
-  about?: string;
-  colors?: { primary: string, secondary: string };
-}
-
-export interface OrderData {
-  customer: { name: string; phone: string; location: string; };
-  restaurantName: string;
-  items: { name: string; qty: number; price: number; }[];
-  total: number;
-  date: string;
-}
-
 export interface InboxMessage {
     id: number;
     sender: 'user' | 'team';
@@ -399,33 +307,6 @@ export interface CatalogueItem {
   isVerified: boolean;
 }
 
-export interface SpecialBanner {
-  id: string;
-  title?: string;
-  subtitle?: string;
-  imageUrl: string;
-  targetCategory?: string;
-  targetLocation?: string;
-  targetAgeGroup?: '18-24' | '25-34' | '35-50' | '50+' | 'All';
-  minRating?: number;
-  targetService?: string;
-  isOnlineTarget?: boolean;
-  isVerifiedTarget?: boolean;
-  targetReferralCode?: string;
-  targetJoiningTenure?: 'all' | 'new_members' | 'tenured';
-  maxDaysJoined?: number;
-  minDaysJoined?: number;
-  targetRole?: 'all' | 'client' | 'provider' | 'guest';
-  isHeaderHero?: boolean;
-  ctaText?: string;
-  actionUrl?: string;
-  badgeText?: string;
-  startDate?: string;
-  endDate?: string;
-  isGlobalHero?: boolean;
-  priority?: number;
-}
-
 export interface AppBrandingConfig {
   appName: string;
   tagline: string;
@@ -437,30 +318,6 @@ export interface AppBrandingConfig {
   primaryColor?: string;
   supportPhone?: string;
   supportEmail?: string;
-}
-
-export interface AppFeatureConfig {
-  enableTimeline: boolean;
-  enableQaRibuGatePass: boolean;
-  enableGigs: boolean;
-  enableEvents: boolean;
-  enableSaccos: boolean;
-  enableAssetVerification: boolean;
-  enableCourses: boolean;
-  enableCatalogue: boolean;
-}
-
-export interface Gig {
-  id: string;
-  providerId: string;
-  title: string;
-  category: string;
-  description: string;
-  budget: number;
-  budgetType: 'fixed' | 'per hour' | 'per day';
-  currency: string;
-  location: string;
-  imageUrl: string;
 }
 
 export interface Ticket {
@@ -540,32 +397,15 @@ export interface Document {
   pendingOwnerPhone?: string;
 }
 
-export interface SetupData {
-  role: 'BuildingManager' | 'TenantAdmin' | 'Staff' | 'Gateman';
-  premiseId: string;
-  unitId?: string;
-  adminId?: string;
-}
-
-export interface Enquiry {
+export interface HeroBanner {
   id: string;
-  userName: string;
-  userPhone: string;
-  date: string;
-  status: 'New' | 'Contacted' | 'Closed';
-  vacancyType: string;
-}
-
-export interface EmailConfig {
-  smtpHost: string;
-  smtpPort: number;
-  smtpSecure: boolean;
-  smtpUser: string;
-  smtpPass: string;
-  fromName: string;
-  fromEmail: string;
-  isEnabled: boolean;
-  lastTestedAt?: string;
-  lastTestStatus?: 'success' | 'failed' | 'pending';
-  lastTestMessage?: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  area?: string;        // place name, e.g. "Ruaka"
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number;    // shown to users within this distance; no coordinates = shown everywhere
+  isActive?: number | boolean;
+  createdAt?: string;
 }
