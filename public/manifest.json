@@ -1,7 +1,7 @@
 {
   "short_name": "NikoSoko",
-  "name": "NikoSoko - Skilled Professional Finder",
-  "description": "Find & connect with nearby skilled professionals, market services, and verify Sacco memberships.",
+  "name": "NikoSoko - Skilled professionals near you",
+  "description": "Find electricians, plumbers and other skilled people near you. See ratings and verification before you call or book.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -137,16 +137,16 @@ const CARD_STEPS = [
 const LADDER = [
   { icon: '🔍', title: 'Discovered', desc: 'Nearby clients find you by skill and location.' },
   { icon: '🤝', title: 'Hired', desc: 'Book you straight from your card or profile.' },
-  { icon: '💸', title: 'Paid', desc: 'M-Pesa or cash. 0% commission — it is all yours.' },
+  { icon: '💸', title: 'Paid', desc: 'M-Pesa or cash, straight to you.' },
   { icon: '⭐', title: 'Rated', desc: 'Honest ratings from real clients build trust.' },
   { icon: '🏅', title: 'Levelled up', desc: 'Higher level, more demand, better rates.' },
 ];
 
 const VALUE_PROPS = [
-  { icon: '🛠️', title: 'Monetize Any Skill', desc: 'TV mounting, gas delivery, plumbing, electrical, braiding & more.' },
-  { icon: '💸', title: '0% Commission', desc: 'Keep 100% of your money, paid directly via M-Pesa or cash.' },
-  { icon: '📍', title: 'Hyperlocal Discovery', desc: 'Get discovered by nearby customers searching for your skills in real time.' },
-  { icon: '🛡️', title: 'Sacco & ID Verified', desc: 'Build trust with verified badges, door profiles & digital gate passes.' },
+  { icon: '🛠️', title: 'Any trade', desc: 'TV mounting, gas delivery, plumbing, electrical, braiding and more.' },
+  { icon: '💸', title: '0% commission', desc: 'Keep what you earn. Clients pay you directly, by M-Pesa or cash.' },
+  { icon: '📍', title: 'Found by location', desc: 'Clients near you search by skill and area.' },
+  { icon: '🛡️', title: 'Verification you can see', desc: 'Badges from your Sacco or training centre show on your card.' },
 ];
 
 const HOW_IT_WORKS = [
@@ -154,8 +154,6 @@ const HOW_IT_WORKS = [
   { step: '2', title: 'Open NikoSoko on your phone', desc: 'Visit nikosoko.com in your phone’s browser and log in with the same details.' },
   { step: '3', title: 'Find or offer services', desc: 'Searching for professionals, booking, and chat all happen in the mobile app.' },
 ];
-
-const PARTNER_PLACEHOLDERS = ['Paint Brand', 'Solar Co.', 'TVET College', 'Building Materials', 'Insurance Partner', 'Logistics Co.'];
 
 const LIVE_EVENTS = [
   { icon: '💾', text: 'Number saved', sub: 'Tap on the card — 2s ago' },
@@ -233,6 +231,8 @@ const CardPhone: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <p className="absolute -bottom-7 left-0 right-0 text-center text-[10px] font-black uppercase tracking-wider text-zinc-500">Sample card</p>
 
       {/* NFC tap rings */}
       <div className="absolute -left-6 top-24 w-10 h-10 flex items-center justify-center pointer-events-none">
@@ -314,11 +314,11 @@ const Nav: React.FC<PageProps & { route: LandingRoute }> = ({ currentUser, onOpe
 
 const Footer: React.FC = () => (
   <footer className="relative z-10 border-t border-white/10 px-8 xl:px-16 py-6 flex items-center justify-between text-[11px] text-zinc-500 font-semibold">
-    <span>© NikoSoko Marketplace Platform</span>
+    <span>© NikoSoko</span>
     <span className="flex items-center gap-4">
       <a href="#/" className="hover:text-white transition-colors">Individuals</a>
       <a href={ORG_HASH} className="hover:text-white transition-colors">Organizations</a>
-      <span>Hyperlocal Service &amp; Skill Network — Kenya</span>
+      <span>Kenya</span>
     </span>
   </footer>
 );
@@ -340,7 +340,7 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
             <div className="flex-1 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Kenya's Hyperlocal Service &amp; Skill Marketplace
+                For Kenya's tradespeople and the people who hire them
               </div>
 
               <h1 className="mt-6 text-4xl xl:text-5xl font-black tracking-tight leading-tight">
@@ -349,8 +349,8 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
               </h1>
 
               <p className="mt-5 text-zinc-300 text-base leading-relaxed font-medium max-w-xl mx-auto lg:mx-0">
-                Sign up and get a digital business card people can tap to save your number and rate your work.
-                Get discovered, hired, paid and rated — and watch your level, and your demand, grow.
+                Get a digital business card people tap to save your number and rate your work.
+                Every rating builds your level, and a higher level puts you higher in search.
               </p>
 
               <div className="mt-8 flex items-center justify-center lg:justify-start gap-3">
@@ -369,8 +369,6 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
               </div>
 
               <div className="mt-6 flex items-center justify-center lg:justify-start gap-4 text-[11px] text-zinc-400 font-semibold">
-                <span>🇰🇪 Built for Kenya</span>
-                <span className="w-1 h-1 rounded-full bg-zinc-700" />
                 <span>Paid via M-Pesa</span>
                 <span className="w-1 h-1 rounded-full bg-zinc-700" />
                 <span>0% Commission</span>
@@ -445,9 +443,8 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
       {/* BUILT FOR EVERYONE */}
       <section className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 py-24">
         <SectionTitle
-          eyebrow="Built for everyone"
-          title="One platform. Everyone who hires, trains or vouches for skill."
-          sub="Whether you're one person with a toolkit or an institution with a thousand graduates, there's a place for you."
+          eyebrow="Who it's for"
+          title="Six kinds of people use NikoSoko."
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {AUDIENCES.map(a => (
@@ -477,7 +474,7 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
 
       {/* SERVICES */}
       <section className="relative z-10 max-w-6xl mx-auto px-8 xl:px-16 pb-24">
-        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-10">Services Traded On NikoSoko</h2>
+        <h2 className="text-center text-xs font-black uppercase tracking-widest text-zinc-500 mb-10">Services on NikoSoko</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {SERVICE_CATEGORIES.map(s => (
             <div key={s.label} className="relative rounded-xl overflow-hidden aspect-square group">
@@ -509,13 +506,7 @@ const HomePage: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenOrgSig
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {PARTNER_PLACEHOLDERS.map(p => (
-              <div key={p} className="aspect-[3/2] rounded-xl border border-dashed border-white/15 bg-white/5 flex items-center justify-center text-center px-2">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">{p}</span>
-              </div>
-            ))}
-          </div>
+          <VerificationPreview />
         </div>
       </section>
 
@@ -610,7 +601,7 @@ const ORG_TYPES = [
     lead: 'Get your products installed properly.',
     points: [
       'Certify NikoSoko professionals as official installers or approved partners.',
-      'Reach skilled people near every customer, across Kenya.',
+      'Find installers close to where your customers live.',
       'Every job a certified pro does reflects well on your brand.',
     ],
   },

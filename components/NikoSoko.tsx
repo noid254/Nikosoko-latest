@@ -505,8 +505,8 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
                         <div className="relative z-10 h-full flex flex-col justify-center px-4 max-w-[70%]">
                             <h3 className="text-white font-black text-base leading-tight">Top Pros Near You</h3>
-                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">Discover the highest-rated verified professionals in your area</p>
-                            <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Explore Now</button>
+                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">See ratings and verification before you call</p>
+                            <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Find a pro</button>
                         </div>
                     </div>
                 </div>

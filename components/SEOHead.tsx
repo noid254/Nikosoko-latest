@@ -12,15 +12,16 @@ interface SEOHeadProps {
 export const SEOHead: React.FC<SEOHeadProps> = ({ provider, item, customTitle, customDescription }) => {
     useEffect(() => {
         // Compute page title & meta description for Google indexing
-        let title = 'NikoSoko - Skilled Professional Marketplace & Service Directory';
-        let description = 'Find certified, verified skilled professionals in Kenya. Boda, Taxi, Electricians, Plumbers, Tech Repairs, Solar Installers & Artisans with location verification.';
+        let title = 'NikoSoko - Skilled professionals near you in Kenya';
+        let description = 'Find electricians, plumbers, boda and taxi drivers, tech repairers and other skilled people near you. See ratings and verification before you call or book.';
         let canonicalUrl = window.location.href;
         let imageUrl = 'https://nikosoko.app/icon-512.png';
         let jsonLdData: any = null;
 
         if (provider) {
-            title = `${provider.name} | Certified ${provider.service} in ${provider.location} - Nikosoko`;
-            description = `Hire ${provider.name}, verified ${provider.service} based in ${provider.location}. Rating: ${provider.rating?.toFixed(1) || '5.0'}★. Contact directly via Nikosoko. ${provider.bio || ''}`;
+            const hasRating = Number(provider.rating) > 0 && Number(provider.ratingCount) > 0;
+            title = `${provider.name} | ${provider.service} in ${provider.location} - NikoSoko`;
+            description = `${provider.name}, ${provider.service} based in ${provider.location}.${hasRating ? ` Rated ${Number(provider.rating).toFixed(1)}★ by ${provider.ratingCount} clients.` : ''} ${provider.bio || ''}`.trim();
             imageUrl = provider.avatarUrl || imageUrl;
             canonicalUrl = `${window.location.origin}/profile/${provider.id}`;
 
@@ -38,24 +39,20 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ provider, item, customTitle, c
                     "addressLocality": provider.location || "Nairobi",
                     "addressCountry": "KE"
                 },
-                "geo": {
-                    "@type": "GeoCoordinates",
-                    "address": provider.location
-                },
-                "aggregateRating": {
+                "aggregateRating": hasRating ? {
                     "@type": "AggregateRating",
-                    "ratingValue": (provider.rating || 5.0).toFixed(1),
-                    "reviewCount": provider.ratingCount || 12,
+                    "ratingValue": Number(provider.rating).toFixed(1),
+                    "reviewCount": provider.ratingCount,
                     "bestRating": "5",
                     "worstRating": "1"
-                },
+                } : undefined,
                 "knowsAbout": normalizeSkills(provider.skills).length > 0 
                     ? normalizeSkills(provider.skills).map(s => s.skillTitle || s.name || provider.service)
                     : [provider.service],
-                "priceRange": provider.rate || "Ksh 1,500 - Ksh 5,000",
-                "memberOf": provider.saccoId ? {
+                "priceRange": provider.rate || undefined,
+                "memberOf": provider.saccoId && provider.saccoName ? {
                     "@type": "Organization",
-                    "name": provider.saccoName || "Verified Cooperative Sacco"
+                    "name": provider.saccoName
                 } : undefined,
                 "hasOfferCatalog": {
                     "@type": "OfferCatalog",
