@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nikosoko.app/sitemap.xml
+Sitemap: https://nikosoko.com/sitemap.xml

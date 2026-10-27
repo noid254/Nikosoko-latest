@@ -8,33 +8,16 @@ export interface DisplayRating {
 }
 
 /**
- * The star rating actually shown to users. Applies two safeguards so a
- * handful of reviews can't produce a misleadingly perfect score:
- * - Bayesian shrinkage toward a neutral platform baseline (prior weight
- *   C=5, baseline m=4.0), so low review counts pull the score down.
- * - A hard cap below 5.0 unless the profile is complete AND there are at
- *   least 5 reviews.
+ * The star rating shown to users: the plain average of real ratings left by real
+ * clients, and nothing at all until at least one rating exists.
  */
 export function getDisplayRating(
-  provider: Pick<ServiceProvider, 'rating' | 'reviewsCount' | 'isProfileCompleted'> | null | undefined
+  provider: Pick<ServiceProvider, 'rating' | 'reviewsCount' | 'ratingCount'> | null | undefined
 ): DisplayRating {
-  const reviewsCount = provider?.reviewsCount || 0;
+  const reviewsCount = provider?.reviewsCount || provider?.ratingCount || 0;
   const rawRating = typeof provider?.rating === 'number' ? provider.rating : 0;
-
-  if (reviewsCount <= 0 || rawRating <= 0) {
-    return { show: false, value: 0, reviewsCount };
-  }
-
-  const C = 5;
-  const m = 4.0;
-  let value = (C * m + rawRating * reviewsCount) / (C + reviewsCount);
-
-  const canShowPerfectScore = provider?.isProfileCompleted === true && reviewsCount >= 5;
-  if (!canShowPerfectScore) {
-    value = Math.min(value, 4.9);
-  }
-
-  return { show: true, value: Math.round(value * 10) / 10, reviewsCount };
+  if (reviewsCount <= 0 || rawRating <= 0) return { show: false, value: 0, reviewsCount: 0 };
+  return { show: true, value: Math.round(rawRating * 10) / 10, reviewsCount };
 }
 
 export interface TrustBreakdown {
@@ -102,8 +85,7 @@ export function calculateTrustAndRanking(provider: Partial<ServiceProvider> | nu
   const isIdVerified = Boolean(
     provider.isVerified ||
     provider.idVerificationStatus === 'Verified' ||
-    provider.nationalId ||
-    provider.idDocumentUrl
+    provider.idSubmitted
   );
   const identityScore = isIdVerified ? 1.0 : 0.0;
   const identityExplanation = isIdVerified
@@ -198,8 +180,8 @@ export function calculateTrustAndRanking(provider: Partial<ServiceProvider> | nu
   // 5. Client Ratings & Performance (Max 2.0)
   // Bayesian average: R_bayesian = (C * m + sum(reviews)) / (C + n)
   // C = 5 prior weight, m = 4.0 platform baseline
-  const reviewsCount = provider.reviewsCount || 8;
-  const rawRating = typeof provider.rating === 'number' && provider.rating > 0 ? provider.rating : 4.0;
+  const reviewsCount = provider.reviewsCount || 0;
+  const rawRating = typeof provider.rating === 'number' && provider.rating > 0 ? provider.rating : 0;
   const C = 5;
   const m = 4.0;
   const totalStarSum = rawRating * reviewsCount;

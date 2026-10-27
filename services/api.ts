@@ -1,4 +1,4 @@
-import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCheckInLog } from '../types';
+import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCheckInLog, HeroBanner } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockInboxMessages } from './mockData';
 import { USE_PLATFORM } from './backend';
 import * as platform from './platform';
@@ -412,6 +412,50 @@ export const createProvider = async (providerData: Omit<ServiceProvider, 'id'>):
     providers.push(newProvider);
     saveTable(DB_KEYS.PROVIDERS, providers);
     return newProvider;
+};
+
+// --- Hero banners ---
+export const getHeroBanners = async (all = false): Promise<HeroBanner[]> => {
+    try {
+        const res = await fetch(all ? '/api/banners/all' : '/api/banners');
+        return res.ok ? await res.json() : [];
+    } catch { return []; }
+};
+export const saveHeroBanner = async (b: Partial<HeroBanner>): Promise<boolean> => {
+    try {
+        const res = await fetch('/api/banners', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+        return res.ok;
+    } catch { return false; }
+};
+export const deleteHeroBanner = async (id: string): Promise<boolean> => {
+    try { return (await fetch(`/api/banners/${id}`, { method: 'DELETE' })).ok; } catch { return false; }
+};
+
+// --- Ratings ---
+// Averages are computed on the server from real ratings; the client never calculates them.
+const getRaterKey = (userId?: string): string => {
+    if (userId) return userId;
+    try {
+        let k = localStorage.getItem('nikosoko_device_id');
+        if (!k) { k = `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; localStorage.setItem('nikosoko_device_id', k); }
+        return k;
+    } catch { return `dev-${Date.now()}`; }
+};
+
+export const submitRating = async (
+    providerId: string, rating: number, comment: string, userId?: string
+): Promise<{ rating: number; reviewsCount: number } | null> => {
+    try {
+        const res = await fetch('/api/ratings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ providerId, rating, comment, raterKey: getRaterKey(userId) })
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch {
+        return null;
+    }
 };
 
 // --- Data Modification (PUT) ---

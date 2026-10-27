@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage, AppBrandingConfig, Coordinates } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, AppBrandingConfig, Coordinates, HeroBanner } from '../types';
+import { getHeroBanners } from '../services/api';
 import { normalizeSkills } from '../utils/skills';
-import { recalculateProvidersDistances, findNearestEstate, compareByDistance } from '../utils/geoLocations';
+import { recalculateProvidersDistances, findNearestEstate, compareByDistance, calculateHaversineDistance } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -135,6 +136,28 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
             setUserHubLocation(nearest.displayName);
         }
     }, [currentUser?.latitude, currentUser?.longitude, guestCoords?.lat, guestCoords?.lng]);
+
+    // Location-targeted hero banner: nearest banner whose radius covers the user, else one
+    // matching the user's area name, else a banner with no location (shown everywhere).
+    const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([]);
+    React.useEffect(() => { getHeroBanners().then(setHeroBanners); }, []);
+    const activeHero = useMemo(() => {
+        const hasGeo = (b: HeroBanner) => typeof b.latitude === 'number' && typeof b.longitude === 'number';
+        if (userHubCoords) {
+            const inRange = heroBanners
+                .filter(hasGeo)
+                .map(b => ({ b, d: calculateHaversineDistance(userHubCoords.lat, userHubCoords.lng, b.latitude as number, b.longitude as number) }))
+                .filter(x => x.d <= (x.b.radiusKm || 5))
+                .sort((a, c) => a.d - c.d);
+            if (inRange.length) return inRange[0].b;
+        }
+        const here = (userHubLocation || '').toLowerCase();
+        if (here) {
+            const byName = heroBanners.find(b => b.area && here.includes(b.area.toLowerCase()));
+            if (byName) return byName;
+        }
+        return heroBanners.find(b => !hasGeo(b) && !b.area) || null;
+    }, [heroBanners, userHubCoords, userHubLocation]);
 
     // Dynamically recalculate distances for all providers based on the user's active location
     const providersWithDistances = useMemo(() => {
@@ -396,15 +419,16 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                 </div>
             </div>
 
-            {/* PROMO BANNER - TOP PROVIDERS SPOTLIGHT */}
-            {brandingConfig?.heroBannerUrl && (
+            {/* HERO BANNER - location-targeted, falls back to the generic branding banner */}
+            {(activeHero || brandingConfig?.heroBannerUrl) && (
                 <div className="px-3 pt-3">
                     <div className="relative rounded-2xl overflow-hidden shadow-md h-36">
-                        <img src={brandingConfig.heroBannerUrl} alt="NikoSoko - Top providers near you" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+                        <img src={activeHero?.imageUrl || brandingConfig?.heroBannerUrl} alt={activeHero?.title || 'NikoSoko'} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
                         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
                         <div className="relative z-10 h-full flex flex-col justify-center px-4 max-w-[70%]">
-                            <h3 className="text-white font-black text-base leading-tight">Top Pros Near You</h3>
-                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">See ratings and verification before you call</p>
+                            {activeHero?.area && <span className="self-start mb-1 bg-white/20 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">{activeHero.area}</span>}
+                            <h3 className="text-white font-black text-base leading-tight">{activeHero?.title || 'Top Pros Near You'}</h3>
+                            <p className="text-white/90 text-[11px] font-medium mt-1 leading-snug">{activeHero ? activeHero.subtitle : 'See ratings and verification before you call'}</p>
                             <button onClick={() => setActiveTab("pros")} className="mt-2.5 self-start bg-white text-black text-[10.5px] font-black uppercase tracking-wide px-3.5 py-1.5 rounded-full active:scale-95 transition-transform">Find a pro</button>
                         </div>
                     </div>
@@ -504,7 +528,7 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
                                             service: item.title,
                                             avatarUrl: photo,
                                             coverImageUrl: photo,
-                                            rating: 5.0,
+                                            rating: 0,
                                             distanceKm: 4,
                                             hourlyRate: 0,
                                             rateType: 'per day',

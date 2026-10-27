@@ -180,6 +180,8 @@ export interface ServiceProvider {
   isProfileCompleted?: boolean;
   idVerificationStatus?: 'Unverified' | 'Pending' | 'Verified';
   idType?: 'National ID' | 'Passport' | 'Alien Card' | 'Driving License';
+  idSubmitted?: boolean; // server-computed; ID details themselves are never sent back
+  // Write-only (sent at signup, never returned by the API):
   idNumber?: string;
   idDocumentUrl?: string;
   selfieUrl?: string;
@@ -393,4 +395,17 @@ export interface Document {
   scannedImageUrl?: string;
   ownerPhone?: string;
   pendingOwnerPhone?: string;
+}
+
+export interface HeroBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  area?: string;        // place name, e.g. "Ruaka"
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number;    // shown to users within this distance; no coordinates = shown everywhere
+  isActive?: number | boolean;
+  createdAt?: string;
 }

@@ -64,7 +64,7 @@ async function initDatabase() {
       email TEXT,
       service TEXT,
       category TEXT,
-      rating REAL DEFAULT 5.0,
+      rating REAL DEFAULT 0,
       reviewsCount INTEGER DEFAULT 0,
       isVerified INTEGER DEFAULT 0,
       location TEXT,
@@ -84,6 +84,29 @@ async function initDatabase() {
       lastCheckInAt TEXT,
       lastCheckInLocation TEXT,
       rawData TEXT,
+      createdAt TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS ratings (
+      id TEXT PRIMARY KEY,
+      providerId TEXT NOT NULL,
+      raterKey TEXT NOT NULL,
+      stars INTEGER NOT NULL,
+      comment TEXT,
+      createdAt TEXT,
+      UNIQUE(providerId, raterKey)
+    );
+
+    CREATE TABLE IF NOT EXISTS hero_banners (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      subtitle TEXT,
+      imageUrl TEXT,
+      area TEXT,
+      latitude REAL,
+      longitude REAL,
+      radiusKm REAL DEFAULT 5,
+      isActive INTEGER DEFAULT 1,
       createdAt TEXT
     );
 
@@ -171,6 +194,7 @@ async function initDatabase() {
   try { runSql('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE bookings ADD COLUMN cancelledBy TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE bookings ADD COLUMN cancelledAt TEXT'); } catch (_) {}
+  try { runSql("UPDATE providers SET rating = 0, reviewsCount = 0 WHERE id = 'super-admin-001' AND reviewsCount = 150"); } catch (_) {}
   try { runSql('ALTER TABLE providers ADD COLUMN latitude REAL'); } catch (_) {}
   try { runSql('ALTER TABLE providers ADD COLUMN longitude REAL'); } catch (_) {}
   try { runSql('ALTER TABLE providers ADD COLUMN lastCheckInAt TEXT'); } catch (_) {}
@@ -188,8 +212,8 @@ async function initDatabase() {
       email: 'admin@nikosoko.com',
       service: 'Platform Support & Verification',
       category: 'TECHNICAL',
-      rating: 5.0,
-      reviewsCount: 150,
+      rating: 0,
+      reviewsCount: 0,
       isVerified: 1,
       location: 'Nairobi, Kenya',
       bio: 'Official NikoSoko Super Administrator for trades, skilled artisans, and local service providers.',
@@ -405,6 +429,28 @@ async function startServer() {
     }
   });
 
+
+  // Fields that must never leave the server. ID details are write-only: users submit them,
+  // nobody (including the owner) gets them back in a response.
+  const PRIVATE_PROVIDER_FIELDS = [
+    'password', 'rawData', 'idNumber', 'nationalId', 'idDocumentUrl', 'idType', 'selfieUrl',
+    'email', 'checkInHistory', 'lastCheckInAt'
+  ];
+  const coarse = (n: any) => (typeof n === 'number' && isFinite(n) ? Math.round(n * 100) / 100 : null); // ~1 km
+  const sanitizeProvider = (p: any) => {
+    if (!p) return p;
+    const out: any = { ...p };
+    out.ratingCount = Number(p.reviewsCount) || 0;
+    out.idSubmitted = Boolean(p.idNumber || p.nationalId || p.idDocumentUrl);
+    for (const k of PRIVATE_PROVIDER_FIELDS) delete out[k];
+    if (Array.isArray(out.joinRequests)) {
+      out.joinRequests = out.joinRequests.map(({ userPhone, ...rest }: any) => rest);
+    }
+    if ('latitude' in out) out.latitude = coarse(out.latitude);
+    if ('longitude' in out) out.longitude = coarse(out.longitude);
+    return out;
+  };
+
   app.post('/api/auth/verify-otp', async (req, res) => {
     try {
       const { target, code } = req.body;
@@ -504,7 +550,7 @@ async function startServer() {
         );
       }
 
-      res.json({ message: 'OTP verified successfully', provider, token: `valid-token-for-${cleanTarget}` });
+      res.json({ message: 'OTP verified successfully', provider: sanitizeProvider(provider), token: `valid-token-for-${cleanTarget}` });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -519,7 +565,7 @@ async function startServer() {
         if (r.rawData && typeof r.rawData === 'string') {
           try { raw = JSON.parse(r.rawData); } catch (_) {}
         }
-        return {
+        return sanitizeProvider({
           ...raw,
           ...r,
           about: r.about || r.bio || raw.about || '',
@@ -528,7 +574,7 @@ async function startServer() {
           isOnline: Boolean(r.isOnline),
           latitude: typeof r.latitude === 'number' ? r.latitude : (raw.latitude ?? null),
           longitude: typeof r.longitude === 'number' ? r.longitude : (raw.longitude ?? null)
-        };
+        });
       });
       res.json(formatted);
     } catch (e: any) {
@@ -543,6 +589,7 @@ async function startServer() {
       const skillsJson = JSON.stringify(p.skills || []);
       const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
+      const prior = queryOne('SELECT rating, reviewsCount FROM providers WHERE id = ?', [id]);
 
       runSql(
         `INSERT OR REPLACE INTO providers (
@@ -550,7 +597,7 @@ async function startServer() {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, p.name || '', p.phone || '', p.email || '', p.service || '', p.category || '',
-          p.rating || 0, p.reviewsCount || 0, p.isVerified ? 1 : 0, p.location || '',
+          prior?.rating ?? 0, prior?.reviewsCount ?? 0, p.isVerified ? 1 : 0, p.location || '',
           p.bio || p.about || '', p.about || p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
           skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0,
           p.latitude || null, p.longitude || null, p.lastCheckInAt || null, p.lastCheckInLocation || null, rawDataJson, p.createdAt || new Date().toISOString()
@@ -558,7 +605,7 @@ async function startServer() {
       );
 
       const saved = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
-      res.json(saved);
+      res.json(sanitizeProvider(saved));
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -576,6 +623,9 @@ async function startServer() {
       }
 
       const updated = { ...existingRaw, ...(existing || {}), ...p, id };
+      // Ratings are computed server-side from the ratings table; clients cannot set them.
+      updated.rating = existing?.rating ?? 0;
+      updated.reviewsCount = existing?.reviewsCount ?? 0;
       const skillsJson = JSON.stringify(updated.skills || []);
       const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, ...safeForRawData } = updated;
       const rawDataJson = JSON.stringify(safeForRawData);
@@ -594,7 +644,74 @@ async function startServer() {
         ]
       );
 
-      res.json({ message: 'Provider updated', provider: updated });
+      res.json({ message: 'Provider updated', provider: sanitizeProvider(updated) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Location-targeted hero banners (e.g. "Karura Forest" for users near Ruaka). Public read, admin-managed.
+  app.get('/api/banners', (req, res) => {
+    try {
+      res.json(queryAll('SELECT * FROM hero_banners WHERE isActive = 1 ORDER BY createdAt DESC'));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/banners/all', (req, res) => {
+    try {
+      res.json(queryAll('SELECT * FROM hero_banners ORDER BY createdAt DESC'));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/banners', (req, res) => {
+    try {
+      const b = req.body || {};
+      if (!b.imageUrl || !b.title) return res.status(400).json({ error: 'title and imageUrl are required' });
+      const id = b.id || `banner-${Date.now()}`;
+      const num = (v: any) => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
+      runSql(
+        `INSERT OR REPLACE INTO hero_banners (id, title, subtitle, imageUrl, area, latitude, longitude, radiusKm, isActive, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, b.title, b.subtitle || '', b.imageUrl, b.area || '', num(b.latitude), num(b.longitude), num(b.radiusKm) ?? 5, b.isActive === false || b.isActive === 0 ? 0 : 1, b.createdAt || new Date().toISOString()]
+      );
+      res.json({ success: true, id });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/banners/:id', (req, res) => {
+    try {
+      runSql('DELETE FROM hero_banners WHERE id = ?', [req.params.id]);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Ratings: one rating per rater per provider; the average is always computed from real rows.
+  app.post('/api/ratings', (req, res) => {
+    try {
+      const { providerId, raterKey, rating, comment } = req.body || {};
+      const stars = Math.round(Number(rating));
+      if (!providerId || !raterKey || !(stars >= 1 && stars <= 5)) {
+        return res.status(400).json({ error: 'providerId, raterKey and a rating of 1-5 are required' });
+      }
+      if (String(raterKey) === String(providerId)) return res.status(400).json({ error: 'You cannot rate yourself' });
+      if (!queryOne('SELECT id FROM providers WHERE id = ?', [providerId])) return res.status(404).json({ error: 'Provider not found' });
+      runSql(
+        `INSERT INTO ratings (id, providerId, raterKey, stars, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(providerId, raterKey) DO UPDATE SET stars = excluded.stars, comment = excluded.comment, createdAt = excluded.createdAt`,
+        [`rt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, providerId, String(raterKey), stars, String(comment || '').slice(0, 500), new Date().toISOString()]
+      );
+      const agg = queryOne('SELECT AVG(stars) AS avg, COUNT(*) AS n FROM ratings WHERE providerId = ?', [providerId]);
+      const rating_ = Math.round(Number(agg.avg) * 10) / 10;
+      runSql('UPDATE providers SET rating = ?, reviewsCount = ? WHERE id = ?', [rating_, agg.n, providerId]);
+      res.json({ success: true, rating: rating_, reviewsCount: agg.n });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

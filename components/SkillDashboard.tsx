@@ -376,15 +376,15 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
       skills: skillsList as any,
       isSaccoVerified: true,
       referredBy: 'REF-MASTER-01',
-      rating: 4.8,
-      reviewsCount: 18,
+      rating: 0,
+      reviewsCount: 0,
       completionRate: 0.98
     });
   }, [currentUser, skillsList]);
 
   const level = getLevel(trustBreakdown.totalScore);
-  const clientRating = currentUser?.rating || 4.2;
-  const reviewsCount = currentUser?.reviewsCount || 18;
+  const clientRating = currentUser?.rating || 0;
+  const reviewsCount = currentUser?.reviewsCount || 0;
 
   // Recommended skills: courses in categories the member doesn't already
   // hold, ranked by whichever carries the strongest demand signal.
@@ -478,8 +478,8 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                     className={`w-4 h-4 ${i <= Math.round(clientRating) ? 'fill-emerald-500 text-emerald-500' : 'fill-gray-200 text-gray-200'}`}
                   />
                 ))}
-                <span className="text-sm font-black text-black ml-1">{clientRating.toFixed(1)}</span>
-                <span className="text-xs text-gray-400 font-medium">({reviewsCount} reviews)</span>
+                <span className="text-sm font-black text-black ml-1">{reviewsCount > 0 ? clientRating.toFixed(1) : 'New'}</span>
+                <span className="text-xs text-gray-400 font-medium">{reviewsCount > 0 ? `(${reviewsCount} reviews)` : '(no reviews yet)'}</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">

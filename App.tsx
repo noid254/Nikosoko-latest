@@ -1072,11 +1072,12 @@ function App() {
       setRatedProviderIds(newRated);
       localStorage.setItem('nikosoko_rated_provider_ids', JSON.stringify(newRated));
 
-      setProviders(prev => prev.map(p => p.id === providerId ? {
-          ...p,
-          rating: Math.min(5, Math.max(1, (p.rating * 10 + rating) / 11)),
-          reviewsCount: (p.reviewsCount || 0) + 1
-      } : p));
+      api.submitRating(providerId, rating, comment, currentUser?.id).then(result => {
+          if (!result) return;
+          setProviders(prev => prev.map(p => p.id === providerId
+              ? { ...p, rating: result.rating, reviewsCount: result.reviewsCount, ratingCount: result.reviewsCount }
+              : p));
+      });
 
       setContactHistory(prev => {
           const updated = prev.filter(c => c.providerId !== providerId);

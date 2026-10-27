@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { CatalogueItem, ServiceProvider, CurrentPage } from '../types';
+import { getDisplayRating } from '../utils/trustEngine';
 
 const BackIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -51,8 +52,8 @@ interface TukosokoItemCardProps {
 
 const TukosokoItemCard: React.FC<TukosokoItemCardProps> = ({ item, provider, onClick }) => {
   const photoCount = item.imageUrls?.length || 1;
-  const rating = provider?.rating || 4.9;
-  const distance = provider?.distanceKm || 0.8;
+  const dr = getDisplayRating(provider);
+  const distance = provider?.distanceKm;
   const isRefill = item.category?.toLowerCase().includes('water') || item.category?.toLowerCase().includes('gas') || item.category === 'Refills';
 
   return (
@@ -119,15 +120,17 @@ const TukosokoItemCard: React.FC<TukosokoItemCardProps> = ({ item, provider, onC
                   {provider.shopDetails?.name || provider.name}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5 text-[9px] font-bold text-gray-600">
-                <StarIcon />
-                <span>{rating.toFixed(1)}</span>
-              </div>
+              {dr.show && (
+                <div className="flex items-center gap-0.5 text-[9px] font-bold text-gray-600">
+                  <StarIcon />
+                  <span>{dr.value.toFixed(1)}</span>
+                </div>
+              )}
             </div>
           )}
 
           <div className="flex items-center justify-between text-[8px] text-gray-400 font-semibold">
-            <span>📍 {distance} km away</span>
+            <span>{distance != null ? `📍 ${distance} km away` : ''}</span>
             <span className="text-blue-600 font-extrabold uppercase tracking-wider group-hover:underline">Order ➔</span>
           </div>
         </div>
@@ -311,7 +314,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 <span className="text-base">⭐</span>
                 <div>
                   <p className="text-[9px] font-black text-gray-400 uppercase">Professional Rating</p>
-                  <p className="font-bold text-gray-800">{provider?.rating || 4.9} / 5.0</p>
+                  <p className="font-bold text-gray-800">{getDisplayRating(provider).show ? `${getDisplayRating(provider).value.toFixed(1)} / 5.0` : 'New'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

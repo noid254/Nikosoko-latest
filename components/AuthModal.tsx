@@ -351,11 +351,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             idNumber: idNumber.trim() || undefined,
             idDocumentUrl: finalIdDoc || undefined,
             selfieUrl: finalSelfie || undefined,
-            rating: isIdentityVerified ? 5.0 : 4.8,
+            rating: 0,
+            ratingCount: 0,
             isProfileCompleted: true
         };
 
-        saveUserProfileToFirestore(tempUserId, fullProfileData).catch(console.error);
+        // ID details go to our server only; never mirror them into Firestore.
+        const firestoreSafe: any = { ...fullProfileData };
+        ['idNumber', 'idDocumentUrl', 'selfieUrl', 'idType'].forEach(k => delete firestoreSafe[k]);
+        saveUserProfileToFirestore(tempUserId, firestoreSafe).catch(console.error);
 
         onLogin(
             mockResponse, 

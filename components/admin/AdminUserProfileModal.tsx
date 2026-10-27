@@ -43,8 +43,8 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
     totalGigsPosted: 2,
     verificationAuditTrail: [
       user.isVerified ? '✓ Document Scan Audit Approved' : '⏳ Identity Verification Pending',
-      user.idNumber ? `✓ National ID / Passport #${user.idNumber} Logged` : '⚠️ ID Number Not Submitted',
-      user.selfieUrl ? '✓ Live Selfie Facial Match Passed' : '⚠️ Live Selfie Pending'
+      user.idSubmitted ? '✓ ID details submitted' : '⚠️ ID not submitted',
+      user.idSubmitted ? '✓ Identity document on file' : '⚠️ Identity document pending'
     ],
     systemFlags: user.flagCount > 0 ? [`${user.flagCount} User Flag Reports Received`] : ['Clean Account Standing'],
     termsAcceptedAt: new Date().toISOString(),

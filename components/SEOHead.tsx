@@ -15,7 +15,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ provider, item, customTitle, c
         let title = 'NikoSoko - Skilled professionals near you in Kenya';
         let description = 'Find electricians, plumbers, boda and taxi drivers, tech repairers and other skilled people near you. See ratings and verification before you call or book.';
         let canonicalUrl = window.location.href;
-        let imageUrl = 'https://nikosoko.app/icon-512.png';
+        let imageUrl = 'https://nikosoko.com/icon-512.png';
         let jsonLdData: any = null;
 
         if (provider) {
