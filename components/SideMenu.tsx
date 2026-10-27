@@ -10,7 +10,6 @@ interface SideMenuProps {
   isSuperAdmin: boolean;
   onLogout: () => void;
   onOpenCompleteSignUp?: () => void;
-  onOpenSEOMap?: () => void;
   onUpdateUser?: (updated: ServiceProvider) => void;
 }
 

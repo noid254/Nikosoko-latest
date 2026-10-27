@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { ServiceProvider, SpecialBanner, CatalogueItem, AppBrandingConfig, AppFeatureConfig } from '../types';
+import type { ServiceProvider, CatalogueItem, AppBrandingConfig } from '../types';
 
 import DashboardPage from './admin/DashboardPage';
 import UsersPage from './admin/UsersPage';
@@ -23,9 +23,6 @@ interface SuperAdminDashboardProps {
     onDeleteCategory: (name:string) => void;
     onBroadcast: (message: string, filters: Record<string, string>) => void;
     initialPage?: AdminPage;
-    specialBanners: SpecialBanner[];
-    onAddBanner: (banner: Omit<SpecialBanner, 'id'>) => void;
-    onDeleteBanner: (bannerId: string) => void;
     onCreateOrganization: (orgData: any) => void;
     onApproveRequest: (orgId: string, userId: string) => void;
     onRejectRequest: (orgId: string, userId: string) => void;
@@ -34,8 +31,6 @@ interface SuperAdminDashboardProps {
     onDeleteCatalogueItem?: (itemId: string) => void;
     brandingConfig?: AppBrandingConfig;
     onSaveBrandingConfig?: (config: AppBrandingConfig) => void;
-    featureConfig?: AppFeatureConfig;
-    onSaveFeatureConfig?: (config: AppFeatureConfig) => void;
 }
 
 export type AdminPage = 'Dashboard' | 'Users' | 'Catalogue' | 'Organizations' | 'Analytics' | 'Appearance' | 'Broadcast' | 'Categories' | 'Email & OTP';
@@ -48,7 +43,6 @@ const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 8v-5z" /></svg>;
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>;
 const OrgIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>;
-const BuildingIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" /></svg>;
 const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 
 
@@ -91,14 +85,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
                 />;
             case 'Appearance':
                 return <AppearancePage 
-                    categories={props.categories}
-                    specialBanners={props.specialBanners}
-                    onAddBanner={props.onAddBanner}
-                    onDeleteBanner={props.onDeleteBanner}
                     brandingConfig={props.brandingConfig}
                     onSaveBrandingConfig={props.onSaveBrandingConfig}
-                    featureConfig={props.featureConfig}
-                    onSaveFeatureConfig={props.onSaveFeatureConfig}
                 />;
             case 'Broadcast':
                 return <BroadcastPage 

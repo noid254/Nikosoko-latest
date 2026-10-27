@@ -4,7 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
-import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 
 const PORT = 3002;
@@ -115,46 +114,6 @@ async function initDatabase() {
       isRead INTEGER DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS gigs (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      category TEXT,
-      location TEXT,
-      budget TEXT,
-      description TEXT,
-      posterName TEXT,
-      posterPhone TEXT,
-      status TEXT DEFAULT 'Open',
-      createdAt TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS events (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      date TEXT,
-      location TEXT,
-      description TEXT,
-      price TEXT,
-      organizerName TEXT,
-      image TEXT,
-      attendeesCount INTEGER DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS special_banners (
-      id TEXT PRIMARY KEY,
-      title TEXT,
-      subtitle TEXT,
-      imageUrl TEXT,
-      actionUrl TEXT,
-      badgeText TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS categories (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      icon TEXT
-    );
-
     CREATE TABLE IF NOT EXISTS bookings (
       id TEXT PRIMARY KEY,
       providerId TEXT,
@@ -219,7 +178,7 @@ async function initDatabase() {
 
   saveDb();
 
-  // Seed default super admin & initial trades professionals if empty
+  // Seed the default super admin if the database is empty
   const providerCount = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM providers');
   if (!providerCount || providerCount.count === 0) {
     const defaultSuperAdmin = {
@@ -243,70 +202,7 @@ async function initDatabase() {
       createdAt: new Date().toISOString()
     };
 
-    const initialTradesPros = [
-      {
-        id: 'pro-001',
-        name: 'Kamau Electrics & Solar',
-        phone: '0712345678',
-        email: 'kamau.electric@gmail.com',
-        service: 'Licensed Electrical Wiring & Solar Installation',
-        category: 'ELECTRICAL',
-        rating: 4.9,
-        reviewsCount: 38,
-        isVerified: 1,
-        location: 'Westlands, Nairobi',
-        bio: 'Certified EPRA electrician with 10+ years experience in domestic wiring, circuit breaker fixes, generator installation, and inverter setups.',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300',
-        coverImageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800',
-        role: 'Provider',
-        skills: JSON.stringify(['Domestic Wiring', 'EPRA Certified', 'Solar Inverters', 'Fault Finding']),
-        hourlyRate: 'Ksh 1,500/hr',
-        password: 'password123',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'pro-002',
-        name: 'Mama Ouma Plumbing Services',
-        phone: '0722987654',
-        email: 'ouma.plumbing@gmail.com',
-        service: 'Pipe Repair, Drainage & Water Heater Maintenance',
-        category: 'PLUMBING',
-        rating: 4.8,
-        reviewsCount: 52,
-        isVerified: 1,
-        location: 'Kilimani, Nairobi',
-        bio: 'Fast emergency plumbing repairs, unblocking choked drains, installing water pumps, instant shower heads, and bathroom remodeling.',
-        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=300',
-        coverImageUrl: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?q=80&w=800',
-        role: 'Provider',
-        skills: JSON.stringify(['Leak Repair', 'Drainage Unblocking', 'Water Pump Fitting', 'Instant Showers']),
-        hourlyRate: 'Ksh 1,200/hr',
-        password: 'password123',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'pro-003',
-        name: 'Otieno Carpentry & Custom Furniture',
-        phone: '0733112233',
-        email: 'otieno.crafts@gmail.com',
-        service: 'Custom Woodwork, Cabinetry & Door Fitting',
-        category: 'CARPENTRY',
-        rating: 4.9,
-        reviewsCount: 29,
-        isVerified: 1,
-        location: 'Industrial Area, Nairobi',
-        bio: 'Skilled wood artisan specializing in kitchen cabinets, mahogany doors, wardrobe fitting, office furniture, and timber repairs.',
-        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=300',
-        coverImageUrl: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?q=80&w=800',
-        role: 'Provider',
-        skills: JSON.stringify(['Kitchen Cabinets', 'Hardwood Doors', 'Wardrobes', 'Furniture Restoration']),
-        hourlyRate: 'Ksh 1,800/hr',
-        password: 'password123',
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    [defaultSuperAdmin, ...initialTradesPros].forEach(p => {
+    [defaultSuperAdmin].forEach(p => {
       runSql(
         `INSERT INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -314,7 +210,7 @@ async function initDatabase() {
       );
     });
 
-    console.log('SQLite database initialized with seed trades professionals!');
+    console.log('SQLite database initialized with the default super admin.');
   }
 }
 
@@ -614,89 +510,6 @@ async function startServer() {
     }
   });
 
-  // Authentication & Profile Persistence Routes
-  app.post('/api/auth/register', (req, res) => {
-    try {
-      const { name, phone, email, service, category, location, bio, password, role } = req.body;
-      if (!name || !phone) {
-        return res.status(400).json({ error: 'Name and Phone number are required' });
-      }
-
-      // Check if user with phone already exists
-      const existing = queryOne('SELECT * FROM providers WHERE phone = ? OR (email = ? AND email != "")', [phone, email || '']);
-      if (existing) {
-        // Return existing profile
-        return res.json({ message: 'User profile retrieved', provider: existing });
-      }
-
-      const id = `pro-${Date.now()}`;
-      const newProvider = {
-        id,
-        name,
-        phone,
-        email: email || '',
-        service: service || 'General Trades Professional',
-        category: category || 'GENERAL',
-        rating: 0,
-        reviewsCount: 0,
-        isVerified: 1,
-        location: location || 'Nairobi, Kenya',
-        bio: bio || 'Skilled trades professional listed on NikoSoko Marketplace.',
-        avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300`,
-        coverImageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800',
-        role: role || 'Provider',
-        skills: JSON.stringify([]),
-        hourlyRate: 'Ksh 1,000/hr',
-        password: password || 'password123',
-        createdAt: new Date().toISOString()
-      };
-
-      runSql(
-        `INSERT INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          newProvider.id, newProvider.name, newProvider.phone, newProvider.email, newProvider.service,
-          newProvider.category, newProvider.rating, newProvider.reviewsCount, newProvider.isVerified,
-          newProvider.location, newProvider.bio, newProvider.avatarUrl, newProvider.coverImageUrl,
-          newProvider.role, newProvider.skills, newProvider.hourlyRate, newProvider.password, newProvider.createdAt
-        ]
-      );
-
-      res.json({ message: 'User registered successfully', provider: newProvider });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message || 'Failed to register user' });
-    }
-  });
-
-  app.post('/api/auth/login', (req, res) => {
-    try {
-      const { phone, email } = req.body;
-      if (!phone && !email) {
-        return res.status(400).json({ error: 'Phone or Email is required' });
-      }
-
-      const user = queryOne(
-        'SELECT * FROM providers WHERE (phone = ? AND phone != "") OR (email = ? AND email != "") OR (phone LIKE ?)',
-        [phone || '', email || '', `%${phone}%`]
-      );
-
-      if (!user) {
-        return res.status(444).json({ error: 'User profile not found. Please create an account.' });
-      }
-
-      // Parse JSON fields
-      if (user.skills && typeof user.skills === 'string') {
-        try { user.skills = JSON.parse(user.skills); } catch { user.skills = []; }
-      }
-
-      res.json({ message: 'Login successful', provider: user });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message || 'Login failed' });
-    }
-  });
-
   // Providers Endpoints
   app.get('/api/providers', (req, res) => {
     try {
@@ -718,29 +531,6 @@ async function startServer() {
         };
       });
       res.json(formatted);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get('/api/providers/:id', (req, res) => {
-    try {
-      const row = queryOne('SELECT * FROM providers WHERE id = ?', [req.params.id]);
-      if (!row) return res.status(404).json({ error: 'Provider not found' });
-      let raw: any = {};
-      if (row.rawData && typeof row.rawData === 'string') {
-        try { raw = JSON.parse(row.rawData); } catch (_) {}
-      }
-      res.json({
-        ...raw,
-        ...row,
-        about: row.about || row.bio || raw.about || '',
-        skills: typeof row.skills === 'string' ? JSON.parse(row.skills || '[]') : (row.skills || raw.skills || []),
-        isVerified: Boolean(row.isVerified),
-        isOnline: Boolean(row.isOnline),
-        latitude: typeof row.latitude === 'number' ? row.latitude : (raw.latitude ?? null),
-        longitude: typeof row.longitude === 'number' ? row.longitude : (raw.longitude ?? null)
-      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -918,65 +708,6 @@ async function startServer() {
     }
   });
 
-  // Gigs Endpoints
-  app.get('/api/gigs', (req, res) => {
-    try {
-      const rows = queryAll('SELECT * FROM gigs ORDER BY createdAt DESC');
-      res.json(rows);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/gigs', (req, res) => {
-    try {
-      const g = req.body;
-      const id = g.id || `gig-${Date.now()}`;
-      runSql(
-        `INSERT INTO gigs (id, title, category, location, budget, description, posterName, posterPhone, status, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, g.title, g.category, g.location, g.budget, g.description, g.posterName, g.posterPhone, g.status || 'Open', new Date().toISOString()]
-      );
-      res.json({ success: true, id });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Banners Endpoints
-  app.get('/api/banners', (req, res) => {
-    try {
-      const rows = queryAll('SELECT * FROM special_banners');
-      res.json(rows);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/banners', (req, res) => {
-    try {
-      const b = req.body;
-      const id = b.id || `banner-${Date.now()}`;
-      runSql(
-        `INSERT OR REPLACE INTO special_banners (id, title, subtitle, imageUrl, actionUrl, badgeText)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, b.title, b.subtitle, b.imageUrl, b.actionUrl, b.badgeText]
-      );
-      res.json({ success: true, id });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.delete('/api/banners/:id', (req, res) => {
-    try {
-      runSql('DELETE FROM special_banners WHERE id = ?', [req.params.id]);
-      res.json({ success: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
   // --- M-Pesa Daraja Payment Gateway Integration ---
   const activeMpesaRequests = new Map<string, { checkoutRequestId: string; phone: string; amount: number; bookingId?: string; status: string; receipt: string; timestamp: number }>();
 
@@ -1029,17 +760,6 @@ async function startServer() {
       return null;
     }
   }
-
-  // Status/Health endpoint for M-Pesa integration
-  app.get('/api/mpesa/config', (req, res) => {
-    const creds = getMpesaCredentials();
-    res.json({
-      configured: creds.isConfigured,
-      environment: creds.env,
-      shortcode: creds.shortcode,
-      mode: creds.isConfigured ? 'live_daraja_api' : 'simulated_instant_stk'
-    });
-  });
 
   // M-Pesa STK Push Endpoint
   app.post('/api/mpesa/stkpush', async (req, res) => {
@@ -1180,8 +900,6 @@ async function startServer() {
           // Success
           const items = callbackData.CallbackMetadata?.Item || [];
           const mpesaReceipt = items.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
-          const phone = items.find((i: any) => i.Name === 'PhoneNumber')?.Value;
-          const amount = items.find((i: any) => i.Name === 'Amount')?.Value;
 
           if (checkoutId && activeMpesaRequests.has(checkoutId)) {
             const reqInfo = activeMpesaRequests.get(checkoutId)!;
@@ -1199,41 +917,6 @@ async function startServer() {
         }
       }
       res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/mpesa/query', (req, res) => {
-    try {
-      const { checkoutRequestId } = req.body;
-      if (!checkoutRequestId) {
-        return res.status(400).json({ error: 'checkoutRequestId is required' });
-      }
-
-      const reqInfo = activeMpesaRequests.get(checkoutRequestId);
-      if (reqInfo) {
-        return res.json({
-          ResponseCode: '0',
-          ResponseDescription: 'The service request has been accepted successfully',
-          ResultCode: '0',
-          ResultDesc: 'The service request is processed successfully.',
-          ReceiptNumber: reqInfo.receipt,
-          Amount: reqInfo.amount,
-          Phone: reqInfo.phone,
-          Status: 'Completed'
-        });
-      }
-
-      // If simulated or unknown, generate confirmation
-      const receipt = 'SH' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      res.json({
-        ResponseCode: '0',
-        ResultCode: '0',
-        ResultDesc: 'Payment verified',
-        ReceiptNumber: receipt,
-        Status: 'Completed'
-      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -1387,15 +1070,6 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/bookings/:id', (req, res) => {
-    try {
-      runSql('DELETE FROM bookings WHERE id = ?', [req.params.id]);
-      res.json({ success: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
   // --- Location Check-in Logs & Distance Calculation System ---
 
   const KENYA_ESTATES_MAP: Record<string, { lat: number; lng: number; county: string; name: string }> = {
@@ -1452,22 +1126,6 @@ async function startServer() {
       name: query || 'Ruaka',
       county: 'Kiambu County'
     };
-  }
-
-  function calcHaversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    if (lat1 === lat2 && lon1 === lon2) return 0.2;
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c;
-    return d < 0.2 ? 0.2 : Math.round(d * 10) / 10;
   }
 
   // Record a Location Check-In
@@ -1579,96 +1237,6 @@ async function startServer() {
       });
     } catch (e: any) {
       console.error('Check-in error:', e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Query Check-in Logs
-  app.get('/api/locations/logs', (req, res) => {
-    try {
-      const { userId, location, limit = 50 } = req.query;
-      let sql = 'SELECT * FROM location_checkin_logs';
-      const params: any[] = [];
-
-      if (userId) {
-        sql += ' WHERE userId = ?';
-        params.push(userId);
-      } else if (location) {
-        sql += ' WHERE locationName LIKE ? OR estateName LIKE ?';
-        params.push(`%${location}%`, `%${location}%`);
-      }
-
-      sql += ' ORDER BY timestamp DESC LIMIT ?';
-      params.push(Number(limit));
-
-      const rows = queryAll(sql, params);
-      res.json(rows.map(r => ({ ...r, isActive: Boolean(r.isActive) })));
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Calculate Distance Between Two Locations or Coordinates (e.g. Ruaka vs Kasarani)
-  app.get('/api/locations/distance', (req, res) => {
-    try {
-      const { from = 'Ruaka', to = 'Kasarani', lat1, lon1, lat2, lon2 } = req.query;
-
-      const fromGeo = resolveServerLocation(String(from), lat1 ? Number(lat1) : undefined, lon1 ? Number(lon1) : undefined);
-      const toGeo = resolveServerLocation(String(to), lat2 ? Number(lat2) : undefined, lon2 ? Number(lon2) : undefined);
-
-      const distanceKm = calcHaversineKm(fromGeo.lat, fromGeo.lng, toGeo.lat, toGeo.lng);
-
-      res.json({
-        from: {
-          location: String(from),
-          estate: fromGeo.name,
-          county: fromGeo.county,
-          latitude: fromGeo.lat,
-          longitude: fromGeo.lng
-        },
-        to: {
-          location: String(to),
-          estate: toGeo.name,
-          county: toGeo.county,
-          latitude: toGeo.lat,
-          longitude: toGeo.lng
-        },
-        distanceKm,
-        formattedText: `${distanceKm} km away`,
-        accuracy: 'GPS Great-Circle (Haversine)'
-      });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Calculate Distances for List of Providers from User Check-in Point
-  app.post('/api/locations/calculate-distances', (req, res) => {
-    try {
-      const { userLocation, userLatitude, userLongitude, providers = [] } = req.body;
-      const userGeo = resolveServerLocation(userLocation || 'Ruaka', userLatitude, userLongitude);
-
-      const results = providers.map((p: any) => {
-        const proGeo = resolveServerLocation(p.location || '', p.latitude, p.longitude);
-        const distanceKm = calcHaversineKm(userGeo.lat, userGeo.lng, proGeo.lat, proGeo.lng);
-        return {
-          id: p.id,
-          name: p.name,
-          service: p.service,
-          location: p.location,
-          distanceKm,
-          distanceDisplay: `${distanceKm} Km away`,
-          userLocation: userGeo.name,
-          providerLocation: proGeo.name
-        };
-      });
-
-      res.json({
-        userCheckIn: userGeo,
-        count: results.length,
-        providers: results
-      });
-    } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });

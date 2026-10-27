@@ -1,9 +1,8 @@
-import { API_BASE_URL } from '../config';
-import type { ServiceProvider, CatalogueItem, Document, SpecialBanner, InboxMessage, Event, Gig, Ticket, SetupData, UnitDetails, LocationCheckInLog } from '../types';
-import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockSpecialBanners, mockInboxMessages, mockEvents, mockGigs, mockTickets, mockCategories } from './mockData';
+import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCheckInLog } from '../types';
+import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockInboxMessages } from './mockData';
 import { USE_PLATFORM } from './backend';
 import * as platform from './platform';
-import { saveUserProfileToFirestore, getUserProfileFromFirestore, getAllUserProfilesFromFirestore } from './firebase';
+import { saveUserProfileToFirestore } from './firebase';
 
 // --- Database Configuration (LocalStorage & SQLite Mirror) ---
 const DB_KEYS = {
@@ -11,12 +10,7 @@ const DB_KEYS = {
     PROFILES_INDEX: 'nikosoko_user_profiles_db', // Persistent index by phone/email/id
     CATALOGUE: 'nikosoko_db_catalogue',
     DOCUMENTS: 'nikosoko_db_documents',
-    BANNERS: 'nikosoko_db_banners',
-    MESSAGES: 'nikosoko_db_messages',
-    GIGS: 'nikosoko_db_gigs',
-    EVENTS: 'nikosoko_db_events',
-    TICKETS: 'nikosoko_db_tickets',
-    CATEGORIES: 'nikosoko_db_categories'
+    MESSAGES: 'nikosoko_db_messages'
 };
 
 // Helper for persistent user profiles registry
@@ -58,12 +52,7 @@ const initDB = async () => {
     seed(DB_KEYS.PROVIDERS, mockProviders);
     seed(DB_KEYS.CATALOGUE, mockCatalogueItems);
     seed(DB_KEYS.DOCUMENTS, mockDocuments);
-    seed(DB_KEYS.BANNERS, mockSpecialBanners);
     seed(DB_KEYS.MESSAGES, mockInboxMessages);
-    seed(DB_KEYS.GIGS, mockGigs);
-    seed(DB_KEYS.EVENTS, mockEvents);
-    seed(DB_KEYS.TICKETS, mockTickets);
-    seed(DB_KEYS.CATEGORIES, mockCategories);
 
     // Merge persistent user profiles index into providers list so NO created profiles are ever lost
     try {
@@ -186,26 +175,6 @@ export interface VerifyOtpResponse {
     isSuperAdmin: boolean;
     token: string;
 }
-
-export const quickSuperAdminLogin = async (): Promise<VerifyOtpResponse> => {
-    if (USE_PLATFORM) throw new Error('This shortcut is not available.');
-    await delay(100);
-    const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-    let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
-    if (!saUser) saUser = SUPER_ADMIN_PROVIDER;
-
-    saveToProfilesIndex(saUser);
-
-    const token = 'valid-token-for-254723119356';
-    setToken(token);
-
-    return {
-        success: true,
-        user: saUser,
-        isSuperAdmin: true,
-        token
-    };
-};
 
 export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpResponse> => {
     if (USE_PLATFORM) {
@@ -361,27 +330,6 @@ export const getProviders = async (): Promise<ServiceProvider[]> => {
     return getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
 };
 
-export const getEvents = async (): Promise<Event[]> => {
-    await delay(100);
-    return getTable<Event>(DB_KEYS.EVENTS);
-};
-
-export const getGigs = async (): Promise<Gig[]> => {
-    try {
-        const res = await fetch('/api/gigs');
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-                saveTable(DB_KEYS.GIGS, data);
-                return data;
-            }
-        }
-    } catch {
-        // Fallback
-    }
-    return getTable<Gig>(DB_KEYS.GIGS);
-};
-
 export const getCatalogueItems = async (): Promise<CatalogueItem[]> => {
     try {
         const res = await fetch('/api/catalogue');
@@ -401,22 +349,6 @@ export const getCatalogueItems = async (): Promise<CatalogueItem[]> => {
 export const getDocuments = async (): Promise<Document[]> => {
     await delay(100);
     return getTable<Document>(DB_KEYS.DOCUMENTS);
-};
-
-export const getSpecialBanners = async (): Promise<SpecialBanner[]> => {
-    try {
-        const res = await fetch('/api/banners');
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-                saveTable(DB_KEYS.BANNERS, data);
-                return data;
-            }
-        }
-    } catch {
-        // Fallback
-    }
-    return getTable<SpecialBanner>(DB_KEYS.BANNERS);
 };
 
 export const getInboxMessages = async (): Promise<InboxMessage[]> => {
@@ -457,16 +389,6 @@ export const addInboxMessage = async (messageData: Omit<InboxMessage, 'id'>): Pr
     return newMessage;
 };
 
-export const getCategories = async (): Promise<string[]> => {
-    await delay(100);
-    return getTable<string>(DB_KEYS.CATEGORIES);
-};
-
-export const getTickets = async (): Promise<Ticket[]> => {
-    await delay(100);
-    return getTable<Ticket>(DB_KEYS.TICKETS);
-};
-
 // --- Data Creation (POST) ---
 export const createProvider = async (providerData: Omit<ServiceProvider, 'id'>): Promise<ServiceProvider> => {
     const newProvider: ServiceProvider = {
@@ -490,65 +412,6 @@ export const createProvider = async (providerData: Omit<ServiceProvider, 'id'>):
     providers.push(newProvider);
     saveTable(DB_KEYS.PROVIDERS, providers);
     return newProvider;
-};
-
-export const addEvent = async (eventData: Omit<Event, 'id'>): Promise<Event> => {
-    await delay(100);
-    const events = getTable<Event>(DB_KEYS.EVENTS);
-    const newEvent: Event = { ...eventData, id: `ev_${Date.now()}` };
-    events.push(newEvent);
-    saveTable(DB_KEYS.EVENTS, events);
-    return newEvent;
-};
-
-export const createGig = async (gigData: Omit<Gig, 'id' | 'providerId'>): Promise<Gig> => {
-    const newGig: Gig = { ...gigData, id: `gig_${Date.now()}`, providerId: 'pro-001' };
-    try {
-        await fetch('/api/gigs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newGig)
-        });
-    } catch {
-        // Fallback
-    }
-
-    const gigs = getTable<Gig>(DB_KEYS.GIGS);
-    gigs.unshift(newGig);
-    saveTable(DB_KEYS.GIGS, gigs);
-    return newGig;
-};
-    
-export const addDocument = async (docData: Omit<Document, 'id'>): Promise<Document> => {
-    await delay(100);
-    const docs = getTable<Document>(DB_KEYS.DOCUMENTS);
-    const newDoc: Document = { ...docData, id: `doc_${Date.now()}` };
-    docs.push(newDoc);
-    saveTable(DB_KEYS.DOCUMENTS, docs);
-    return newDoc;
-};
-
-export const updateDocument = async (updatedDoc: Document): Promise<Document> => {
-    await delay(100);
-    const docs = getTable<Document>(DB_KEYS.DOCUMENTS);
-    const index = docs.findIndex(d => d.id === updatedDoc.id);
-    if (index !== -1) {
-        docs[index] = updatedDoc;
-        saveTable(DB_KEYS.DOCUMENTS, docs);
-    }
-    return updatedDoc;
-};
-
-export const searchAssetBySerialOrReg = async (identifier: string): Promise<Document | null> => {
-    await delay(100);
-    const docs = getTable<Document>(DB_KEYS.DOCUMENTS);
-    const match = docs.find(d => {
-        const docAny = d as any;
-        return (docAny.serialNumber && docAny.serialNumber.toLowerCase() === identifier.toLowerCase()) ||
-               (docAny.registrationNumber && docAny.registrationNumber.toLowerCase() === identifier.toLowerCase()) ||
-               d.id === identifier;
-    });
-    return match || null;
 };
 
 // --- Data Modification (PUT) ---
@@ -676,51 +539,3 @@ export const recordLocationCheckIn = async (data: Partial<LocationCheckInLog> & 
     };
     return { success: true, log: fallbackLog };
 };
-
-export const getLocationCheckInLogs = async (query?: { userId?: string; location?: string; limit?: number }): Promise<LocationCheckInLog[]> => {
-    try {
-        const params = new URLSearchParams();
-        if (query?.userId) params.append('userId', query.userId);
-        if (query?.location) params.append('location', query.location);
-        if (query?.limit) params.append('limit', String(query.limit));
-
-        const res = await fetch(`/api/locations/logs?${params.toString()}`);
-        if (res.ok) {
-            return await res.json();
-        }
-    } catch (e) {
-        console.warn('API getLocationCheckInLogs failed:', e);
-    }
-    return [];
-};
-
-export const getCalculatedDistance = async (
-    from: string,
-    to: string,
-    lat1?: number,
-    lon1?: number,
-    lat2?: number,
-    lon2?: number
-): Promise<{ distanceKm: number; formattedText: string; from: any; to: any }> => {
-    try {
-        const params = new URLSearchParams({ from, to });
-        if (lat1 !== undefined) params.append('lat1', String(lat1));
-        if (lon1 !== undefined) params.append('lon1', String(lon1));
-        if (lat2 !== undefined) params.append('lat2', String(lat2));
-        if (lon2 !== undefined) params.append('lon2', String(lon2));
-
-        const res = await fetch(`/api/locations/distance?${params.toString()}`);
-        if (res.ok) {
-            return await res.json();
-        }
-    } catch (e) {
-        console.warn('API getCalculatedDistance failed:', e);
-    }
-    return {
-        distanceKm: 0,
-        formattedText: '0 km away',
-        from: { location: from },
-        to: { location: to }
-    };
-};
-

@@ -1,4 +1,4 @@
-import type { ServiceProvider, CatalogueItem, Document, QaRibuRequest, Ticket, Gig, Event, SpecialBanner, InboxMessage, Premise, UnitKey } from '../types';
+import type { ServiceProvider, CatalogueItem, Document, InboxMessage } from '../types';
 
 export const SUPER_ADMIN_PROVIDER: ServiceProvider = {
     id: 'superadmin-0723119356',
@@ -74,16 +74,5 @@ export const mockProviders: ServiceProvider[] = [
 export const mockCatalogueItems: CatalogueItem[] = [];
 
 export const mockDocuments: Document[] = [];
-
-export const mockQaRibuRequests: QaRibuRequest[] = [];
-
-export const mockTickets: Ticket[] = [];
-export const mockGigs: Gig[] = [];
-export const mockEvents: Event[] = [];
-export const mockCategories: string[] = ['HOME', 'TRANSPORT', 'HEALTH', 'EDUCATION', 'PROFESSIONAL'];
-
-export const mockSpecialBanners: SpecialBanner[] = [];
-
-export const mockPremises: Premise[] = [];
 
 export const mockInboxMessages: InboxMessage[] = [];

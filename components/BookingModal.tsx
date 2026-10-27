@@ -5,8 +5,7 @@ import {
     signInWithGoogle, 
     getCachedAccessToken, 
     createGoogleCalendarEvent, 
-    checkGoogleCalendarAvailability,
-    googleSignOut 
+    checkGoogleCalendarAvailability
 } from '../services/googleCalendar';
 import { User } from 'firebase/auth';
 import { USE_PLATFORM } from '../services/backend';
@@ -76,7 +75,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const [accessToken, setAccessToken] = useState<string | null>(getCachedAccessToken());
     const [isAuthenticating, setIsAuthenticating] = useState(false);
     const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-    const [busyEvents, setBusyEvents] = useState<{ title: string; start: string; end: string }[]>([]);
     const [hasCalendarConflict, setHasCalendarConflict] = useState(false);
     const [conflictDetails, setConflictDetails] = useState<string | null>(null);
 
@@ -109,7 +107,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         const verifyAvailability = async () => {
             if (!accessToken || !date) {
-                setBusyEvents([]);
                 setHasCalendarConflict(false);
                 setConflictDetails(null);
                 return;
@@ -121,8 +118,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 if (isCancelled) return;
 
                 if (res.success) {
-                    setBusyEvents(res.busyEvents);
-                    
                     // Check if selected time (1 hour window) overlaps any busy event
                     const selectedStart = new Date(`${date}T${time}:00`).getTime();
                     const selectedEnd = selectedStart + 60 * 60 * 1000;

@@ -9,7 +9,6 @@ export const EmailSettingsPage: React.FC = () => {
   });
 
   const [showToken, setShowToken] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -23,7 +22,6 @@ export const EmailSettingsPage: React.FC = () => {
   }, []);
 
   const fetchSmsSettings = async () => {
-    setIsLoading(true);
     try {
       const res = await fetch('/api/admin/sms-settings');
       if (res.ok) {
@@ -32,8 +30,6 @@ export const EmailSettingsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load Twilio SMS settings:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 

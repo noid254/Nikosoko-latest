@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import type { ServiceProvider } from '../types';
 
@@ -13,9 +12,8 @@ export const db = (firebaseConfig as any).firestoreDatabaseId
   ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
   : getFirestore(app);
 
-// Initialize Auth & Storage
+// Initialize Auth
 export const auth = getAuth(app);
-export const storage = getStorage(app);
 
 // Helper – never let Firebase block the UI for too long
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
@@ -137,41 +135,5 @@ export async function saveUserProfileToFirestore(
     }
   } catch (error) {
     console.error(`Error saving user profile to Firestore:`, error);
-  }
-}
-
-export async function getUserProfileFromFirestore(
-  userId: string
-): Promise<ServiceProvider | null> {
-  if (!userId) return null;
-  try {
-    const userRef = doc(db, 'users', userId);
-    return await withTimeout(
-      getDoc(userRef).then((snap) => (snap.exists() ? (snap.data() as ServiceProvider) : null)),
-      2000,
-      null
-    );
-  } catch (error) {
-    console.error(`Error fetching user profile:`, error);
-    return null;
-  }
-}
-
-export async function getAllUserProfilesFromFirestore(): Promise<ServiceProvider[]> {
-  try {
-    return await withTimeout(
-      getDocs(collection(db, 'users')).then((qs) => {
-        const profiles: ServiceProvider[] = [];
-        qs.forEach((d) => {
-          if (d.exists()) profiles.push(d.data() as ServiceProvider);
-        });
-        return profiles;
-      }),
-      2500,
-      []
-    );
-  } catch (error) {
-    console.error('Error fetching all user profiles:', error);
-    return [];
   }
 }

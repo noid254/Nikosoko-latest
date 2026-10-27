@@ -15,8 +15,8 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
   currentUserEmail = 'Noid254@gmail.com'
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [adminAuthorName, setAdminAuthorName] = useState('Super Admin');
-  const [adminAuthorRole, setAdminAuthorRole] = useState('SuperAdmin');
+  const adminAuthorName = 'Super Admin';
+  const adminAuthorRole = 'SuperAdmin';
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteSuccess, setNoteSuccess] = useState('');
 
@@ -24,7 +24,7 @@ export const AdminUserProfileModal: React.FC<AdminUserProfileModalProps> = ({
   const [showRaiseCaseForm, setShowRaiseCaseForm] = useState(false);
   const [caseReason, setCaseReason] = useState('');
   const [caseReviewer, setCaseReviewer] = useState('Client / Customer Report');
-  const [caseRating, setCaseRating] = useState(1);
+  const caseRating = 1;
   const [caseComment, setCaseComment] = useState('');
 
   // Inferred contact email if missing

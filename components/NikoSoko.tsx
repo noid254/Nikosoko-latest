@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { ServiceProvider, CatalogueItem, CurrentPage, SpecialBanner, AppBrandingConfig, Coordinates } from '../types';
+import type { ServiceProvider, CatalogueItem, CurrentPage, AppBrandingConfig, Coordinates } from '../types';
 import { normalizeSkills } from '../utils/skills';
 import { recalculateProvidersDistances, findNearestEstate, compareByDistance } from '../utils/geoLocations';
 import ServiceCard from './ServiceCard';
@@ -64,7 +64,6 @@ const BellIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-
 interface NikoSokoProps {
     providers: ServiceProvider[];
     catalogueItems?: CatalogueItem[];
-    specialBanners?: SpecialBanner[];
     brandingConfig?: AppBrandingConfig;
     onSelectProvider: (p: ServiceProvider) => void;
     searchTerm: string;
@@ -105,7 +104,7 @@ const HIGHLIGHT_CATEGORIES: HighlightCategory[] = [
 ];
 
 const NikoSoko: React.FC<NikoSokoProps> = ({ 
-    providers, catalogueItems = [], specialBanners = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick,
+    providers, catalogueItems = [], brandingConfig, onSelectProvider, searchTerm, setSearchTerm, onBack, onMessagesClick,
     hasNewMessages, onNavigate, currentUser, guestCoords, onViewSacco, isAuthenticated = false, onAuthClick, onInitiateContact, onBookProvider
 }) => {
     const [activeTab, setActiveTab] = useState<'pros' | 'services'>('pros');
@@ -220,106 +219,6 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
     const activeItemProvider = selectedCatalogueItem 
         ? providers.find(p => p.id === selectedCatalogueItem.providerId) || null 
         : null;
-
-    // DYNAMIC TARGETED HEADER HERO BANNER ENGINE
-    const targetedHeaderBanner = useMemo(() => {
-        if (!specialBanners || specialBanners.length === 0) return null;
-
-        const candidates = specialBanners.filter(banner => {
-            // 1. Date range filter
-            if (banner.startDate && new Date(banner.startDate).getTime() > Date.now()) return false;
-            if (banner.endDate && new Date(banner.endDate).getTime() < Date.now()) return false;
-
-            // 2. User Role Segment Filter
-            if (banner.targetRole && banner.targetRole !== 'all') {
-                if (banner.targetRole === 'guest' && currentUser) return false;
-                if (banner.targetRole === 'provider' && (!currentUser || currentUser.role !== 'Provider')) return false;
-                if (banner.targetRole === 'client' && (!currentUser || currentUser.role !== 'Member')) return false;
-            }
-
-            // 3. Location / Area Targeting Filter
-            if (banner.targetLocation && banner.targetLocation.trim() !== '') {
-                const locTarget = banner.targetLocation.toLowerCase().trim();
-                const userLoc = (currentUser?.location || '').toLowerCase();
-                const searchLoc = (localSearch || '').toLowerCase();
-                const selCategory = (selectedCategory || '').toLowerCase();
-
-                const matchesUserLoc = userLoc.includes(locTarget) || locTarget.includes(userLoc);
-                const matchesSearchLoc = searchLoc.includes(locTarget);
-                const matchesCategoryLoc = selCategory.includes(locTarget);
-
-                if (!matchesUserLoc && !matchesSearchLoc && !matchesCategoryLoc && locTarget !== 'all') {
-                    return false;
-                }
-            }
-
-            // 4. Profession / Category Targeting Filter
-            if (banner.targetCategory && banner.targetCategory.trim() !== '') {
-                const catTarget = banner.targetCategory.toLowerCase().trim();
-                const userProf = ((currentUser as any)?.profession || currentUser?.service || currentUser?.category || '').toLowerCase();
-                const activeCat = (selectedCategory || '').toLowerCase();
-                const searchTxt = (localSearch || '').toLowerCase();
-
-                const matchesUserProf = userProf.includes(catTarget) || catTarget.includes(userProf);
-                const matchesSelectedCat = activeCat.includes(catTarget) || catTarget.includes(activeCat);
-                const matchesSearchTxt = searchTxt.includes(catTarget);
-
-                if (!matchesUserProf && !matchesSelectedCat && !matchesSearchTxt && catTarget !== 'all') {
-                    return false;
-                }
-            }
-
-            // 5. Min Rating Filter
-            if (banner.minRating && banner.minRating > 0) {
-                const userRating = currentUser?.rating || 0;
-                if (userRating < banner.minRating) return false;
-            }
-
-            // 6. Member Tenure / Time of Joining Filter
-            if (banner.targetJoiningTenure && banner.targetJoiningTenure !== 'all') {
-                const joinedAt = (currentUser as any)?.createdAt ? new Date((currentUser as any).createdAt).getTime() : Date.now();
-                const daysSinceJoining = (Date.now() - joinedAt) / (1000 * 60 * 60 * 24);
-
-                if (banner.targetJoiningTenure === 'new_members' && daysSinceJoining > 30 && currentUser) {
-                    return false;
-                }
-                if (banner.targetJoiningTenure === 'tenured' && daysSinceJoining <= 30) {
-                    return false;
-                }
-            }
-
-            // 7. Verified Profile Filter
-            if (banner.isVerifiedTarget !== undefined) {
-                if (banner.isVerifiedTarget && !currentUser?.isVerified) return false;
-                if (!banner.isVerifiedTarget && currentUser?.isVerified) return false;
-            }
-
-            return true;
-        });
-
-        if (candidates.length === 0) return null;
-
-        // Sort candidates by priority descending
-        candidates.sort((a, b) => (b.priority || 1) - (a.priority || 1));
-        return candidates[0];
-    }, [specialBanners, currentUser, selectedCategory, localSearch]);
-
-    const handleBannerClick = (banner: SpecialBanner) => {
-        if (banner.actionUrl) {
-            if (banner.actionUrl.startsWith('http')) {
-                window.open(banner.actionUrl, '_blank');
-            } else if (banner.actionUrl.startsWith('/')) {
-                const route = banner.actionUrl.replace('/', '') as CurrentPage;
-                onNavigate(route);
-            } else {
-                setLocalSearch(banner.actionUrl);
-            }
-        } else if (banner.targetCategory) {
-            setSelectedCategory(banner.targetCategory);
-        } else if (banner.targetLocation) {
-            setLocalSearch(banner.targetLocation);
-        }
-    };
 
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [customLocInput, setCustomLocInput] = useState('');

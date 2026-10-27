@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage, Coordinates } from '../types';
 import { normalizeSkills, withProfessionTitles } from '../utils/skills';
 import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
-import { resolveLocationCoordinates, recordLocationCheckIn, getLocalCheckInLogs, isValidKenyaCoords, matchSpecificEstate } from '../utils/geoLocations';
+import { resolveLocationCoordinates, recordLocationCheckIn, isValidKenyaCoords, matchSpecificEstate } from '../utils/geoLocations';
 import LocationPromptModal from './LocationPromptModal';
 import SkillDetailModal from './SkillDetailModal';
 import OrgDetailModal from './OrgDetailModal';
@@ -51,7 +51,6 @@ const SettingsIcon = ({ onClick }: any) => <svg onClick={onClick} xmlns="http://
 const CallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const WhatsAppIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99 0-3.903-.52-5.586-1.456l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 4.315 1.731 6.086l.474 1.039-1.04 3.833 3.855-1.017z" /></svg>;
 const BookmarkIcon = ({ filled }: { filled: boolean }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>;
-const CatalogueIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7s0 4 8 4 8-4 8-4" /></svg>;
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
@@ -235,7 +234,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [coverFile, setCoverFile] = useState<File | null>(null);
-    const [isUploadingImages, setIsUploadingImages] = useState(false);
 
     const avatarFileInputRef = useRef<HTMLInputElement>(null);
     const coverFileInputRef = useRef<HTMLInputElement>(null);
@@ -283,7 +281,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({
     };
 
     const handleUpdateProfile = async () => {
-        setIsUploadingImages(true);
         try {
             let finalAvatarUrl = profileData.avatarUrl;
             let finalCoverImageUrl = profileData.coverImageUrl || DEFAULT_PROFILE_COVER;
@@ -339,8 +336,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         } catch (err) {
             console.error("Error updating profile images or saving:", err);
             alert("An error occurred while saving profile changes. Please try again.");
-        } finally {
-            setIsUploadingImages(false);
         }
     };
 
@@ -397,10 +392,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({
             }
         }
     };
-
-    const activeButtons = profileData.selectedProfileButtons && profileData.selectedProfileButtons.length > 0
-        ? profileData.selectedProfileButtons
-        : ['call', 'book', 'chat'];
 
     const normalizedProfileSkills = withProfessionTitles(normalizeSkills(profileData.skills), profileData.service);
     const skillsList = normalizedProfileSkills.length > 0 ? normalizedProfileSkills : [
@@ -1534,6 +1525,5 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 };
 
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>;
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>;
 
 export default ProfileView;
