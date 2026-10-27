@@ -433,26 +433,20 @@ export const deleteHeroBanner = async (id: string): Promise<boolean> => {
 
 // --- Ratings ---
 // Averages are computed on the server from real ratings; the client never calculates them.
-const getRaterKey = (userId?: string): string => {
-    if (userId) return userId;
-    try {
-        let k = localStorage.getItem('nikosoko_device_id');
-        if (!k) { k = `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; localStorage.setItem('nikosoko_device_id', k); }
-        return k;
-    } catch { return `dev-${Date.now()}`; }
-};
-
 export const submitRating = async (
     providerId: string, rating: number, comment: string, userId?: string
-): Promise<{ rating: number; reviewsCount: number } | null> => {
+): Promise<{ rating: number; reviewsCount: number } | { error: string } | null> => {
+    // Only OTP-verified users (who have a user id) can rate.
+    if (!userId) return { error: 'Verify your phone number to rate.' };
     try {
         const res = await fetch('/api/ratings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ providerId, rating, comment, raterKey: getRaterKey(userId) })
+            body: JSON.stringify({ providerId, rating, comment, raterKey: userId })
         });
-        if (!res.ok) return null;
-        return await res.json();
+        const data = await res.json().catch(() => null);
+        if (!res.ok) return { error: data?.error || 'Your rating was not saved.' };
+        return data;
     } catch {
         return null;
     }

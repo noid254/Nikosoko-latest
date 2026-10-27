@@ -703,6 +703,12 @@ async function startServer() {
       }
       if (String(raterKey) === String(providerId)) return res.status(400).json({ error: 'You cannot rate yourself' });
       if (!queryOne('SELECT id FROM providers WHERE id = ?', [providerId])) return res.status(404).json({ error: 'Provider not found' });
+      // One rating per verified user per provider per day (Nairobi time). A newer rating replaces the older one.
+      const nairobiDay = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+      const prev = queryOne('SELECT createdAt FROM ratings WHERE providerId = ? AND raterKey = ?', [providerId, String(raterKey)]);
+      if (prev?.createdAt && nairobiDay(new Date(prev.createdAt)) === nairobiDay(new Date())) {
+        return res.status(429).json({ error: 'You have already rated this provider today. You can rate again tomorrow.' });
+      }
       runSql(
         `INSERT INTO ratings (id, providerId, raterKey, stars, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(providerId, raterKey) DO UPDATE SET stars = excluded.stars, comment = excluded.comment, createdAt = excluded.createdAt`,

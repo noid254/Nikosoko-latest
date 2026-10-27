@@ -1073,7 +1073,7 @@ function App() {
       localStorage.setItem('nikosoko_rated_provider_ids', JSON.stringify(newRated));
 
       api.submitRating(providerId, rating, comment, currentUser?.id).then(result => {
-          if (!result) return;
+          if (!result || 'error' in result) return;
           setProviders(prev => prev.map(p => p.id === providerId
               ? { ...p, rating: result.rating, reviewsCount: result.reviewsCount, ratingCount: result.reviewsCount }
               : p));
