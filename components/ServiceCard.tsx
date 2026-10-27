@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ServiceProvider } from '../types';
-import { normalizeSkills } from '../utils/skills';
+import { normalizeSkills, isPlaceholderTitle, withProfessionTitles } from '../utils/skills';
 import { getDisplayRating } from '../utils/trustEngine';
 
 const StarIcon: React.FC<{ className?: string }> = ({ className = "w-3 h-3" }) => (
@@ -42,9 +42,6 @@ export interface ServiceCardProps {
     isItemVerified?: boolean;
 }
 
-// Default titles new accounts get at sign-up (not real skills or professions).
-const PLACEHOLDER_TITLES = /^(general trades?( professional)?|trades? specialist|general skill|service skill|skilled service|professional artisan|general tradesperson)$/i;
-
 const ServiceCard: React.FC<ServiceCardProps> = ({ 
     provider, 
     onClick, 
@@ -61,8 +58,10 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
 }) => {
     const activeQuery = (searchTerm || '').toLowerCase().trim();
     // Placeholder values given to new accounts at sign-up; never shown as someone's skill or profession.
-    const isPlaceholder = (v?: string) => !v || PLACEHOLDER_TITLES.test(v.trim());
-    const normalizedSkills = normalizeSkills(provider?.skills).filter(s => !isPlaceholder(s.skillTitle || s.name));
+    const isPlaceholder = isPlaceholderTitle;
+    // Placeholder skill titles ("General Trades") take the person's profession; any left over are dropped.
+    const normalizedSkills = withProfessionTitles(normalizeSkills(provider?.skills), provider?.service)
+        .filter(s => !isPlaceholder(s.skillTitle || s.name));
     const matchedSkill = normalizedSkills.find(s => {
         if (!activeQuery) return false;
         const title = (s.skillTitle || s.name || '').toLowerCase();

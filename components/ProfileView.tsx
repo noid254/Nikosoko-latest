@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage, Coordinates } from '../types';
-import { normalizeSkills } from '../utils/skills';
+import { normalizeSkills, withProfessionTitles } from '../utils/skills';
 import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
 import { resolveLocationCoordinates, recordLocationCheckIn, getLocalCheckInLogs, isValidKenyaCoords, matchSpecificEstate } from '../utils/geoLocations';
 import LocationPromptModal from './LocationPromptModal';
@@ -402,7 +402,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         ? profileData.selectedProfileButtons
         : ['call', 'book', 'chat'];
 
-    const normalizedProfileSkills = normalizeSkills(profileData.skills);
+    const normalizedProfileSkills = withProfessionTitles(normalizeSkills(profileData.skills), profileData.service);
     const skillsList = normalizedProfileSkills.length > 0 ? normalizedProfileSkills : [
         {
             id: 'sk-default',
