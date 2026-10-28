@@ -299,7 +299,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
     setIsLoading(true);
     try {
-        const hasReferral = Boolean(referralCode.trim().length > 0);
         const finalPhone = mobileNumber.trim() || (phoneNum.includes('@') ? '' : phoneNum.trim()) || (phone ? `254${phone}` : '');
         const tempUserId = `sp_${Date.now()}`;
         let finalAvatar = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName.trim())}&background=random`;
@@ -345,8 +344,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             rateType: rateType,
             cta: selectedCta,
             referralCode: referralCode.trim(),
-            isVerified: isIdentityVerified || hasReferral,
-            idVerificationStatus: isIdentityVerified ? 'Verified' : 'Unverified',
+            isVerified: false, // set by the server when a valid organization or course code is used
+            idVerificationStatus: isIdentityVerified ? 'Pending' : 'Unverified',
             idType: isIdentityVerified ? idType : undefined,
             idNumber: idNumber.trim() || undefined,
             idDocumentUrl: finalIdDoc || undefined,
@@ -838,7 +837,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 </div>
               </div>
 
-              {/* Row 9: Identity Verification & Rating Boost */}
+              {/* Row 9: Get verified */}
               <div className="p-3 border border-emerald-300 bg-emerald-50/50 rounded-lg space-y-2.5">
                 <div className="flex items-center gap-2">
                   <span className="text-base">🛡️</span>
@@ -847,7 +846,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                       Identity Verification & Rating Boost
                     </span>
                     <span className="block text-[8px] text-emerald-800 font-semibold leading-tight mt-0.5">
-                      Verified profiles get a Verified Badge ✓, boosted rating score (5.0★), and feature FIRST in search results!
+                      Add your ID details for review, or enter your sacco, school or course code below to get the Verified badge. Ratings only come from real clients.
                     </span>
                   </div>
                 </div>
@@ -931,7 +930,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 </div>
               </div>
 
-              {/* Row 10: Referral Code (Optional) */}
+              {/* Row 10: Organization or course code (optional) */}
               <label className="block p-3 border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100/80 focus-within:border-black focus-within:bg-white transition-all cursor-pointer group">
                 <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-[0.18em] group-hover:text-black transition-colors">
                   Referral Code (Optional)
@@ -940,7 +939,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                   type="text" 
                   value={referralCode} 
                   onChange={e => setReferralCode(e.target.value)} 
-                  placeholder="Enter code for priority verification" 
+                  placeholder="e.g. KCSA-7K2M from your sacco or school" 
                   className="w-full mt-0.5 bg-transparent border-b border-transparent group-hover:border-neutral-300 focus:border-black text-xs font-bold text-black uppercase tracking-wider focus:outline-none py-0.5 placeholder-neutral-400" 
                 />
               </label>

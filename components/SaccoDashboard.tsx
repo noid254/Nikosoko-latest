@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import type { ServiceProvider, RatingDispute } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { ServiceProvider, RatingDispute, ReferralCode, OrgOffering } from '../types';
+import { ensureReferralCodes } from '../services/api';
 
 interface SaccoDashboardProps {
   currentUser: ServiceProvider | null;
@@ -69,11 +70,25 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'members' | 'offerings' | 'profile' | 'disputes'>('members');
 
   // Org Services & Vocational Courses Offerings State
-  const [orgOfferings, setOrgOfferings] = useState<{ id: string; title: string; type: 'Course' | 'Service' | 'Equipment'; price: string; description: string; published: boolean }[]>([
-    { id: 'off_1', title: 'Solar Installation & Electrical Certificate Course', type: 'Course', price: 'Ksh 15,000', description: '3-Month accredited TVET vocational training course with hands-on field practice.', published: true },
-    { id: 'off_2', title: 'Group Security Guarding & Event Stewarding', type: 'Service', price: 'Ksh 2,500/day', description: 'Vetted, uniformed security guards for community events and premises.', published: true },
-    { id: 'off_3', title: 'Heavy Duty Scaffolding & Ladder Hire', type: 'Equipment', price: 'Ksh 1,000/day', description: 'Certified aluminum scaffolds with safety harnesses for high-rise work.', published: true }
-  ]);
+  const orgOfferings: OrgOffering[] = currentSaccoOrg.offerings || [];
+  const saveOfferings = (next: OrgOffering[]) => onUpdateProvider({ ...currentSaccoOrg, offerings: next });
+
+  // Referral codes: one for the organization, one for each course it lists.
+  const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [copied, setCopied] = useState('');
+  const courseKey = orgOfferings.filter(o => o.type === 'Course').map(o => `${o.id}:${o.title}`).join('|');
+  useEffect(() => {
+    if (!currentSaccoOrg.id) return;
+    const courses = orgOfferings.filter(o => o.type === 'Course').map(o => ({ id: o.id, title: o.title }));
+    ensureReferralCodes(currentSaccoOrg.id, courses).then(setReferralCodes);
+  }, [currentSaccoOrg.id, courseKey]);
+  const copyCode = (code: string) => {
+    navigator.clipboard?.writeText(code).catch(() => {});
+    setCopied(code);
+    setTimeout(() => setCopied(''), 1500);
+  };
+  const orgCode = referralCodes.find(c => c.kind === 'organization');
+  const codeForCourse = (id: string) => referralCodes.find(c => c.kind === 'course' && c.itemId === id);
 
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<'Course' | 'Service' | 'Equipment'>('Course');
@@ -91,11 +106,10 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
       description: newDesc.trim(),
       published: true
     };
-    setOrgOfferings([newItem, ...orgOfferings]);
+    saveOfferings([newItem, ...orgOfferings]);
     setNewTitle('');
     setNewPrice('');
     setNewDesc('');
-    alert(`✓ "${newItem.title}" added to ${saccoName}'s published offerings!`);
   };
 
   // Search query for adding members
@@ -121,10 +135,7 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
   );
 
   // Pending join requests
-  const joinRequests = currentSaccoOrg.joinRequests || [
-    { id: 'req_1', userId: 'h2', userName: 'David Njuguna', userPhone: '254712345678', status: 'Pending' as const },
-    { id: 'req_2', userId: 'h3', userName: 'Grace Muthoni', userPhone: '254723456789', status: 'Pending' as const }
-  ];
+  const joinRequests = currentSaccoOrg.joinRequests || [];
   const pendingRequests = joinRequests.filter((r: any) => r.status === 'Pending' || r.status === 'pending');
 
   // Rating Disputes
@@ -496,6 +507,25 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
         {/* TAB: ORGANIZATION OFFERINGS (SERVICES & COURSES) */}
         {activeTab === 'offerings' && (
           <div className="space-y-4 font-sans">
+            {/* Referral codes */}
+            <div className="bg-black text-white p-5 rounded-3xl space-y-3">
+              <div>
+                <h3 className="font-black text-sm">Your verification codes</h3>
+                <p className="text-xs text-white/70 mt-0.5">Give people the organization code, or the code of the course they took. When they enter it at signup they get the Verified badge, linked to {saccoName}.</p>
+              </div>
+              <div className="flex items-center justify-between gap-3 bg-white/10 rounded-2xl px-4 py-3">
+                <div>
+                  <p className="text-[11px] text-white/60">Organization code</p>
+                  <p className="font-mono font-black text-xl tracking-widest text-emerald-400">{orgCode?.code || 'Generating…'}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/70">{orgCode?.redeemed || 0} verified</span>
+                  {orgCode && <button onClick={() => copyCode(orgCode.code)} className="text-xs font-bold bg-white text-black rounded-full px-3 py-1.5">{copied === orgCode.code ? 'Copied' : 'Copy'}</button>}
+                </div>
+              </div>
+              <p className="text-xs text-white/60">Each course you add below gets its own code, so you can see which course brings in verified people.</p>
+            </div>
+
             {/* Create New Offering Form */}
             <form onSubmit={handleAddOffering} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs space-y-3">
               <div>
@@ -570,7 +600,7 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <span>➕</span> Publish Offering to Tukosoko
+                <span>➕</span> Add to your list
               </button>
             </form>
 
@@ -596,15 +626,25 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
                       </div>
                       <p className="text-[11px] text-gray-600 font-medium">{item.description}</p>
                       <span className="inline-block text-xs font-black text-emerald-700">{item.price}</span>
+                      {item.type === 'Course' && (() => {
+                        const rc = codeForCourse(item.id);
+                        return rc ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-mono text-[11px] font-black bg-black text-emerald-400 px-2 py-0.5 rounded">{rc.code}</span>
+                            <button onClick={() => copyCode(rc.code)} className="text-[11px] font-bold underline">{copied === rc.code ? 'Copied' : 'Copy'}</button>
+                            <span className="text-[11px] text-gray-500">{rc.redeemed} verified</span>
+                          </div>
+                        ) : <span className="text-[11px] text-gray-400">Generating code…</span>;
+                      })()}
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg uppercase">
-                        ✓ Live on Tukosoko
+                        ✓ Saved
                       </span>
                       <button 
                         onClick={() => {
-                          setOrgOfferings(orgOfferings.filter(o => o.id !== item.id));
+                          saveOfferings(orgOfferings.filter(o => o.id !== item.id));
                         }}
                         className="text-red-500 hover:text-red-700 text-xs p-1 cursor-pointer"
                         title="Delete offering"

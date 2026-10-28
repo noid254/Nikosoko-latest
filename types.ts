@@ -200,6 +200,9 @@ export interface ServiceProvider {
   nationalId?: string;
   referredBy?: string;
   referralCodeUsed?: string;
+  verifiedByOrgName?: string;
+  verifiedForCourse?: string;
+  offerings?: OrgOffering[];
   isReferred?: boolean;
   reviewsCount?: number;
   completionRate?: number;
@@ -408,4 +411,22 @@ export interface HeroBanner {
   radiusKm?: number;    // shown to users within this distance; no coordinates = shown everywhere
   isActive?: number | boolean;
   createdAt?: string;
+}
+
+export interface ReferralCode {
+  code: string;
+  kind: 'organization' | 'course';
+  itemId?: string | null;
+  label?: string | null;   // course title
+  redeemed: number;        // people verified with this code
+  createdAt?: string;
+}
+
+export interface OrgOffering {
+  id: string;
+  title: string;
+  type: 'Course' | 'Service' | 'Equipment';
+  price: string;
+  description: string;
+  published: boolean;
 }

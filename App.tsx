@@ -407,6 +407,28 @@ function App() {
     gateAuth(() => setIsSideMenuOpen(true));
   };
 
+  // A user is verified through an organization only when the server accepts their code.
+  const applyReferralCode = async (user: ServiceProvider, code?: string) => {
+    const clean = (code || '').trim();
+    if (!clean) return;
+    const result = await api.redeemReferralCode(clean, user.id);
+    if ('error' in result) {
+      alert(result.error);
+      return;
+    }
+    const verified: ServiceProvider = {
+      ...user,
+      isVerified: true,
+      isSaccoVerified: true,
+      referralCodeUsed: clean.toUpperCase(),
+      verifiedByOrgName: result.orgName,
+      verifiedForCourse: result.courseTitle || undefined,
+    };
+    setCurrentUser(prev => (prev && prev.id === user.id ? verified : prev));
+    setProviders(prev => prev.map(p => (p.id === user.id ? verified : p)));
+    alert(`You are now verified through ${result.orgName}${result.courseTitle ? ` (${result.courseTitle})` : ''}.`);
+  };
+
   const handleLogin = (data: any, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => {
     if (data.success && data.user) {
         const userToSet = { ...data.user, ...(fullProfile || {}) };
@@ -427,16 +449,15 @@ function App() {
                 ...currentUser,
                 ...fullProfile,
                 isProfileCompleted: true,
-                isVerified: fullProfile.isVerified ?? Boolean(fullProfile.referralCode && fullProfile.referralCode.trim().length > 0)
+                isVerified: currentUser.isVerified
             };
             setCurrentUser(updatedUser);
-            api.updateProvider(updatedUser).catch(() => {});
+            api.updateProvider(updatedUser).then(() => applyReferralCode(updatedUser, fullProfile.referralCode)).catch(() => {});
             setProviders(prev => prev.map(p => p.id === updatedUser.id ? updatedUser : p));
             if (!providers.some(p => p.id === updatedUser.id)) {
                 setProviders(prev => [updatedUser, ...prev]);
             }
         } else if (fullProfile) {
-            const hasReferral = Boolean(fullProfile.referralCode && fullProfile.referralCode.trim().length > 0);
             const newUser: ServiceProvider = { 
                 id: `usr_${Date.now()}`, 
                 name: fullProfile.name || nickname || 'Member', 
@@ -444,7 +465,7 @@ function App() {
                 service: fullProfile.service || 'Trades Professional', 
                 avatarUrl: fullProfile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullProfile.name || nickname || 'U')}&background=random`,
                 coverImageUrl: fullProfile.coverImageUrl || 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=800', 
-                isVerified: fullProfile.isVerified ?? hasReferral,
+                isVerified: false,
                 rating: 0,
                 distanceKm: 0,
                 hourlyRate: fullProfile.hourlyRate ?? 0,
@@ -464,7 +485,7 @@ function App() {
                 isProfileCompleted: fullProfile.isProfileCompleted ?? true
             };
             setCurrentUser(newUser);
-            api.createProvider(newUser).catch(() => {});
+            api.createProvider(newUser).then(() => applyReferralCode(newUser, fullProfile.referralCode)).catch(() => {});
             setProviders(prev => [newUser, ...prev]);
         } else {
             // Guest Mode
