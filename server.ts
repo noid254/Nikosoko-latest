@@ -97,6 +97,22 @@ async function initDatabase() {
       UNIQUE(providerId, raterKey)
     );
 
+    CREATE TABLE IF NOT EXISTS referral_codes (
+      code TEXT PRIMARY KEY,
+      orgId TEXT NOT NULL,
+      kind TEXT NOT NULL,          -- 'organization' | 'course'
+      itemId TEXT,                 -- course id for kind = 'course'
+      label TEXT,                  -- course title for kind = 'course'
+      createdAt TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS referral_redemptions (
+      userId TEXT PRIMARY KEY,     -- a user can be verified through one code
+      code TEXT NOT NULL,
+      orgId TEXT NOT NULL,
+      createdAt TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS hero_banners (
       id TEXT PRIMARY KEY,
       title TEXT,
@@ -526,9 +542,9 @@ async function startServer() {
           category: 'GENERAL',
           rating: 0,
           reviewsCount: 0,
-          isVerified: 1,
+          isVerified: 0, // verified only through an organization code or admin review
           location: 'Nairobi, Kenya',
-          bio: 'Verified user on NikoSoko Neighbourhood Marketplace.',
+          bio: 'New member on NikoSoko.',
           avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300',
           coverImageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800',
           role: 'Member',
@@ -589,7 +605,7 @@ async function startServer() {
       const skillsJson = JSON.stringify(p.skills || []);
       const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
-      const prior = queryOne('SELECT rating, reviewsCount FROM providers WHERE id = ?', [id]);
+      const prior = queryOne('SELECT rating, reviewsCount, isVerified FROM providers WHERE id = ?', [id]);
 
       runSql(
         `INSERT OR REPLACE INTO providers (
@@ -597,7 +613,7 @@ async function startServer() {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, p.name || '', p.phone || '', p.email || '', p.service || '', p.category || '',
-          prior?.rating ?? 0, prior?.reviewsCount ?? 0, p.isVerified ? 1 : 0, p.location || '',
+          prior?.rating ?? 0, prior?.reviewsCount ?? 0, prior ? (prior.isVerified ? 1 : 0) : 0, p.location || '',
           p.bio || p.about || '', p.about || p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
           skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0,
           p.latitude || null, p.longitude || null, p.lastCheckInAt || null, p.lastCheckInLocation || null, rawDataJson, p.createdAt || new Date().toISOString()
@@ -645,6 +661,85 @@ async function startServer() {
       );
 
       res.json({ message: 'Provider updated', provider: sanitizeProvider(updated) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Referral codes: every organization gets one, and every course an organization lists gets its own.
+  // A valid code is the only thing that verifies a user through an organization.
+  const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
+  const codePrefix = (name: string) => {
+    const letters = String(name || 'ORG').toUpperCase().replace(/[^A-Z]/g, '');
+    const consonants = letters.replace(/[AEIOU]/g, '');
+    return (consonants.length >= 3 ? consonants : letters).slice(0, 4).padEnd(3, 'X');
+  };
+  const newCode = (prefix: string) => {
+    for (let i = 0; i < 50; i++) {
+      let tail = '';
+      for (let j = 0; j < 4; j++) tail += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      const code = `${prefix}-${tail}`;
+      if (!queryOne('SELECT code FROM referral_codes WHERE code = ?', [code])) return code;
+    }
+    throw new Error('Could not generate a unique code');
+  };
+  const listOrgCodes = (orgId: string) => queryAll(
+    `SELECT c.code, c.kind, c.itemId, c.label, c.createdAt,
+            (SELECT COUNT(*) FROM referral_redemptions r WHERE r.code = c.code) AS redeemed
+     FROM referral_codes c WHERE c.orgId = ? ORDER BY c.kind DESC, c.createdAt`, [orgId]);
+
+  app.post('/api/referral-codes/ensure', (req, res) => {
+    try {
+      const { orgId, courses } = req.body || {};
+      const org = orgId ? queryOne('SELECT id, name FROM providers WHERE id = ?', [orgId]) : null;
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+      const prefix = codePrefix(org.name);
+      const now = new Date().toISOString();
+      if (!queryOne("SELECT code FROM referral_codes WHERE orgId = ? AND kind = 'organization'", [orgId])) {
+        runSql('INSERT INTO referral_codes (code, orgId, kind, createdAt) VALUES (?, ?, ?, ?)', [newCode(prefix), orgId, 'organization', now]);
+      }
+      for (const c of Array.isArray(courses) ? courses : []) {
+        if (!c?.id || !c?.title) continue;
+        const existing = queryOne("SELECT code FROM referral_codes WHERE orgId = ? AND kind = 'course' AND itemId = ?", [orgId, String(c.id)]);
+        if (existing) runSql('UPDATE referral_codes SET label = ? WHERE code = ?', [String(c.title), existing.code]);
+        else runSql('INSERT INTO referral_codes (code, orgId, kind, itemId, label, createdAt) VALUES (?, ?, ?, ?, ?, ?)', [newCode(prefix), orgId, 'course', String(c.id), String(c.title), now]);
+      }
+      res.json(listOrgCodes(orgId));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/referral-codes/org/:orgId', (req, res) => {
+    try {
+      res.json(listOrgCodes(req.params.orgId));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/referral-codes/redeem', (req, res) => {
+    try {
+      const code = String(req.body?.code || '').trim().toUpperCase();
+      const userId = String(req.body?.userId || '');
+      if (!code || !userId) return res.status(400).json({ error: 'A code and user are required' });
+      const ref = queryOne('SELECT * FROM referral_codes WHERE code = ?', [code]);
+      if (!ref) return res.status(404).json({ error: 'That code does not exist. Check it with your organization.' });
+      if (ref.orgId === userId) return res.status(400).json({ error: 'An organization cannot use its own code.' });
+      const user = queryOne('SELECT * FROM providers WHERE id = ?', [userId]);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [ref.orgId]);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+      if (queryOne('SELECT userId FROM referral_redemptions WHERE userId = ?', [userId])) {
+        return res.status(409).json({ error: 'This account is already verified through an organization.' });
+      }
+      runSql('INSERT INTO referral_redemptions (userId, code, orgId, createdAt) VALUES (?, ?, ?, ?)', [userId, code, ref.orgId, new Date().toISOString()]);
+      let raw: any = {};
+      try { raw = JSON.parse(user.rawData || '{}'); } catch (_) {}
+      raw = { ...raw, referralCodeUsed: code, isReferred: true, isSaccoVerified: true, verifiedByOrgId: org.id, verifiedByOrgName: org.name, verifiedForCourse: ref.label || undefined,
+              saccoMember: { saccoId: org.id, saccoName: org.name, saccoCode: code, status: 'Confirmed', requestedAt: new Date().toISOString(), confirmedAt: new Date().toISOString() } };
+      runSql('UPDATE providers SET isVerified = 1, rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
+      res.json({ success: true, orgId: org.id, orgName: org.name, courseTitle: ref.label || null, kind: ref.kind });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

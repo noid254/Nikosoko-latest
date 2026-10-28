@@ -1,4 +1,4 @@
-import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCheckInLog, HeroBanner } from '../types';
+import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCheckInLog, HeroBanner, ReferralCode } from '../types';
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockInboxMessages } from './mockData';
 import { USE_PLATFORM } from './backend';
 import * as platform from './platform';
@@ -429,6 +429,24 @@ export const saveHeroBanner = async (b: Partial<HeroBanner>): Promise<boolean> =
 };
 export const deleteHeroBanner = async (id: string): Promise<boolean> => {
     try { return (await fetch(`/api/banners/${id}`, { method: 'DELETE' })).ok; } catch { return false; }
+};
+
+// --- Referral codes ---
+export const ensureReferralCodes = async (orgId: string, courses: { id: string; title: string }[]): Promise<ReferralCode[]> => {
+    try {
+        const res = await fetch('/api/referral-codes/ensure', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orgId, courses }) });
+        return res.ok ? await res.json() : [];
+    } catch { return []; }
+};
+
+export const redeemReferralCode = async (
+    code: string, userId: string
+): Promise<{ orgId: string; orgName: string; courseTitle: string | null } | { error: string }> => {
+    try {
+        const res = await fetch('/api/referral-codes/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, userId }) });
+        const data = await res.json().catch(() => null);
+        return res.ok ? data : { error: data?.error || 'That code could not be used.' };
+    } catch { return { error: 'No connection. Try the code again.' }; }
 };
 
 // --- Ratings ---
