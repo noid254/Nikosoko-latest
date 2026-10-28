@@ -35,11 +35,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
   // Auth Mode: 'email' | 'google' | 'phone'
   const [authMethod, setAuthMethod] = useState<'email' | 'google' | 'phone'>('email');
   const [emailInput, setEmailInput] = useState('');
-  const [googleEmail, setGoogleEmail] = useState('');
-  const [googleName, setGoogleName] = useState('');
   const [otpSentTarget, setOtpSentTarget] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [activeDevOtp, setActiveDevOtp] = useState<string>('');
+  const [useApp, setUseApp] = useState(false); // sign in with an authenticator app instead of SMS
   const [resendTimer, setResendTimer] = useState<number>(30);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
@@ -106,10 +104,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError('');
-    const input = e.target.value.replace(/\D/g, '');
-    if (input.length <= 6) {
+    // SMS and authenticator codes are 6 digits; backup codes look like ABCD-EFGH.
+    const input = useApp ? e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') : e.target.value.replace(/\D/g, '');
+    if (input.length <= (useApp ? 9 : 6)) {
       setOtp(input);
     }
+  };
+
+  const handleUseAuthenticator = () => {
+    if (phone.length < 9) { setError('Enter your 9-digit mobile number first.'); return; }
+    if (!termsAccepted) { setError('Please accept the Terms & Conditions and Kenya DPA 2019 to continue.'); return; }
+    const fullPhone = `254${phone}`;
+    setError('');
+    setUseApp(true);
+    setOtp('');
+    setPhoneNum(fullPhone);
+    setMobileNumber(fullPhone);
+    setOtpSentTarget(`+254 ${phone}`);
+    setStep(2);
   };
 
   const handleSendOtp = async (e?: React.FormEvent) => {
@@ -127,7 +139,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     try {
         const fullPhone = `254${phone}`;
         const res = await api.sendOtp(fullPhone);
-        if (res.devCode) setActiveDevOtp(res.devCode);
+        setUseApp(Boolean(res.useAuthenticator));
         setResendTimer(30);
         setPhoneNum(fullPhone);
         setMobileNumber(fullPhone);
@@ -140,56 +152,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     }
   };
 
-  const handleSendEmailOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanEmail = emailInput.trim();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setError("Please enter a valid Gmail or Email address.");
-      return;
-    }
-    if (!termsAccepted) {
-      setError("Please accept the Terms & Conditions and Kenya DPA 2019 to continue.");
-      return;
-    }
-    setIsLoading(true);
-    setError('');
-    try {
-        const res = await api.sendOtp(cleanEmail);
-        if (res.devCode) setActiveDevOtp(res.devCode);
-        setResendTimer(30);
-        setPhoneNum(cleanEmail);
-        setOtpSentTarget(cleanEmail);
-        setStep(2);
-    } catch (err: any) {
-        setError(err.message || "Failed to send verification code to email.");
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = googleEmail.trim() || 'user@gmail.com';
-    const cleanName = googleName.trim() || cleanEmail.split('@')[0] || 'Google Member';
-    
-    setIsLoading(true);
-    setTimeout(() => {
-      const mockResponse: api.VerifyOtpResponse = {
-        success: true,
-        user: null,
-        token: `google_token_${Date.now()}`,
-        isSuperAdmin: false
-      };
-      setTempAuthResponse(mockResponse);
-      setPhoneNum(cleanEmail);
-      setFullName(cleanName);
-      setNickname(cleanName);
-      setStep(3);
-      setStep3Mode('choice');
-      setIsLoading(false);
-    }, 400);
-  };
-
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 4) {
@@ -200,7 +162,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     setError('');
     try {
         const target = otpSentTarget || (phone ? `254${phone}` : emailInput);
-        const response = await api.verifyOtp(target, otp);
+        const response = await api.verifyOtp(target, otp, useApp ? 'totp' : 'sms');
         
         if (response.user) {
             onLogin(response, target, response.user.name, response.user);
@@ -275,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
     const mockResponse: api.VerifyOtpResponse = tempAuthResponse || {
       success: true,
       user: null,
-      token: `token_${Date.now()}`,
+      token: api.getToken() || '',
       isSuperAdmin: false
     };
 
@@ -325,7 +287,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
         const mockResponse: api.VerifyOtpResponse = tempAuthResponse || {
           success: true,
           user: null,
-          token: `token_${Date.now()}`,
+          token: api.getToken() || '',
           isSuperAdmin: false
         };
 
@@ -440,6 +402,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 >
                   {isLoading ? 'Sending OTP Code...' : 'Continue & Send OTP \u2192'}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleUseAuthenticator}
+                  className="w-full text-[11px] font-bold text-black underline hover:text-neutral-700 cursor-pointer py-1"
+                >
+                  Use authenticator app instead
+                </button>
               </form>
 
               {/* TERMS & CONDITIONS MANDATORY CHECKBOX */}
@@ -472,7 +441,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
             <form onSubmit={handleVerifyOtp} className="space-y-3.5">
               <div className="text-center bg-neutral-50 p-2.5 rounded border border-neutral-300">
                 <span className="text-[10px] text-neutral-600 font-bold uppercase block">
-                  OTP Sent To: <strong className="text-black font-mono">{otpSentTarget || (phone ? `+254 ${phone}` : '')}</strong>
+                  {useApp ? 'Signing in as' : 'OTP Sent To'}: <strong className="text-black font-mono">{otpSentTarget || (phone ? `+254 ${phone}` : '')}</strong>
                 </span>
                 <button 
                   type="button" 
@@ -485,11 +454,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-black uppercase tracking-wider text-center">
-                  Enter OTP Verification Code *
+                  {useApp ? 'Code from your authenticator app *' : 'Enter OTP Verification Code *'}
                 </label>
+                {useApp && <p className="text-[10px] text-neutral-500 text-center">Open Authenticator and type the 6 digits shown for NikoSoko. Lost your phone? Use one of your backup codes.</p>}
                 <input 
-                  type="tel" 
-                  maxLength={6} 
+                  type={useApp ? 'text' : 'tel'} 
+                  autoComplete="one-time-code"
+                  maxLength={useApp ? 9 : 6} 
                   value={otp} 
                   onChange={handleOtpChange} 
                   required 
@@ -499,6 +470,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                 />
               </div>
 
+              {useApp ? (
+                <div className="text-center pt-0.5">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => { setUseApp(false); setOtp(''); handleSendOtp(); }}
+                    className="text-[10px] font-bold text-black underline cursor-pointer"
+                  >
+                    Get an SMS code instead
+                  </button>
+                </div>
+              ) : (
               <div className="flex items-center justify-between text-[9.5px] pt-0.5">
                 <span className="text-neutral-500 font-medium">
                   {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Did not receive SMS?'}
@@ -512,6 +495,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin, initialM
                   Resend OTP
                 </button>
               </div>
+              )}
 
               <button 
                 type="submit" 

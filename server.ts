@@ -5,6 +5,10 @@ import path from 'path';
 import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
 import twilio from 'twilio';
+import {
+  signToken, verifyToken, TokenPayload, newTotpSecret, otpauthUrl, checkTotp,
+  newBackupCodes, hashBackupCode, tooManyAttempts, clearAttempts
+} from './authCore';
 
 const PORT = 3002;
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
@@ -95,6 +99,15 @@ async function initDatabase() {
       comment TEXT,
       createdAt TEXT,
       UNIQUE(providerId, raterKey)
+    );
+
+    CREATE TABLE IF NOT EXISTS totp_secrets (
+      providerId TEXT PRIMARY KEY,
+      secret TEXT NOT NULL,
+      enabled INTEGER DEFAULT 0,
+      lastStep INTEGER DEFAULT 0,
+      backupCodes TEXT,            -- JSON array of sha256 hashes of unused backup codes
+      createdAt TEXT
     );
 
     CREATE TABLE IF NOT EXISTS referral_codes (
@@ -305,6 +318,77 @@ async function startServer() {
     return '+' + digits;
   }
 
+  // ---------- Authentication helpers ----------
+  const last9 = (s: any) => String(s || '').replace(/\D/g, '').slice(-9);
+  const SESSION_MS = 30 * 24 * 3600 * 1000;
+  const ADMIN_SESSION_MS = 12 * 3600 * 1000;
+
+  // One spelling per phone number (254712345678), so codes sent and checked always line up.
+  const normTarget = (t: string) => {
+    const x = String(t).trim().toLowerCase();
+    if (x.includes('@')) return x;
+    const d = last9(x);
+    return d.length === 9 ? `254${d}` : x.replace(/\D/g, '');
+  };
+
+  const getAuth = (req: any): TokenPayload | null => {
+    const h = String(req.headers.authorization || '');
+    return h.startsWith('Bearer ') ? verifyToken(h.slice(7)) : null;
+  };
+  const requireAuth = (req: any, res: any, next: any) => {
+    const a = getAuth(req);
+    if (!a) return res.status(401).json({ error: 'Please sign in to continue.' });
+    req.auth = a;
+    next();
+  };
+  // Admin routes need an admin account that signed in with its authenticator app.
+  const requireAdmin = (req: any, res: any, next: any) => {
+    const a = getAuth(req);
+    if (!a) return res.status(401).json({ error: 'Please sign in to continue.' });
+    const row = queryOne('SELECT role FROM providers WHERE id = ?', [a.sub]);
+    if (row?.role !== 'SuperAdmin' || a.amr !== 'totp') {
+      return res.status(403).json({ error: 'Admin access needs sign-in with your authenticator app.' });
+    }
+    req.auth = a;
+    next();
+  };
+  const isAdminAuth = (a: TokenPayload) => a.role === 'SuperAdmin' && a.amr === 'totp';
+  // The signed-in person owns a profile when it carries their phone number (or they are the admin).
+  const ownsProfile = (a: TokenPayload, providerId: string) => {
+    if (isAdminAuth(a)) return true;
+    const row = queryOne('SELECT phone FROM providers WHERE id = ?', [providerId]);
+    return Boolean(row && last9(row.phone) === a.phone);
+  };
+  const findProviderByTarget = (target: string) => {
+    const t = String(target).trim().toLowerCase();
+    if (t.includes('@')) return queryOne('SELECT * FROM providers WHERE lower(email) = ?', [t]);
+    const d = last9(t);
+    if (d.length < 9) return null;
+    const rows = queryAll("SELECT * FROM providers WHERE replace(replace(replace(phone, ' ', ''), '+', ''), '-', '') LIKE ?", [`%${d}`]);
+    // Prefer the full profile over the stub created at first login.
+    return rows.find((r: any) => !String(r.id).startsWith('pro-')) || rows[0] || null;
+  };
+  const getTotp = (providerId: string) => queryOne('SELECT * FROM totp_secrets WHERE providerId = ?', [providerId]);
+  const totpEnabled = (providerId: string) => Boolean(getTotp(providerId)?.enabled);
+
+  /** Checks a 6-digit authenticator code, or a one-time backup code. */
+  const consumeTotpOrBackup = (providerId: string, code: string): boolean => {
+    const rec = getTotp(providerId);
+    if (!rec) return false;
+    const step = checkTotp(rec.secret, code, Number(rec.lastStep) || 0);
+    if (step !== null) {
+      runSql('UPDATE totp_secrets SET lastStep = ? WHERE providerId = ?', [step, providerId]);
+      return true;
+    }
+    const hash = hashBackupCode(code);
+    const backups: string[] = JSON.parse(rec.backupCodes || '[]');
+    if (backups.includes(hash)) {
+      runSql('UPDATE totp_secrets SET backupCodes = ? WHERE providerId = ?', [JSON.stringify(backups.filter(h => h !== hash)), providerId]);
+      return true;
+    }
+    return false;
+  };
+
   // OTP Verification Endpoints
   const activeServerOtps = new Map<string, { code: string; expiresAt: number }>();
 
@@ -312,21 +396,16 @@ async function startServer() {
     try {
       const { target } = req.body;
       if (!target) return res.status(400).json({ error: 'Target phone number is required' });
-      const cleanTarget = String(target).trim().toLowerCase();
-      const normDigits = cleanTarget.replace(/\D/g, '');
-      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
-      
+      const cleanTarget = normTarget(String(target));
+      if (tooManyAttempts(`send:${last9(cleanTarget) || cleanTarget}`, 4, 10 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Too many codes requested. Wait a few minutes and try again.' });
+      }
       const formattedPhone = formatToE164(cleanTarget);
 
-      // Super Admin default code 3232 bypass
-      if (isSuperAdmin) {
-        activeServerOtps.set(cleanTarget, { code: '3232', expiresAt: Date.now() + 10 * 60 * 1000 });
-        return res.json({
-          success: true,
-          message: `OTP requested for Super Admin (${cleanTarget})`,
-          smsSent: false,
-          devCode: '3232'
-        });
+      // Accounts protected by an authenticator app sign in with it, so no SMS is sent (and none is paid for).
+      const existing = findProviderByTarget(cleanTarget);
+      if (existing && totpEnabled(existing.id)) {
+        return res.json({ success: true, message: 'Open your authenticator app for the 6-digit code.', smsSent: false, useAuthenticator: true });
       }
 
       const cfg = getTwilioConfig();
@@ -364,7 +443,7 @@ async function startServer() {
         // Credentials not configured yet fallback
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         activeServerOtps.set(cleanTarget, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
-        console.log(`[Twilio Unconfigured Notice] Local OTP code generated for ${cleanTarget}: ${code}`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Twilio not configured] Local OTP for ${cleanTarget}: ${code}`);
       }
 
       res.json({
@@ -379,7 +458,7 @@ async function startServer() {
   });
 
   // Admin Twilio SMS Settings API
-  app.get('/api/admin/sms-settings', (req, res) => {
+  app.get('/api/admin/sms-settings', requireAdmin, (req, res) => {
     try {
       const cfg = getTwilioConfig();
       const maskedCfg = {
@@ -392,7 +471,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/sms-settings', (req, res) => {
+  app.post('/api/admin/sms-settings', requireAdmin, (req, res) => {
     try {
       const { accountSid, authToken, phoneNumber, verifyServiceSid } = req.body;
       const saveKey = (key: string, val: any) => {
@@ -410,7 +489,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/test-sms', async (req, res) => {
+  app.post('/api/admin/test-sms', requireAdmin, async (req, res) => {
     try {
       const { testPhone } = req.body;
       const recipient = (testPhone || '0723119356').trim();
@@ -469,67 +548,55 @@ async function startServer() {
 
   app.post('/api/auth/verify-otp', async (req, res) => {
     try {
-      const { target, code } = req.body;
-      if (!target || !code) return res.status(400).json({ error: 'Target phone number and OTP code are required' });
-      const cleanTarget = String(target).trim().toLowerCase();
-      const normDigits = cleanTarget.replace(/\D/g, '');
+      const { target, code } = req.body || {};
+      const method = req.body?.method === 'totp' ? 'totp' : 'sms';
+      if (!target || !code) return res.status(400).json({ error: 'Phone number and code are required' });
+      const cleanTarget = normTarget(String(target));
       const inputCode = String(code).trim();
+      const attemptKey = `verify:${last9(cleanTarget) || cleanTarget}`;
+      if (tooManyAttempts(attemptKey, 8, 10 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Too many wrong codes. Wait a few minutes and try again.' });
+      }
 
-      const isSuperAdmin = normDigits.endsWith('723119356') || cleanTarget === '0723119356' || cleanTarget === '254723119356';
-      
+      let provider = findProviderByTarget(cleanTarget);
+      const isAdminAccount = provider?.role === 'SuperAdmin';
+      const hasTotp = provider ? totpEnabled(provider.id) : false;
+
       let isValid = false;
-
-      if (isSuperAdmin && inputCode === '3232') {
-        isValid = true;
+      if (method === 'totp') {
+        if (!provider || !hasTotp) return res.status(400).json({ error: 'Authenticator sign-in is not set up for this account.' });
+        isValid = consumeTotpOrBackup(provider.id, inputCode);
+        if (!isValid) return res.status(400).json({ error: 'That code is not right. Check the code in your authenticator app, or use a backup code.' });
       } else {
-        const cfg = getTwilioConfig();
-        const formattedPhone = formatToE164(cleanTarget);
-
-        if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
-          try {
-            const client = twilio(cfg.accountSid, cfg.authToken);
-            const check = await client.verify.v2.services(cfg.verifyServiceSid)
-              .verificationChecks.create({ to: formattedPhone, code: inputCode });
-            
-            if (check.status === 'approved') {
-              isValid = true;
-            }
-          } catch (err: any) {
-            console.error('Twilio Verify check error:', err);
-            // Fallback check against activeServerOtps
-            const stored = activeServerOtps.get(cleanTarget);
-            if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
-              isValid = true;
-            }
-          }
+        if (hasTotp) return res.status(400).json({ error: 'This account signs in with an authenticator app. Choose "Use authenticator app".' });
+        const recovery = process.env.ADMIN_RECOVERY_CODE;
+        if (isAdminAccount && recovery && recovery.length >= 12 && inputCode === recovery) {
+          isValid = true; // emergency access if the admin has not set up an authenticator and SMS fails
         } else {
-          const stored = activeServerOtps.get(cleanTarget);
-          if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) {
-            isValid = true;
+          const cfg = getTwilioConfig();
+          const formattedPhone = formatToE164(cleanTarget);
+          if (cfg.accountSid && cfg.authToken && cfg.verifyServiceSid) {
+            try {
+              const client = twilio(cfg.accountSid, cfg.authToken);
+              const check = await client.verify.v2.services(cfg.verifyServiceSid).verificationChecks.create({ to: formattedPhone, code: inputCode });
+              if (check.status === 'approved') isValid = true;
+            } catch (err: any) {
+              console.error('Twilio Verify check error:', err.message);
+              const stored = activeServerOtps.get(cleanTarget);
+              if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) isValid = true;
+            }
+          } else {
+            const stored = activeServerOtps.get(cleanTarget);
+            if (stored && stored.code === inputCode && Date.now() < stored.expiresAt) isValid = true;
           }
         }
+        if (!isValid) return res.status(400).json({ error: 'That code is not right. Enter the code sent to your phone.' });
       }
 
-      if (!isValid) {
-        if (isSuperAdmin) {
-          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
-        }
-        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
-      }
-
+      clearAttempts(attemptKey);
       activeServerOtps.delete(cleanTarget);
 
-      if (!isValid) {
-        if (isSuperAdmin) {
-          return res.status(400).json({ error: 'Incorrect code for Super Admin. Default code is 3232.' });
-        }
-        return res.status(400).json({ error: 'Incorrect OTP verification code. Please enter the valid code sent to your phone.' });
-      }
-
-      activeServerOtps.delete(cleanTarget);
-      
       // Lookup or auto-create provider
-      let provider = queryOne('SELECT * FROM providers WHERE email = ? OR phone = ? OR phone LIKE ?', [cleanTarget, cleanTarget, `%${cleanTarget}%`]);
       if (!provider) {
         const id = `pro-${Date.now()}`;
         const isEmail = cleanTarget.includes('@');
@@ -550,10 +617,9 @@ async function startServer() {
           role: 'Member',
           skills: JSON.stringify([]),
           hourlyRate: 'Ksh 1,000/hr',
-          password: 'password123',
+          password: '',
           createdAt: new Date().toISOString()
         };
-
         runSql(
           `INSERT INTO providers (id, name, phone, email, service, category, rating, reviewsCount, isVerified, location, bio, avatarUrl, coverImageUrl, role, skills, hourlyRate, password, createdAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -566,7 +632,82 @@ async function startServer() {
         );
       }
 
-      res.json({ message: 'OTP verified successfully', provider: sanitizeProvider(provider), token: `valid-token-for-${cleanTarget}` });
+      const amr = method === 'totp' ? 'totp' : 'sms';
+      const token = signToken(
+        { sub: provider.id, phone: last9(provider.phone), role: provider.role || 'Member', amr },
+        isAdminAccount ? ADMIN_SESSION_MS : SESSION_MS
+      );
+      res.json({
+        message: 'Signed in',
+        provider: sanitizeProvider(provider),
+        token,
+        isSuperAdmin: Boolean(isAdminAccount && amr === 'totp'),
+        adminNeedsAuthenticator: Boolean(isAdminAccount && !hasTotp),
+        totpEnabled: hasTotp
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Who am I (used to restore a session). Never returns private fields.
+  app.get('/api/auth/me', requireAuth, (req: any, res) => {
+    const row = queryOne('SELECT * FROM providers WHERE id = ?', [req.auth.sub]);
+    if (!row) return res.status(404).json({ error: 'Account not found' });
+    res.json({
+      provider: sanitizeProvider(row),
+      isSuperAdmin: Boolean(row.role === 'SuperAdmin' && req.auth.amr === 'totp'),
+      adminNeedsAuthenticator: Boolean(row.role === 'SuperAdmin' && !totpEnabled(row.id)),
+      totpEnabled: totpEnabled(row.id)
+    });
+  });
+
+  // ---------- Authenticator app setup ----------
+  app.post('/api/auth/totp/setup', requireAuth, (req: any, res) => {
+    try {
+      const id = req.auth.sub;
+      if (totpEnabled(id)) return res.status(409).json({ error: 'An authenticator app is already set up for this account.' });
+      const row = queryOne('SELECT phone FROM providers WHERE id = ?', [id]);
+      const secret = newTotpSecret();
+      runSql('INSERT OR REPLACE INTO totp_secrets (providerId, secret, enabled, lastStep, backupCodes, createdAt) VALUES (?, ?, 0, 0, ?, ?)',
+        [id, secret, '[]', new Date().toISOString()]);
+      res.json({ secret, otpauthUrl: otpauthUrl(secret, row?.phone || id) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/totp/enable', requireAuth, (req: any, res) => {
+    try {
+      const id = req.auth.sub;
+      if (tooManyAttempts(`totp-enable:${id}`, 8, 10 * 60 * 1000)) return res.status(429).json({ error: 'Too many tries. Wait a few minutes.' });
+      const rec = getTotp(id);
+      if (!rec || rec.enabled) return res.status(400).json({ error: 'Start the setup first.' });
+      const step = checkTotp(rec.secret, String(req.body?.code || ''), 0);
+      if (step === null) return res.status(400).json({ error: 'That code is not right. Check the app and try again.' });
+      const backupCodes = newBackupCodes(8);
+      runSql('UPDATE totp_secrets SET enabled = 1, lastStep = ?, backupCodes = ? WHERE providerId = ?',
+        [step, JSON.stringify(backupCodes.map(hashBackupCode)), id]);
+      clearAttempts(`totp-enable:${id}`);
+      const row = queryOne('SELECT phone, role FROM providers WHERE id = ?', [id]);
+      // Setting up the app proves possession of it, so the session is upgraded.
+      const token = signToken({ sub: id, phone: last9(row?.phone), role: row?.role || 'Member', amr: 'totp' },
+        row?.role === 'SuperAdmin' ? ADMIN_SESSION_MS : SESSION_MS);
+      res.json({ success: true, backupCodes, token, isSuperAdmin: row?.role === 'SuperAdmin' });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/totp/disable', requireAuth, (req: any, res) => {
+    try {
+      const id = req.auth.sub;
+      const row = queryOne('SELECT role FROM providers WHERE id = ?', [id]);
+      if (row?.role === 'SuperAdmin') return res.status(403).json({ error: 'Admin accounts must keep the authenticator app on.' });
+      if (tooManyAttempts(`totp-disable:${id}`, 8, 10 * 60 * 1000)) return res.status(429).json({ error: 'Too many tries. Wait a few minutes.' });
+      if (!consumeTotpOrBackup(id, String(req.body?.code || ''))) return res.status(400).json({ error: 'That code is not right.' });
+      runSql('DELETE FROM totp_secrets WHERE providerId = ?', [id]);
+      res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -598,10 +739,17 @@ async function startServer() {
     }
   });
 
-  app.post('/api/providers', (req, res) => {
+  app.post('/api/providers', requireAuth, (req: any, res) => {
     try {
       const p = req.body;
       const id = p.id || `pro-${Date.now()}`;
+      const a: TokenPayload = req.auth;
+      if (!isAdminAuth(a)) {
+        if (last9(p.phone) !== a.phone) return res.status(403).json({ error: 'You can only create a profile for your own phone number.' });
+        const taken = queryOne('SELECT phone FROM providers WHERE id = ?', [id]);
+        if (taken && last9(taken.phone) !== a.phone) return res.status(403).json({ error: 'That profile belongs to someone else.' });
+        if (p.role === 'SuperAdmin') p.role = 'Provider';
+      }
       const skillsJson = JSON.stringify(p.skills || []);
       const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
@@ -627,10 +775,12 @@ async function startServer() {
     }
   });
 
-  app.put('/api/providers/:id', (req, res) => {
+  app.put('/api/providers/:id', requireAuth, (req: any, res) => {
     try {
       const id = req.params.id;
       const p = req.body;
+      const a: TokenPayload = req.auth;
+      if (!ownsProfile(a, id)) return res.status(403).json({ error: 'You can only change your own profile.' });
       const existing = queryOne('SELECT * FROM providers WHERE id = ?', [id]);
       
       let existingRaw: any = {};
@@ -642,6 +792,14 @@ async function startServer() {
       // Ratings are computed server-side from the ratings table; clients cannot set them.
       updated.rating = existing?.rating ?? 0;
       updated.reviewsCount = existing?.reviewsCount ?? 0;
+      // Only the signed-in admin can verify, suspend, flag or change roles.
+      if (!isAdminAuth(a)) {
+        updated.isVerified = existing?.isVerified ?? 0;
+        updated.role = existing?.role ?? 'Provider';
+        for (const k of ['isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'flagCount', 'adminNotes', 'verifiedByOrgId', 'verifiedByOrgName', 'referralCodeUsed', 'isSaccoVerified']) {
+          updated[k] = (existing as any)?.[k] ?? existingRaw[k];
+        }
+      }
       const skillsJson = JSON.stringify(updated.skills || []);
       const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, ...safeForRawData } = updated;
       const rawDataJson = JSON.stringify(safeForRawData);
@@ -688,11 +846,12 @@ async function startServer() {
             (SELECT COUNT(*) FROM referral_redemptions r WHERE r.code = c.code) AS redeemed
      FROM referral_codes c WHERE c.orgId = ? ORDER BY c.kind DESC, c.createdAt`, [orgId]);
 
-  app.post('/api/referral-codes/ensure', (req, res) => {
+  app.post('/api/referral-codes/ensure', requireAuth, (req, res) => {
     try {
       const { orgId, courses } = req.body || {};
       const org = orgId ? queryOne('SELECT id, name FROM providers WHERE id = ?', [orgId]) : null;
       if (!org) return res.status(404).json({ error: 'Organization not found' });
+      if (!ownsProfile((req as any).auth, org.id)) return res.status(403).json({ error: 'Only the organization can create its codes.' });
       const prefix = codePrefix(org.name);
       const now = new Date().toISOString();
       if (!queryOne("SELECT code FROM referral_codes WHERE orgId = ? AND kind = 'organization'", [orgId])) {
@@ -718,11 +877,12 @@ async function startServer() {
     }
   });
 
-  app.post('/api/referral-codes/redeem', (req, res) => {
+  app.post('/api/referral-codes/redeem', requireAuth, (req, res) => {
     try {
       const code = String(req.body?.code || '').trim().toUpperCase();
       const userId = String(req.body?.userId || '');
       if (!code || !userId) return res.status(400).json({ error: 'A code and user are required' });
+      if (!ownsProfile((req as any).auth, userId)) return res.status(403).json({ error: 'You can only use a code for your own account.' });
       const ref = queryOne('SELECT * FROM referral_codes WHERE code = ?', [code]);
       if (!ref) return res.status(404).json({ error: 'That code does not exist. Check it with your organization.' });
       if (ref.orgId === userId) return res.status(400).json({ error: 'An organization cannot use its own code.' });
@@ -754,7 +914,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/banners/all', (req, res) => {
+  app.get('/api/banners/all', requireAdmin, (req, res) => {
     try {
       res.json(queryAll('SELECT * FROM hero_banners ORDER BY createdAt DESC'));
     } catch (e: any) {
@@ -762,7 +922,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/banners', (req, res) => {
+  app.post('/api/banners', requireAdmin, (req, res) => {
     try {
       const b = req.body || {};
       if (!b.imageUrl || !b.title) return res.status(400).json({ error: 'title and imageUrl are required' });
@@ -779,7 +939,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/banners/:id', (req, res) => {
+  app.delete('/api/banners/:id', requireAdmin, (req, res) => {
     try {
       runSql('DELETE FROM hero_banners WHERE id = ?', [req.params.id]);
       res.json({ success: true });
@@ -789,14 +949,15 @@ async function startServer() {
   });
 
   // Ratings: one rating per rater per provider; the average is always computed from real rows.
-  app.post('/api/ratings', (req, res) => {
+  app.post('/api/ratings', requireAuth, (req, res) => {
     try {
-      const { providerId, raterKey, rating, comment } = req.body || {};
+      const { providerId, rating, comment } = req.body || {};
+      const raterKey = (req as any).auth.sub; // from the signed login token, never from the request body
       const stars = Math.round(Number(rating));
       if (!providerId || !raterKey || !(stars >= 1 && stars <= 5)) {
         return res.status(400).json({ error: 'providerId, raterKey and a rating of 1-5 are required' });
       }
-      if (String(raterKey) === String(providerId)) return res.status(400).json({ error: 'You cannot rate yourself' });
+      if (ownsProfile((req as any).auth, String(providerId))) return res.status(400).json({ error: 'You cannot rate yourself' });
       if (!queryOne('SELECT id FROM providers WHERE id = ?', [providerId])) return res.status(404).json({ error: 'Provider not found' });
       // One rating per verified user per provider per day (Nairobi time). A newer rating replaces the older one.
       const nairobiDay = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10);
@@ -818,7 +979,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/providers/:id', (req, res) => {
+  app.delete('/api/providers/:id', requireAdmin, (req, res) => {
     try {
       runSql('DELETE FROM providers WHERE id = ?', [req.params.id]);
       res.json({ success: true });
@@ -842,7 +1003,7 @@ async function startServer() {
     }
   });
   // Image Upload Endpoint - saves base64 images to persistent disk storage
-  app.post('/api/upload', (req, res) => {
+  app.post('/api/upload', requireAuth, (req, res) => {
     try {
       const { dataUrl, path: uploadPath } = req.body;
       if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
@@ -870,10 +1031,11 @@ async function startServer() {
   });
 
 
-  app.post('/api/catalogue', (req, res) => {
+  app.post('/api/catalogue', requireAuth, (req, res) => {
     try {
       const item = req.body;
       const id = item.id || `cat-${Date.now()}`;
+      if (!item.providerId || !ownsProfile((req as any).auth, String(item.providerId))) return res.status(403).json({ error: 'You can only add items to your own catalogue.' });
       const imagesJson = JSON.stringify(item.imageUrls || item.images || []);
 
       runSql(
@@ -892,8 +1054,10 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/catalogue/:id', (req, res) => {
+  app.delete('/api/catalogue/:id', requireAuth, (req, res) => {
     try {
+      const row = queryOne('SELECT providerId FROM catalogue_items WHERE id = ?', [req.params.id]);
+      if (row && !ownsProfile((req as any).auth, String(row.providerId))) return res.status(403).json({ error: 'You can only delete your own items.' });
       runSql('DELETE FROM catalogue_items WHERE id = ?', [req.params.id]);
       res.json({ success: true });
     } catch (e: any) {
@@ -902,7 +1066,7 @@ async function startServer() {
   });
 
   // Messages Endpoints
-  app.get('/api/messages', (req, res) => {
+  app.get('/api/messages', requireAuth, (req, res) => {
     try {
       const rows = queryAll('SELECT * FROM messages ORDER BY timestamp ASC');
       res.json(rows);
@@ -911,10 +1075,11 @@ async function startServer() {
     }
   });
 
-  app.post('/api/messages', (req, res) => {
+  app.post('/api/messages', requireAuth, (req, res) => {
     try {
       const m = req.body;
       const id = m.id || `msg-${Date.now()}`;
+      if (!ownsProfile((req as any).auth, String(m.senderId))) return res.status(403).json({ error: 'You can only send messages as yourself.' });
       runSql(
         `INSERT INTO messages (id, senderId, recipientId, senderName, recipientName, text, timestamp, isRead)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -980,7 +1145,7 @@ async function startServer() {
   }
 
   // M-Pesa STK Push Endpoint
-  app.post('/api/mpesa/stkpush', async (req, res) => {
+  app.post('/api/mpesa/stkpush', requireAuth, async (req, res) => {
     try {
       const { phone, amount, bookingId, providerName, serviceTitle } = req.body;
       const rawPhone = phone ? String(phone).trim() : '';
@@ -1141,7 +1306,7 @@ async function startServer() {
   });
 
   // --- Bookings API Endpoints ---
-  app.get('/api/bookings', (req, res) => {
+  app.get('/api/bookings', requireAuth, (req, res) => {
     try {
       const { userId, providerId, status } = req.query;
       let sql = 'SELECT * FROM bookings WHERE 1=1';
@@ -1177,7 +1342,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/bookings', (req, res) => {
+  app.post('/api/bookings', requireAuth, (req, res) => {
     try {
       const b = req.body;
       const id = b.id || `book-${Date.now()}`;
@@ -1214,7 +1379,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/bookings/:id', (req, res) => {
+  app.put('/api/bookings/:id', requireAuth, (req, res) => {
     try {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
@@ -1254,7 +1419,7 @@ async function startServer() {
   });
 
   // Dedicated Cancel Booking Endpoint
-  app.put('/api/bookings/:id/cancel', (req, res) => {
+  app.put('/api/bookings/:id/cancel', requireAuth, (req, res) => {
     try {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
@@ -1347,7 +1512,7 @@ async function startServer() {
   }
 
   // Record a Location Check-In
-  app.post('/api/locations/checkin', (req, res) => {
+  app.post('/api/locations/checkin', requireAuth, (req, res) => {
     try {
       const {
         userId,

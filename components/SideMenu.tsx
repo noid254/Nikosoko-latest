@@ -10,6 +10,7 @@ interface SideMenuProps {
   isSuperAdmin: boolean;
   onLogout: () => void;
   onOpenCompleteSignUp?: () => void;
+  onOpenSecurity?: () => void;
   onUpdateUser?: (updated: ServiceProvider) => void;
 }
 
@@ -69,6 +70,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
   isSuperAdmin,
   onLogout,
   onOpenCompleteSignUp,
+  onOpenSecurity,
   onUpdateUser
 }) => {
   const isOnline = Boolean(currentUser?.isOnline);
@@ -284,6 +286,17 @@ const SideMenu: React.FC<SideMenuProps> = ({
                 <BuildingIcon />
               </span>
               <span className="text-xs font-semibold leading-none">Org Console</span>
+            </button>
+          )}
+
+          {onOpenSecurity && (
+            <button
+              type="button"
+              onClick={() => { onOpenSecurity(); onClose(); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-neutral-800 hover:text-black hover:bg-neutral-100 active:bg-neutral-200 rounded-xl transition-colors cursor-pointer text-left"
+            >
+              <span className="shrink-0 opacity-80"><ShieldIcon /></span>
+              <span className="text-xs font-semibold leading-none">Authenticator app</span>
             </button>
           )}
 

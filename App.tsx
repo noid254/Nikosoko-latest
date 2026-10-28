@@ -24,6 +24,7 @@ import { BookingModal } from './components/BookingModal';
 import BookingsView from './components/BookingsView';
 import SEOHead from './components/SEOHead';
 import DesktopBannerLayout from './components/DesktopBannerLayout';
+import AuthenticatorModal from './components/AuthenticatorModal';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(() => {
@@ -35,18 +36,13 @@ function App() {
     }
   });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(api.getToken() || localStorage.getItem('nikosoko_cached_user'));
+    return Boolean(api.getToken());
   });
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('nikosoko_cached_user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.role === 'SuperAdmin' || parsed.phone === '254723119356' || parsed.phone === '0723119356';
-      }
-    } catch {}
-    return false;
-  });
+  // Admin rights come only from the server, after sign-in with the authenticator app.
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
+  const [adminNeedsAuthenticator, setAdminNeedsAuthenticator] = useState<boolean>(false);
+  const [totpEnabled, setTotpEnabled] = useState<boolean>(false);
+  const [showAuthenticator, setShowAuthenticator] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<CurrentPage>(() => {
     try {
       const saved = localStorage.getItem('nikosoko_current_page');
@@ -364,11 +360,19 @@ function App() {
         let token = api.getToken();
 
         if (token) {
-            const user = await api.getMyProfile().catch(() => null);
-            if (user && isMounted) {
-              setCurrentUser(user);
-              setIsAuthenticated(true);
-              if (user.phone === '254723119356' || user.phone === '0723119356') setIsSuperAdmin(true);
+            const session = await api.getMyProfile();
+            if (isMounted) {
+              if (session) {
+                setCurrentUser(session.user);
+                setIsAuthenticated(true);
+                setIsSuperAdmin(session.isSuperAdmin);
+                setTotpEnabled(session.totpEnabled);
+                if (session.adminNeedsAuthenticator) { setAdminNeedsAuthenticator(true); setShowAuthenticator(true); }
+              } else {
+                // The server did not accept the saved sign-in, so ask the person to sign in again.
+                setIsAuthenticated(false);
+                setCurrentUser(null);
+              }
             }
         }
         const [providersData, catalogueData, docsData] = await Promise.all([
@@ -434,14 +438,18 @@ function App() {
         const userToSet = { ...data.user, ...(fullProfile || {}) };
         setCurrentUser(userToSet);
         setIsAuthenticated(true);
-        setIsSuperAdmin(data.isSuperAdmin);
-        api.setToken(data.token);
+        setIsSuperAdmin(Boolean(data.isSuperAdmin));
+        setTotpEnabled(Boolean(data.totpEnabled));
+        if (data.token) api.setToken(data.token);
+        if (data.adminNeedsAuthenticator) { setAdminNeedsAuthenticator(true); setShowAuthenticator(true); }
         api.updateProvider(userToSet).catch(() => {});
         setIsAuthModalOpen(false);
     } else if (data.success && !data.user) {
         setIsAuthenticated(true); 
-        api.setToken(data.token);
-        setIsSuperAdmin(data.isSuperAdmin);
+        if (data.token) api.setToken(data.token);
+        setIsSuperAdmin(Boolean(data.isSuperAdmin));
+        setTotpEnabled(Boolean(data.totpEnabled));
+        if (data.adminNeedsAuthenticator) { setAdminNeedsAuthenticator(true); setShowAuthenticator(true); }
 
         if (currentUser && fullProfile) {
             // Updating existing logged-in guest user with full profile
@@ -551,6 +559,9 @@ function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
     setIsSuperAdmin(false);
+    setTotpEnabled(false);
+    setAdminNeedsAuthenticator(false);
+    setShowAuthenticator(false);
     api.clearToken();
     try {
       localStorage.removeItem('nikosoko_cached_user');
@@ -1296,12 +1307,21 @@ function App() {
         isSuperAdmin={isSuperAdmin} 
         onLogout={handleLogout} 
         onOpenCompleteSignUp={handleOpenCompleteSignUp}
+        onOpenSecurity={() => (totpEnabled ? alert('The authenticator app is already on for this account.') : setShowAuthenticator(true))}
         onUpdateUser={(updated) => {
             setCurrentUser(updated);
             setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
             api.updateProvider(updated);
         }}
       />
+      {isAuthenticated && (
+        <AuthenticatorModal
+          isOpen={showAuthenticator && !totpEnabled}
+          required={adminNeedsAuthenticator}
+          onClose={() => setShowAuthenticator(false)}
+          onEnabled={(admin) => { setTotpEnabled(true); setAdminNeedsAuthenticator(false); if (admin) setIsSuperAdmin(true); }}
+        />
+      )}
       {showReviewModal && (
         <ReviewModal 
           pendingProviders={pendingReviews} 

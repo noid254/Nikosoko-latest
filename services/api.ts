@@ -130,43 +130,35 @@ export const getToken = (): string | null => localStorage.getItem('authToken');
 export const setToken = (token: string): void => localStorage.setItem('authToken', token);
 export const clearToken = (): void => localStorage.removeItem('authToken');
 
-// --- Auth API & Active OTP Store ---
-const activeOtpStore = new Map<string, { code: string; expiresAt: number }>();
-
-export const sendOtp = async (target: string): Promise<{ success: boolean; devCode: string; message: string }> => {
-    if (USE_PLATFORM) {
-        // The server issues and checks the code; nothing about it is known here.
-        await platform.requestCode(target);
-        return { success: true, devCode: '', message: `A sign-in code was sent to ${target} if it can sign in.` };
-    }
-    await delay(150);
-    const cleanTarget = String(target).trim().toLowerCase();
-    const cleanNum = cleanTarget.replace(/\D/g, '');
-    const last9 = cleanNum.slice(-9);
-    const isSuperAdminPhone = last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
-
-    // Generate 6-digit OTP code (or 3232 for superadmin default)
-    const devCode = isSuperAdminPhone ? '3232' : Math.floor(100000 + Math.random() * 900000).toString();
-    activeOtpStore.set(cleanTarget, {
-        code: devCode,
-        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes expiry
-    });
-
-    try {
-        await fetch('/api/auth/send-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: cleanTarget })
-        });
-    } catch {
-        // Fallback
-    }
-
-    return {
-        success: true,
-        devCode: isSuperAdminPhone ? '3232' : devCode,
-        message: `OTP verification code dispatched to ${target}`
+// Every call to our own API carries the signed login token, so the server knows who is asking.
+if (typeof window !== 'undefined' && !(window as any).__nikosokoFetchPatched) {
+    (window as any).__nikosokoFetchPatched = true;
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
+        const token = getToken();
+        if (token && url.startsWith('/api/')) {
+            const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+            if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+            return nativeFetch(input, { ...init, headers });
+        }
+        return nativeFetch(input, init);
     };
+}
+
+// --- Sign in ---
+// The server is the only place codes are created and checked. Nothing here knows or stores a code.
+const readJson = async (res: Response) => { try { return await res.json(); } catch { return null; } };
+
+export const sendOtp = async (target: string): Promise<{ success: boolean; useAuthenticator?: boolean; message: string }> => {
+    const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: String(target).trim() })
+    });
+    const data = await readJson(res);
+    if (!res.ok) throw new Error(data?.error || 'We could not send a code. Try again.');
+    return { success: true, useAuthenticator: Boolean(data?.useAuthenticator), message: data?.message || 'Code sent.' };
 };
 
 export interface VerifyOtpResponse {
@@ -174,141 +166,75 @@ export interface VerifyOtpResponse {
     user: ServiceProvider | null;
     isSuperAdmin: boolean;
     token: string;
+    adminNeedsAuthenticator?: boolean;
+    totpEnabled?: boolean;
 }
 
-export const verifyOtp = async (target: string, otp: string): Promise<VerifyOtpResponse> => {
-    if (USE_PLATFORM) {
-        const { token } = await platform.verifyCode(target, otp.trim());
-        setToken(token);
-        return { success: true, user: await platform.getMyProvider(), isSuperAdmin: false, token };
-    }
-    await delay(200);
-    const cleanTarget = String(target).trim().toLowerCase();
-    const cleanNum = (p: string) => (p ? p.replace(/\D/g, '') : '');
-    const normPhone = cleanNum(cleanTarget);
-    const last9 = normPhone.slice(-9);
-
-    if (!otp || otp.trim().length < 4) {
-        throw new Error('Please enter a valid OTP verification code.');
-    }
-
-    const trimmedOtp = otp.trim();
-
-    // Check if target is SuperAdmin phone
-    const isSuperAdminPhone = normPhone === '254723119356' || normPhone === '0723119356' || last9 === '723119356' || cleanTarget === 'noid254@gmail.com' || cleanTarget === 'admin@nikosoko.com';
-
-    if (isSuperAdminPhone) {
-        const storedOtp = activeOtpStore.get(cleanTarget);
-        const isSaCodeValid = trimmedOtp === '3232' || (storedOtp && storedOtp.code === trimmedOtp);
-        if (!isSaCodeValid) {
-            throw new Error('Incorrect code for Super Admin. Default code is 3232.');
-        }
-
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        let saUser = providers.find(p => p.phone === '254723119356' || p.phone === '0723119356' || p.id === SUPER_ADMIN_PROVIDER.id);
-        if (!saUser) saUser = SUPER_ADMIN_PROVIDER;
-
-        saveToProfilesIndex(saUser);
-        const token = 'valid-token-for-254723119356';
-        setToken(token);
-
-        return {
-            success: true,
-            user: saUser,
-            isSuperAdmin: true,
-            token
-        };
-    }
-
-    // Verify OTP against active store & backend
-    const storedOtp = activeOtpStore.get(cleanTarget);
-    const isLocalValid = storedOtp && storedOtp.code === trimmedOtp && Date.now() < storedOtp.expiresAt;
-
-    let backendOk = false;
-    let existingUser: ServiceProvider | null = null;
-
-    try {
-        const res = await fetch('/api/auth/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: cleanTarget, code: trimmedOtp })
-        });
-        if (res.ok) {
-            backendOk = true;
-            const data = await res.json();
-            if (data.provider) {
-                existingUser = data.provider;
-            }
-        }
-    } catch {
-        // Fallback
-    }
-
-    if (!isLocalValid && !backendOk) {
-        throw new Error('Incorrect OTP verification code. Please enter the valid code sent to your phone.');
-    }
-
-    // Clear used OTP
-    activeOtpStore.delete(cleanTarget);
-
-    // 2. Fallback to local persistent index or localStorage table
-    if (!existingUser) {
-        const index = getPersistentProfilesIndex();
-        if (index[cleanTarget] || index[`phone_${normPhone}`] || index[`phone_${last9}`]) {
-            existingUser = index[cleanTarget] || index[`phone_${normPhone}`] || index[`phone_${last9}`];
-        }
-    }
-
-    if (!existingUser) {
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        existingUser = providers.find(p => {
-            if (p.email && p.email.toLowerCase() === cleanTarget) return true;
-            if (!p.phone) return false;
-            const pClean = cleanNum(p.phone);
-            return pClean === normPhone || (last9.length === 9 && pClean.endsWith(last9));
-        }) || null;
-    }
-
-    if (existingUser) {
-        saveToProfilesIndex(existingUser);
-    }
-
-    const token = 'valid-token-for-' + (existingUser?.phone || existingUser?.email || cleanTarget);
-    setToken(token);
-
+export const verifyOtp = async (target: string, otp: string, method: 'sms' | 'totp' = 'sms'): Promise<VerifyOtpResponse> => {
+    const code = otp.trim();
+    if (code.length < 4) throw new Error('Enter the code.');
+    const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: String(target).trim(), code, method })
+    });
+    const data = await readJson(res);
+    if (!res.ok) throw new Error(data?.error || 'That code did not work.');
+    setToken(data.token);
+    if (data.provider) saveToProfilesIndex(data.provider);
     return {
         success: true,
-        user: existingUser || null,
-        isSuperAdmin: false,
-        token
+        user: data.provider || null,
+        isSuperAdmin: Boolean(data.isSuperAdmin),
+        token: data.token,
+        adminNeedsAuthenticator: Boolean(data.adminNeedsAuthenticator),
+        totpEnabled: Boolean(data.totpEnabled)
     };
 };
 
-export const getMyProfile = async (): Promise<ServiceProvider> => {
-    if (USE_PLATFORM) return platform.getMyProvider();
-    await delay(100);
-    const token = getToken();
-    if (token && token.startsWith('valid-token-for-')) {
-        const phone = token.replace('valid-token-for-', '');
-        const normPhone = phone.replace(/\D/g, '');
-        const index = getPersistentProfilesIndex();
-        
-        if (index[`phone_${normPhone}`]) {
-            return index[`phone_${normPhone}`];
-        }
+export interface Session {
+    user: ServiceProvider;
+    isSuperAdmin: boolean;
+    adminNeedsAuthenticator: boolean;
+    totpEnabled: boolean;
+}
 
-        const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-        if (normPhone.endsWith('723119356') || phone === '254723119356' || phone === '0723119356') {
-            return providers.find(p => p.phone === '254723119356' || p.phone === '0723119356') || SUPER_ADMIN_PROVIDER;
-        }
+/** Restores a session from the stored token. Returns null (and forgets the token) if the server rejects it. */
+export const getMyProfile = async (): Promise<Session | null> => {
+    if (!getToken()) return null;
+    try {
+        const res = await fetch('/api/auth/me');
+        if (res.status === 401 || res.status === 404) { clearToken(); return null; }
+        if (!res.ok) return null;
+        const data = await res.json();
+        saveToProfilesIndex(data.provider);
+        return { user: data.provider, isSuperAdmin: Boolean(data.isSuperAdmin), adminNeedsAuthenticator: Boolean(data.adminNeedsAuthenticator), totpEnabled: Boolean(data.totpEnabled) };
+    } catch { return null; }
+};
 
-        const user = providers.find(p => p.phone && p.phone.replace(/\D/g, '').endsWith(normPhone.slice(-9)));
-        if (user) {
-            saveToProfilesIndex(user);
-            return user;
-        }
-    }
-    throw new Error("No valid token or profile");
+// --- Authenticator app ---
+export const startAuthenticatorSetup = async (): Promise<{ secret: string; otpauthUrl: string }> => {
+    const res = await fetch('/api/auth/totp/setup', { method: 'POST' });
+    const data = await readJson(res);
+    if (!res.ok) throw new Error(data?.error || 'Could not start setup.');
+    return data;
+};
+
+export const confirmAuthenticatorSetup = async (code: string): Promise<{ backupCodes: string[]; isSuperAdmin: boolean }> => {
+    const res = await fetch('/api/auth/totp/enable', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code })
+    });
+    const data = await readJson(res);
+    if (!res.ok) throw new Error(data?.error || 'That code is not right.');
+    if (data.token) setToken(data.token);
+    return { backupCodes: data.backupCodes, isSuperAdmin: Boolean(data.isSuperAdmin) };
+};
+
+export const turnOffAuthenticator = async (code: string): Promise<void> => {
+    const res = await fetch('/api/auth/totp/disable', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code })
+    });
+    if (!res.ok) throw new Error((await readJson(res))?.error || 'That code is not right.');
 };
 
 // --- Data Fetching (GET) ---
