@@ -6,6 +6,7 @@ import { recalculateProvidersDistances, findNearestEstate, compareByDistance, ca
 import ServiceCard from './ServiceCard';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 import OrgDetailModal from './OrgDetailModal';
+import HomeTiles from './HomeTiles';
 
 const MenuIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4 text-white' }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -437,8 +438,9 @@ const NikoSoko: React.FC<NikoSokoProps> = ({
 
             {/* MAIN CONTENT HEADER WITH FULL-WIDTH TOGGLE SWITCH */}
             <main className="px-3 pt-4">
+                <HomeTiles onNavigate={onNavigate} />
                 {/* HEADER TITLE, FULL-WIDTH TOGGLE SWITCH & SUBTITLE */}
-                <div className="pb-4 border-b border-gray-200 mb-4">
+                <div id="marketplace" className="scroll-mt-14 pb-4 border-b border-gray-200 mb-4">
                     {/* SEGMENTED TOGGLE WITH ICONS & COUNTS */}
                     <div className="flex w-full border border-black rounded-xl p-1 bg-white gap-1">
                         <button

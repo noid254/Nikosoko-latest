@@ -242,7 +242,7 @@ export interface LocationCheckInLog {
   isActive?: boolean;
 }
 
-export type CurrentPage = 'home' | 'tukosoko' | 'sellService' | 'profile' | 'skill_id' | 'mycontacts' | 'bookings' | 'sacco_dashboard' | 'admin' | 'messages' | 'login';
+export type CurrentPage = 'home' | 'tukosoko' | 'marketplace' | 'qaribu_gate' | 'my_invoice' | 'my_places' | 'sellService' | 'profile' | 'skill_id' | 'mycontacts' | 'bookings' | 'sacco_dashboard' | 'admin' | 'messages' | 'login';
 
 export interface Booking {
   id: string;
