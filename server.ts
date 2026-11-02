@@ -5,6 +5,7 @@ import path from 'path';
 import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
 import twilio from 'twilio';
+import { registerQaribu } from './qaribuCore';
 import {
   signToken, verifyToken, TokenPayload, newTotpSecret, otpauthUrl, checkTotp,
   newBackupCodes, hashBackupCode, tooManyAttempts, clearAttempts
@@ -1341,6 +1342,8 @@ async function startServer() {
       res.status(500).json({ error: e.message });
     }
   });
+
+  registerQaribu({ app, requireAuth, queryAll, queryOne, runSql, last9 });
 
   app.post('/api/bookings', requireAuth, (req, res) => {
     try {

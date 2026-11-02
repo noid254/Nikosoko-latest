@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nikosoko-pwa-v1';
+const CACHE_NAME = 'nikosoko-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -46,6 +46,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.method !== 'GET') return;
+
+  // Link pages (visitor pass, guard check, place page, document view) always come fresh from the server.
+  if (/^\/(g|v|q|d)\//.test(url.pathname)) return;
+
+  // Opening the app: take the newest copy when online, and fall back to the cached one offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html').then((r) => r || caches.match('/'))));
+    return;
+  }
 
   // Skip browser extension requests or cross-origin POSTs
   if (url.origin !== location.origin && !url.href.includes('fonts.googleapis.com') && !url.href.includes('cdn.tailwindcss.com')) {

@@ -1,8 +1,6 @@
 import React from 'react';
 import type { CurrentPage } from '../types';
 
-const QARIBU_URL = 'https://qaribu.nikosoko.com/';
-
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
 const Icons = {
@@ -30,26 +28,19 @@ const Icons = {
 };
 
 const TILES = [
-  { key: 'qaribu', label: 'Qaribu', hint: 'Gate pass and visitors', icon: Icons.qaribu, external: true },
-  { key: 'invoice', label: 'My Invoice', hint: 'Receipts, invoices, quotes', icon: Icons.invoice, external: true },
-  { key: 'market', label: 'Marketplace', hint: 'Professionals near you', icon: Icons.market, external: false },
-  { key: 'places', label: 'My Places', hint: 'Your premises and vacancies', icon: Icons.places, external: true },
+  { key: 'qaribu', label: 'Qaribu', hint: 'Gate pass and visitors', icon: Icons.qaribu, page: 'qaribu_gate' },
+  { key: 'invoice', label: 'My Invoice', hint: 'Receipts, invoices, quotes', icon: Icons.invoice, page: 'my_invoice' },
+  { key: 'market', label: 'Marketplace', hint: 'Services and products near you', icon: Icons.market, page: 'marketplace' },
+  { key: 'places', label: 'My Places', hint: 'Your premises and vacancies', icon: Icons.places, page: 'my_places' },
 ] as const;
 
 const HomeTiles: React.FC<{ onNavigate: (p: CurrentPage) => void }> = ({ onNavigate }) => {
-  const open = (t: typeof TILES[number]) => {
-    if (t.external) {
-      window.open(QARIBU_URL, '_blank', 'noopener');
-    } else {
-      onNavigate('marketplace');
-    }
-  };
   return (
     <div className="grid grid-cols-2 gap-3 pb-4">
       {TILES.map(t => (
         <button
           key={t.key}
-          onClick={() => open(t)}
+          onClick={() => onNavigate(t.page as CurrentPage)}
           className="rounded-2xl bg-black text-white p-4 text-left flex flex-col gap-3 active:scale-[0.98] transition cursor-pointer"
         >
           <span className="text-[#22C27A]">{t.icon}</span>
