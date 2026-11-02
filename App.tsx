@@ -20,7 +20,7 @@ import ReviewModal from './components/ReviewModal';
 import SkillDashboard from './components/SkillDashboard';
 import Marketplace from './components/Marketplace';
 import VisitorsHub from './components/qaribu/VisitorsHub';
-import MyInvoice from './components/qaribu/MyInvoice';
+import DocumentsHub from './components/qaribu/documents/DocumentsHub';
 import ServiceCenters from './components/ServiceCenters';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
@@ -893,7 +893,7 @@ function App() {
       case 'qaribu_gate':
         return <VisitorsHub isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
       case 'my_invoice':
-        return <MyInvoice isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
+        return <DocumentsHub start="received" isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
       case 'service_centers':
         return (
           <ServiceCenters

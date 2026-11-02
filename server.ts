@@ -5,7 +5,7 @@ import path from 'path';
 import initSqlJs, { Database } from 'sql.js';
 import { createServer as createViteServer } from 'vite';
 import twilio from 'twilio';
-import { registerQaribuDocs } from './qaribuCore';
+import { registerQaribuDocs } from './qaribuDocs';
 import { registerQaribuGate } from './qaribuGate';
 import {
   signToken, verifyToken, TokenPayload, newTotpSecret, otpauthUrl, checkTotp,
