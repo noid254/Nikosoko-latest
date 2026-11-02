@@ -180,6 +180,7 @@ export interface ServiceProvider {
   isProfileCompleted?: boolean;
   idVerificationStatus?: 'Unverified' | 'Pending' | 'Verified';
   idType?: 'National ID' | 'Passport' | 'Alien Card' | 'Driving License';
+  registrationStep?: number; // where the person stopped in the registration flow
   idSubmitted?: boolean; // server-computed; ID details themselves are never sent back
   // Write-only (sent at signup, never returned by the API):
   idNumber?: string;

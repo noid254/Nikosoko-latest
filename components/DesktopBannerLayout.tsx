@@ -67,6 +67,7 @@ const Nav: React.FC<PageProps> = ({ currentUser, onOpenSignUp, onOpenLogin }) =>
     <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
       <a href="#top" className="flex items-center"><img src={LOGO_DARK} alt="NikoSoko" className="h-7 w-auto" /></a>
       <nav className="flex items-center gap-8 text-[15px] text-white/70" aria-label="Sections">
+        <a href="#features" className="hover:text-white transition">What you can do</a>
         <a href="#who" className="hover:text-white transition">Who it is for</a>
         <a href="#how" className="hover:text-white transition">How it works</a>
         <a href="#organizations" className="hover:text-white transition">For organizations</a>
@@ -137,10 +138,10 @@ const Hero: React.FC<PageProps> = ({ onOpenSignUp, onOpenOrgSignUp }) => (
     <div className="max-w-[1200px] mx-auto px-8 pt-24 pb-32 grid grid-cols-[1.15fr_1fr] gap-16 items-center">
       <div>
         <h1 className="text-[64px] leading-[1.02] font-semibold tracking-[-0.035em]">
-          Hire skilled people you can actually check.
+          Request, book and reserve trusted services near you.
         </h1>
         <p className="mt-7 text-xl leading-relaxed text-white/65 max-w-[34rem]">
-          NikoSoko lists electricians, drivers, tailors, tutors and more near you. Each one is linked to the sacco, school or group that vouches for them, and rated by real clients.
+          Find electricians, drivers, tutors, accountants and more. See who vouches for them, book a time, talk to them by call or chat, and rate the job afterwards.
         </p>
         <div className="mt-10 flex items-center gap-4">
           <Button onClick={onOpenSignUp} variant="green">Find a professional</Button>
@@ -155,14 +156,25 @@ const Hero: React.FC<PageProps> = ({ onOpenSignUp, onOpenOrgSignUp }) => (
 
 const AUDIENCES = [
   {
-    title: 'Common mwananchi',
+    title: 'People who need a service',
     lead: 'Find someone you can trust, close to home.',
     points: [
       'See who vouches for a person before you call',
       'Ratings come only from clients who contacted them',
-      'Sorted by how near they are to you',
+      'The closest professionals show first',
     ],
     cta: 'Find a professional',
+    action: 'signup' as const,
+  },
+  {
+    title: 'Skilled professionals',
+    lead: 'Be found, booked and trusted.',
+    points: [
+      'A profile with your work, rate and area',
+      'Booking requests land in your account',
+      'Join with your sacco or school code to get the Verified badge',
+    ],
+    cta: 'Create your profile',
     action: 'signup' as const,
   },
   {
@@ -193,9 +205,9 @@ const Audiences: React.FC<PageProps> = ({ onOpenSignUp, onOpenOrgSignUp }) => (
   <section id="who" className="bg-white text-black">
     <div className="max-w-[1200px] mx-auto px-8 py-28">
       <h2 className="text-[44px] leading-[1.08] font-semibold tracking-[-0.03em] max-w-[40rem]">One platform for the people who hire, and the groups that vouch.</h2>
-      <div className="mt-16 grid grid-cols-3 gap-6">
+      <div className="mt-16 grid grid-cols-4 gap-5">
         {AUDIENCES.map(a => (
-          <div key={a.title} className="rounded-3xl border border-neutral-200 p-8 flex flex-col">
+          <div key={a.title} className="rounded-3xl border border-neutral-200 p-7 flex flex-col">
             <h3 className="text-xl font-semibold tracking-tight">{a.title}</h3>
             <p className="mt-3 text-neutral-600 leading-relaxed">{a.lead}</p>
             <ul className="mt-6 space-y-3.5 flex-1">
@@ -220,16 +232,61 @@ const Audiences: React.FC<PageProps> = ({ onOpenSignUp, onOpenOrgSignUp }) => (
 );
 
 const STEPS = [
-  { title: 'An organization joins', body: 'A sacco, school or trade group registers and receives its own code. A school gets a further code for each course it lists.' },
-  { title: 'Members verify with the code', body: 'When a driver, graduate or tradesperson signs up, they enter the code. The Verified badge appears on their profile with the organization named beside it.' },
-  { title: 'Customers search and contact', body: 'People nearby find them by service and distance. To call or message, the customer confirms their phone number with a one-time code.' },
-  { title: 'Clients rate what happened', body: 'After contact, the client rates the job. The score on the profile is the plain average of those ratings.' },
+  { title: 'Search', body: 'Pick a service and see the professionals closest to you first.' },
+  { title: 'Check', body: 'Look at who vouches for them, their rating from real clients, and what they charge.' },
+  { title: 'Book and talk', body: 'Send a booking request for a date and time, and call or chat from the profile. To contact anyone you confirm your phone number first.' },
+  { title: 'Rate', body: 'After the job, rate it. The score on a profile is the plain average of real ratings.' },
 ];
+
+const FEATURES = [
+  { title: 'Find by service and place', body: 'Search by trade and area. The closest professionals come first.' },
+  { title: 'Request and book', body: 'Choose a professional, pick a date and time, and send a booking request they can confirm.' },
+  { title: 'Call or chat', body: 'Call, WhatsApp or message straight from their profile.' },
+  { title: 'Vouched for by people who know them', body: 'Saccos, schools and groups verify their members with a code.' },
+  { title: 'Ratings from real clients', body: 'You must confirm your phone number to rate, and you can rate a provider once a day.' },
+  { title: 'Profiles that show the work', body: 'Services, rates, area and a catalogue of what each professional offers.' },
+];
+
+const COMING = [
+  { title: 'Reserve and queue', body: 'Hold a time in advance, or join a queue for first-come services.' },
+  { title: 'Pay in the app', body: 'Pay deposits and bills with M-Pesa and keep a record.' },
+  { title: 'Membership', body: 'Priority booking and discounts for regular customers.' },
+];
+
+const Features: React.FC = () => (
+  <section id="features" className="bg-neutral-100 text-black">
+    <div className="max-w-[1200px] mx-auto px-8 py-28">
+      <h2 className="text-[44px] leading-[1.08] font-semibold tracking-[-0.03em] max-w-[40rem]">Everything you need to get a job done, in one place.</h2>
+      <div className="mt-14 grid grid-cols-3 gap-x-10 gap-y-12">
+        {FEATURES.map(f => (
+          <div key={f.title}>
+            <div className="w-10 h-1 rounded-full" style={{ background: GREEN }} />
+            <h3 className="mt-5 text-lg font-semibold tracking-tight">{f.title}</h3>
+            <p className="mt-2.5 text-neutral-600 leading-relaxed text-[15px]">{f.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-20 rounded-3xl bg-black text-white p-10">
+        <h3 className="text-2xl font-semibold tracking-tight">Coming next</h3>
+        <p className="mt-2 text-white/60">These are planned and not live yet.</p>
+        <div className="mt-8 grid grid-cols-3 gap-10">
+          {COMING.map(c => (
+            <div key={c.title}>
+              <h4 className="font-semibold">{c.title}</h4>
+              <p className="mt-2 text-[15px] text-white/60 leading-relaxed">{c.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+);
 
 const How: React.FC = () => (
   <section id="how" className="bg-black text-white">
     <div className="max-w-[1200px] mx-auto px-8 py-28">
-      <h2 className="text-[44px] leading-[1.08] font-semibold tracking-[-0.03em] max-w-[36rem]">How it works</h2>
+      <h2 className="text-[44px] leading-[1.08] font-semibold tracking-[-0.03em] max-w-[36rem]">From search to a rated job in four steps</h2>
       <ol className="mt-16 grid grid-cols-4 gap-0 border-t border-white/15">
         {STEPS.map((s, i) => (
           <li key={s.title} className="pt-8 pr-8 border-r border-white/10 last:border-r-0 pl-0 first:pl-0 [&:not(:first-child)]:pl-8">
@@ -339,6 +396,7 @@ const DesktopLandingPage: React.FC<PageProps> = props => (
   <div className="min-h-screen bg-black text-white scroll-smooth" style={{ fontFamily: FONT }}>
     <Nav {...props} />
     <Hero {...props} />
+    <Features />
     <Audiences {...props} />
     <How />
     <Organizations {...props} />

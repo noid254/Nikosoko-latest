@@ -23,8 +23,17 @@ const getPersistentProfilesIndex = (): Record<string, ServiceProvider> => {
     }
 };
 
-const saveToProfilesIndex = (provider: ServiceProvider) => {
-    if (!provider || !provider.id) return;
+// Private details go to the server only. They are never kept in this browser or sent to Firestore.
+const PRIVATE_KEYS = ['idNumber', 'idDocumentUrl', 'selfieUrl', 'idType', 'nationalId', 'password'];
+export const stripPrivate = <T extends object>(p: T): T => {
+    const copy: any = { ...p };
+    for (const k of PRIVATE_KEYS) delete copy[k];
+    return copy;
+};
+
+const saveToProfilesIndex = (rawProvider: ServiceProvider) => {
+    if (!rawProvider || !rawProvider.id) return;
+    const provider = stripPrivate(rawProvider);
     try {
         const index = getPersistentProfilesIndex();
         index[provider.id] = provider;
@@ -335,9 +344,9 @@ export const createProvider = async (providerData: Omit<ServiceProvider, 'id'>):
     }
 
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-    providers.push(newProvider);
+    providers.push(stripPrivate(newProvider));
     saveTable(DB_KEYS.PROVIDERS, providers);
-    return newProvider;
+    return stripPrivate(newProvider);
 };
 
 // --- Hero banners ---
@@ -410,19 +419,20 @@ export const updateProvider = async (updatedProvider: ServiceProvider): Promise<
         // Fallback
     }
 
-    if (updatedProvider.id) {
-        await saveUserProfileToFirestore(updatedProvider.id, updatedProvider).catch(() => {});
+    const safe = stripPrivate(updatedProvider);
+    if (safe.id) {
+        await saveUserProfileToFirestore(safe.id, safe).catch(() => {});
     }
 
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
-    const index = providers.findIndex(p => p.id === updatedProvider.id);
+    const index = providers.findIndex(p => p.id === safe.id);
     if (index > -1) {
-        providers[index] = updatedProvider;
+        providers[index] = safe;
     } else {
-        providers.push(updatedProvider);
+        providers.push(safe);
     }
     saveTable(DB_KEYS.PROVIDERS, providers);
-    return updatedProvider;
+    return safe;
 };
 
 export const updateCatalogueItem = async (updatedItem: CatalogueItem): Promise<CatalogueItem> => {
