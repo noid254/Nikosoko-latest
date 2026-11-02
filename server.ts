@@ -1632,18 +1632,25 @@ async function startServer() {
     res.status(404).json({ error: 'Endpoint not found' });
   });
 
-  // Vite Middleware integration for development / production
-  if (process.env.NODE_ENV !== 'production') {
+  // Serve the built app unless we are explicitly developing. (Using the Vite dev server in production
+  // makes every page load slow, so a missing NODE_ENV must never switch it on.)
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasBuild = fs.existsSync(path.join(distPath, 'index.html'));
+  if (process.env.NODE_ENV === 'development' || !hasBuild) {
+    console.log(hasBuild ? 'Serving with the Vite dev server (NODE_ENV=development).' : 'No build found in dist/, serving with the Vite dev server. Run "npm run build" for production.');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+    console.log('Serving the built app from dist/.');
+    // Hashed files in /assets never change, so browsers can keep them for a year. index.html must always be re-checked.
+    app.use('/assets', express.static(path.join(distPath, 'assets'), { maxAge: '365d', immutable: true }));
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), { maxAge: '7d' }));
+    app.use(express.static(distPath, { index: false, maxAge: '1h' }));
     app.use((req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

@@ -98,7 +98,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = (props) => {
     const today = new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     return (
-        <div className="min-h-screen bg-[#F3F5F3] text-[#14211C] flex" style={{ fontFamily: "'IBM Plex Sans', 'Inter', system-ui, sans-serif" }}>
+        <div className="min-h-screen bg-[#F3F5F3] text-[#14211C] flex" style={{ fontFamily: "'Geist', 'Inter', system-ui, sans-serif" }}>
             <aside className="hidden md:flex w-[248px] shrink-0 flex-col bg-[#10201A] text-[#C9D6CF] sticky top-0 h-screen">
                 <div className="px-6 pt-7 pb-6">
                     <p className="text-[19px] font-semibold tracking-tight text-white">NikoSoko</p>

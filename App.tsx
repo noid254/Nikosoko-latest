@@ -25,6 +25,7 @@ import BookingsView from './components/BookingsView';
 import SEOHead from './components/SEOHead';
 import DesktopBannerLayout from './components/DesktopBannerLayout';
 import AuthenticatorModal from './components/AuthenticatorModal';
+import RegistrationFlow from './components/RegistrationFlow';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(() => {
@@ -53,8 +54,8 @@ function App() {
   });
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'nickname' | 'complete_signup'>('nickname');
-  const [authAccountType, setAuthAccountType] = useState<'individual' | 'organization'>('individual');
+  const [registrationKind, setRegistrationKind] = useState<null | 'individual' | 'organization'>(null);
+  const [pendingRegistration, setPendingRegistration] = useState<null | 'individual' | 'organization'>(null);
   const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
@@ -244,21 +245,26 @@ function App() {
     }, durationMs);
   };
 
-  const handleOpenCompleteSignUp = () => {
-    setAuthAccountType('individual');
-    setAuthModalMode('complete_signup');
-    setIsAuthModalOpen(true);
+  // Registration happens after the phone number is confirmed, so every save is tied to a signed-in person.
+  const openRegistration = (kind: 'individual' | 'organization') => {
+    if (isAuthenticated && currentUser) {
+      setRegistrationKind(kind);
+    } else {
+      setPendingRegistration(kind);
+      setIsAuthModalOpen(true);
+    }
   };
+  const handleOpenCompleteSignUp = () => openRegistration(currentUser?.accountType === 'organization' ? 'organization' : 'individual');
+  const handleOpenOrgSignUp = () => openRegistration('organization');
+  const handleOpenLogin = () => setIsAuthModalOpen(true);
 
-  const handleOpenOrgSignUp = () => {
-    setAuthAccountType('organization');
-    setAuthModalMode('complete_signup');
-    setIsAuthModalOpen(true);
-  };
-
-  const handleOpenLogin = () => {
-    setAuthModalMode('nickname');
-    setIsAuthModalOpen(true);
+  const saveRegistrationPatch = async (patch: Partial<ServiceProvider>) => {
+    if (!currentUser) return;
+    const updated = { ...currentUser, ...patch } as ServiceProvider;
+    const local = api.stripPrivate(updated); // private ID details go to the server, not kept in this browser
+    setCurrentUser(local);
+    setProviders(prev => (prev.some(p => p.id === local.id) ? prev.map(p => (p.id === local.id ? local : p)) : [local, ...prev]));
+    await api.updateProvider(updated);
   };
 
   const handleToggleSaveContact = (providerId: string, customLabel?: string) => {
@@ -357,30 +363,29 @@ function App() {
 
     const loadData = async () => {
       try {
-        let token = api.getToken();
-
-        if (token) {
-            const session = await api.getMyProfile();
-            if (isMounted) {
-              if (session) {
-                setCurrentUser(session.user);
-                setIsAuthenticated(true);
-                setIsSuperAdmin(session.isSuperAdmin);
-                setTotpEnabled(session.totpEnabled);
-                if (session.adminNeedsAuthenticator) { setAdminNeedsAuthenticator(true); setShowAuthenticator(true); }
-              } else {
-                // The server did not accept the saved sign-in, so ask the person to sign in again.
-                setIsAuthenticated(false);
-                setCurrentUser(null);
-              }
-            }
-        }
-        const [providersData, catalogueData, docsData] = await Promise.all([
-          api.getProviders().catch(() => []), 
-          api.getCatalogueItems().catch(() => []), 
-          api.getDocuments().catch(() => [])
+        // Ask who is signed in and fetch the lists at the same time, so neither waits for the other.
+        const [session, [providersData, catalogueData, docsData]] = await Promise.all([
+          api.getToken() ? api.getMyProfile().catch(() => null) : Promise.resolve(null),
+          Promise.all([
+            api.getProviders().catch(() => []),
+            api.getCatalogueItems().catch(() => []),
+            api.getDocuments().catch(() => [])
+          ])
         ]);
         if (isMounted) {
+          if (api.getToken() || session) {
+            if (session) {
+              setCurrentUser(session.user);
+              setIsAuthenticated(true);
+              setIsSuperAdmin(session.isSuperAdmin);
+              setTotpEnabled(session.totpEnabled);
+              if (session.adminNeedsAuthenticator) { setAdminNeedsAuthenticator(true); setShowAuthenticator(true); }
+            } else {
+              // The server did not accept the saved sign-in, so ask the person to sign in again.
+              setIsAuthenticated(false);
+              setCurrentUser(null);
+            }
+          }
           if (providersData.length) setProviders(providersData);
           if (catalogueData.length) setCatalogueItems(catalogueData);
           if (docsData.length) setDocuments(docsData);
@@ -434,6 +439,13 @@ function App() {
   };
 
   const handleLogin = (data: any, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => {
+    if (data?.success && pendingRegistration) {
+      setRegistrationKind(pendingRegistration);
+      setPendingRegistration(null);
+    } else if (data?.success && data.user && !data.user.isProfileCompleted && /^User \d+$/.test(data.user.name || '')) {
+      // First time here: offer to fill in the profile. They can finish later.
+      setRegistrationKind('individual');
+    }
     if (data.success && data.user) {
         const userToSet = { ...data.user, ...(fullProfile || {}) };
         setCurrentUser(userToSet);
@@ -1314,6 +1326,15 @@ function App() {
             api.updateProvider(updated);
         }}
       />
+      {registrationKind && currentUser && (
+        <RegistrationFlow
+          kind={registrationKind}
+          currentUser={currentUser}
+          onSave={saveRegistrationPatch}
+          onClose={() => setRegistrationKind(null)}
+          onOpenDashboard={() => handleNavigate('sacco_dashboard' as CurrentPage)}
+        />
+      )}
       {isAuthenticated && (
         <AuthenticatorModal
           isOpen={showAuthenticator && !totpEnabled}
@@ -1357,10 +1378,8 @@ function App() {
       </DesktopBannerLayout>
       {isAuthModalOpen && (
         <AuthModal
-          onClose={() => setIsAuthModalOpen(false)}
+          onClose={() => { setIsAuthModalOpen(false); setPendingRegistration(null); }}
           onLogin={handleLogin}
-          initialMode={authModalMode}
-          initialAccountType={authAccountType}
         />
       )}
     </>

@@ -51,6 +51,11 @@ export interface LearningCenterCourse {
   description: string;
 }
 
+// Everything built from this list is sample content, shown so people can see how the hub will look.
+const SampleTag: React.FC = () => (
+  <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">Sample</span>
+);
+
 const ACCREDITED_COURSES: LearningCenterCourse[] = [
   {
     id: 'crs-1',
@@ -443,6 +448,13 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
 
       <main className="p-4 sm:p-6 space-y-5">
 
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="note">
+          <p className="font-bold">Some of this page is sample content</p>
+          <p className="mt-1 leading-relaxed">
+            Training courses, fees, earnings boosts and area demand are examples marked <strong>Sample</strong>. Institutions will add their real courses here. Your own skills, rating and trust score are real.
+          </p>
+        </div>
+
         {/* RATING GAUGE HERO */}
         <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -485,15 +497,15 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl">
                   <span className="text-[9px] text-gray-400 uppercase font-bold block">Active Skills</span>
-                  <span className="text-sm font-black text-black block">{skillsList.length} Verified</span>
+                  <span className="text-sm font-black text-black block">{skillsList.length} listed</span>
                 </div>
                 <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl">
                   <span className="text-[9px] text-gray-400 uppercase font-bold block">Daily Rate</span>
-                  <span className="text-sm font-black text-black block">KES {currentUser?.hourlyRate || 2500}</span>
+                  <span className="text-sm font-black text-black block">{currentUser?.hourlyRate ? `KES ${currentUser.hourlyRate}` : 'Not set yet'}</span>
                 </div>
                 <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl col-span-2 sm:col-span-1">
                   <span className="text-[9px] text-gray-400 uppercase font-bold block">Sacco</span>
-                  <span className="text-sm font-black text-emerald-700 block truncate">Westlands SACCO</span>
+                  <span className="text-sm font-black text-emerald-700 block truncate">{currentUser?.saccoMember?.saccoName || currentUser?.verifiedByOrgName || 'Not linked yet'}</span>
                 </div>
               </div>
             </div>
@@ -505,6 +517,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-black">Recommended For You</h3>
+            <SampleTag />
           </div>
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
             {recommendedCourses.map(course => (
@@ -530,9 +543,10 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-emerald-600" />
             <h3 className="text-xs font-black uppercase tracking-wider text-black">Where You're Needed Most</h3>
+            <SampleTag />
           </div>
           <p className="text-[11px] text-gray-500 -mt-1.5">
-            Estimated local demand for <span className="font-bold text-black">{primaryCategory}</span> by area.
+            Sample demand figures for <span className="font-bold text-black">{primaryCategory}</span> by area.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {heatmapData.map(({ area, intensity }) => {
@@ -646,7 +660,8 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-emerald-600" />
-              <span>Accredited Learning Centers</span>
+              <span>Learning centers</span>
+              <SampleTag />
             </h3>
           </div>
 
@@ -688,6 +703,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                       <span className="text-[10px] uppercase bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">
                         {course.category}
                       </span>
+                      <SampleTag />
                       <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                         <TrendingUp className="w-3 h-3" />
                         {course.demandTag}
@@ -888,6 +904,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-emerald-600" />
                 <h3 className="text-sm font-black uppercase text-black">Course & Institution Details</h3>
+                <SampleTag />
               </div>
               <button onClick={() => setSelectedCourseModal(null)} className="text-gray-400 hover:text-black cursor-pointer">
                 <X className="w-4 h-4" />
