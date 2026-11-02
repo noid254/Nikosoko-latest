@@ -18,6 +18,7 @@ import MessageCenterView from './components/MessageCenterView';
 import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
 import SkillDashboard from './components/SkillDashboard';
+import Marketplace from './components/Marketplace';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
@@ -886,6 +887,18 @@ function App() {
     }
 
     switch (currentPage) {
+      case 'marketplace':
+        return (
+          <Marketplace
+            providers={publicProviders}
+            catalogueItems={catalogueItems}
+            isAuthenticated={isAuthenticated}
+            onAuthClick={() => setIsAuthModalOpen(true)}
+            onInitiateContact={(p) => handleCtaInteraction(p)}
+            onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }}
+            onBack={() => setCurrentPage('home')}
+          />
+        );
       case 'home':
       case 'tukosoko':
         return (
