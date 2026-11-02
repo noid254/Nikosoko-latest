@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { q } from '../../services/qaribuApi';
 import { Shell, SignInPrompt, Card, Field, Btn, Tabs, Err, copy } from './ui';
+import MyPlaces from './MyPlaces';
 import type { Place } from './MyPlaces';
 
 interface Pass {
@@ -10,10 +11,11 @@ interface Pass {
 
 const STATE_LABEL: Record<string, string> = { waiting: 'Waiting', arrived: 'Arrived', left: 'Left', expired: 'Expired', cancelled: 'Cancelled' };
 
-const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBack: () => void; onOpenPlaces: () => void }> = ({ isAuthenticated, onSignIn, onBack, onOpenPlaces }) => {
+const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBack: () => void }> = ({ isAuthenticated, onSignIn, onBack }) => {
   const [places, setPlaces] = useState<Place[] | null>(null);
   const [pid, setPid] = useState('');
   const [tab, setTab] = useState('Invite');
+  const [showPlaces, setShowPlaces] = useState(false);
   const [passes, setPasses] = useState<Pass[]>([]);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,10 +29,8 @@ const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onB
   const canHost = !!place && ['owner', 'manager', 'caretaker', 'tenant'].includes(place.role || '');
   const canGate = !!place && ['owner', 'manager', 'gateman'].includes(place.role || '');
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    q<Place[]>('/places').then(ps => { setPlaces(ps); if (ps[0]) setPid(ps[0].id); }).catch(e => setErr(e.message));
-  }, [isAuthenticated]);
+  const loadPlaces = () => q<Place[]>('/places').then(ps => { setPlaces(ps); setPid(cur => (ps.some(p => p.id === cur) ? cur : ps[0]?.id || '')); }).catch(e => setErr(e.message));
+  useEffect(() => { if (isAuthenticated) loadPlaces(); }, [isAuthenticated]);
 
   const loadPasses = () => pid && q<Pass[]>(`/places/${pid}/passes`).then(setPasses).catch(() => {});
   useEffect(() => { setIssued(null); setFound(null); if (place?.gatepass) loadPasses(); setTab(canHost ? 'Invite' : 'Gate'); }, [pid, places]);
@@ -39,10 +39,16 @@ const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onB
 
   return (
     <Shell title="Qaribu · Gate pass" onBack={onBack}>
-      {!isAuthenticated ? <SignInPrompt what="gate pass" onSignIn={onSignIn} /> : places === null ? <p className="text-neutral-500">Loading…</p> : places.length === 0 ? (
-        <Card><p className="font-black">Add a place first</p><p className="text-sm text-neutral-600 mt-1">Gate pass works for a place you own or work at, such as an estate, building or school.</p><Btn tone="green" className="mt-3" onClick={onOpenPlaces}>Go to My Places</Btn></Card>
-      ) : (
+      {!isAuthenticated ? <SignInPrompt what="gate pass" onSignIn={onSignIn} /> : places === null ? <p className="text-neutral-500">Loading…</p> : (
         <>
+          <Tabs tabs={['Gate pass', 'Places']} value={showPlaces || places.length === 0 ? 'Places' : 'Gate pass'} onChange={t => setShowPlaces(t === 'Places')} />
+          {(showPlaces || places.length === 0) ? (
+            <>
+              {places.length === 0 && <p className="text-sm text-neutral-600 mb-3">Add the estate, building, school or business you manage. Then you can invite visitors, add your guard and list vacancies.</p>}
+              <MyPlaces onChanged={loadPlaces} onOpenGate={() => setShowPlaces(false)} />
+            </>
+          ) : (
+            <>
           {places.length > 1 && (
             <select value={pid} onChange={e => setPid(e.target.value)} className="w-full mb-3 rounded-xl border border-neutral-300 bg-white px-3.5 py-3 font-bold">
               {places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -53,8 +59,8 @@ const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onB
 
           {place && !place.gatepass ? (
             <Card><p className="font-black">Gate pass is off for {place.name}</p>
-              <p className="text-sm text-neutral-600 mt-1">{place.role === 'owner' ? 'Switch it on under My Places.' : 'The owner needs to switch it on.'}</p>
-              <Btn tone="green" className="mt-3" onClick={onOpenPlaces}>Open My Places</Btn></Card>
+              <p className="text-sm text-neutral-600 mt-1">{place.role === 'owner' ? 'Switch it on under Places.' : 'The owner needs to switch it on.'}</p>
+              <Btn tone="green" className="mt-3" onClick={() => setShowPlaces(true)}>Open Places</Btn></Card>
           ) : (
             <>
               <Tabs tabs={[...(canHost ? ['Invite', 'Expected'] : []), ...(canGate ? ['Gate'] : [])]} value={tab} onChange={t => { setTab(t); if (t === 'Expected') loadPasses(); }} />
@@ -119,6 +125,8 @@ const QaribuGate: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onB
                   ))}
                 </>
               )}
+            </>
+          )}
             </>
           )}
         </>
