@@ -19,6 +19,9 @@
 }
 
 @layer utilities {
+  .active-scale:active {
+    transform: scale(0.96);
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
