@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { CatalogueItem, ServiceProvider } from '../types';
-import { TAXONOMY, itemText, providerText, matches } from '../utils/taxonomy';
+import { itemText, providerText, matches } from '../utils/taxonomy';
+import FilterBar from './FilterBar';
 import CatalogueItemDetailModal from './CatalogueItemDetailModal';
 
 interface Props {
@@ -56,10 +57,6 @@ const Marketplace: React.FC<Props> = ({ providers, catalogueItems, isAuthenticat
     return tiles.filter(t => matches(t.text, parent, child) && (!term || t.text.includes(term) || t.title.toLowerCase().includes(term) || t.sub.toLowerCase().includes(term)));
   }, [tiles, parent, child, q]);
 
-  const pickParent = (label: string) => {
-    if (parent === label) { setParent(null); setChild(null); } else { setParent(label); setChild(null); }
-  };
-
   const onTile = (t: Tile) => (t.item ? setOpen(t.item) : t.provider && onSelectProvider(t.provider));
 
   return (
@@ -74,28 +71,7 @@ const Marketplace: React.FC<Props> = ({ providers, catalogueItems, isAuthenticat
         />
       </header>
 
-      {/* One scrolling line: PARENT, then (when opened) its children, then the next PARENT. */}
-      <nav className="sticky top-[52px] z-20 bg-white border-b border-gray-200 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-2 px-3 py-2.5 w-max">
-          <button onClick={() => { setParent(null); setChild(null); }}
-            className={`text-[11px] font-black tracking-wider px-3 py-1.5 rounded-full border cursor-pointer ${!parent ? 'bg-black text-white border-black' : 'border-gray-300 text-gray-600'}`}>ALL</button>
-          {TAXONOMY.map(p => (
-            <React.Fragment key={p.label}>
-              <button onClick={() => pickParent(p.label)}
-                className={`text-[11px] font-black tracking-wider px-3 py-1.5 rounded-full border whitespace-nowrap cursor-pointer ${parent === p.label ? 'bg-black text-white border-black' : 'border-gray-300 text-gray-800'}`}>
-                {p.label}
-              </button>
-              {parent === p.label && p.children.map(c => (
-                <button key={c.label} onClick={() => setChild(child === c.label ? null : c.label)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap cursor-pointer border"
-                  style={child === c.label ? { background: GREEN, borderColor: GREEN, color: '#000' } : { borderColor: '#d1d5db', color: '#374151' }}>
-                  {c.label}
-                </button>
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
-      </nav>
+      <FilterBar parent={parent} child={child} onParent={setParent} onChild={setChild} />
 
       <main className="px-1.5 pt-1.5 pb-24">
         {shown.length === 0 ? (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { q } from '../../services/qaribuApi';
-import { Shell, SignInPrompt, Card, Field, Btn, Err, copy } from './ui';
+import { Card, Field, Btn, Err, copy } from './ui';
 
 export interface Place {
   id: string; name: string; kind: string; area: string; about: string; gatepass: boolean; role: string | null;
@@ -9,7 +9,8 @@ export interface Place {
   vacancies: { id: string; title: string; rent: string; note: string; status: string; confirmedAt: string }[];
 }
 
-const MyPlaces: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBack: () => void; onOpenGate: () => void }> = ({ isAuthenticated, onSignIn, onBack, onOpenGate }) => {
+// Lives inside the Gate pass screen (Places tab). `onChanged` tells the parent to reload its place list.
+const MyPlaces: React.FC<{ onChanged?: () => void; onOpenGate?: () => void }> = ({ onChanged, onOpenGate }) => {
   const [places, setPlaces] = useState<Place[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -18,15 +19,15 @@ const MyPlaces: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBac
   const [open, setOpen] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
-  const load = () => q<Place[]>('/places').then(setPlaces).catch(e => setErr(e.message));
-  useEffect(() => { if (isAuthenticated) load(); }, [isAuthenticated]);
+  const load = () => q<Place[]>('/places').then(ps => { setPlaces(ps); onChanged?.(); }).catch(e => setErr(e.message));
+  useEffect(() => { load(); }, []);
 
   const run = async (fn: () => Promise<any>) => { setBusy(true); setErr(''); try { await fn(); await load(); } catch (e: any) { setErr(e.message); } finally { setBusy(false); } };
   const flash = (m: string) => { setNote(m); setTimeout(() => setNote(''), 2000); };
 
   return (
-    <Shell title="My Places" onBack={onBack}>
-      {!isAuthenticated ? <SignInPrompt what="My Places" onSignIn={onSignIn} /> : (
+    <>
+      {true && (
         <>
           <Err msg={err} />
           {note && <p className="mb-3 text-sm font-bold text-emerald-700">{note}</p>}
@@ -48,7 +49,7 @@ const MyPlaces: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBac
                       {p.gatepass ? 'Switch gate pass off' : 'Switch gate pass on'}
                     </Btn>
                   )}
-                  {p.gatepass && <Btn tone="dark" className="ml-2" onClick={onOpenGate}>Open gate pass</Btn>}
+                  {p.gatepass && onOpenGate && <Btn tone="dark" className="ml-2" onClick={onOpenGate}>Invite visitors</Btn>}
 
                   <div className="mt-4 text-sm">
                     <p className="font-black text-xs uppercase tracking-wider text-neutral-500">Place page (put the QR sticker here)</p>
@@ -105,7 +106,7 @@ const MyPlaces: React.FC<{ isAuthenticated: boolean; onSignIn: () => void; onBac
           ) : <Btn tone="dark" className="w-full" onClick={() => setAdding(true)}>+ Add a place</Btn>}
         </>
       )}
-    </Shell>
+    </>
   );
 };
 

@@ -21,7 +21,7 @@ import SkillDashboard from './components/SkillDashboard';
 import Marketplace from './components/Marketplace';
 import QaribuGate from './components/qaribu/QaribuGate';
 import MyInvoice from './components/qaribu/MyInvoice';
-import MyPlaces from './components/qaribu/MyPlaces';
+import ServiceCenters from './components/ServiceCenters';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
 import { BookingModal } from './components/BookingModal';
@@ -891,11 +891,19 @@ function App() {
 
     switch (currentPage) {
       case 'qaribu_gate':
-        return <QaribuGate isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} onOpenPlaces={() => setCurrentPage('my_places')} />;
+        return <QaribuGate isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
       case 'my_invoice':
         return <MyInvoice isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
-      case 'my_places':
-        return <MyPlaces isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} onOpenGate={() => setCurrentPage('qaribu_gate')} />;
+      case 'service_centers':
+        return (
+          <ServiceCenters
+            providers={publicProviders}
+            catalogueItems={catalogueItems}
+            onSelectProvider={(p) => { setViewingProvider(p); setCurrentPage('profile'); }}
+            onInitiateContact={(p) => handleCtaInteraction(p)}
+            onBack={() => setCurrentPage('home')}
+          />
+        );
       case 'marketplace':
         return (
           <Marketplace

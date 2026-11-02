@@ -28,10 +28,10 @@ const Icons = {
 };
 
 const TILES = [
-  { key: 'qaribu', label: 'Qaribu', hint: 'Gate pass and visitors', icon: Icons.qaribu, page: 'qaribu_gate' },
+  { key: 'qaribu', label: 'Qaribu', hint: 'Gate pass, places and visitors', icon: Icons.qaribu, page: 'qaribu_gate' },
   { key: 'invoice', label: 'My Invoice', hint: 'Receipts, invoices, quotes', icon: Icons.invoice, page: 'my_invoice' },
   { key: 'market', label: 'Marketplace', hint: 'Services and products near you', icon: Icons.market, page: 'marketplace' },
-  { key: 'places', label: 'My Places', hint: 'Your premises and vacancies', icon: Icons.places, page: 'my_places' },
+  { key: 'places', label: 'Service Centers', hint: 'Registered outlets near you', icon: Icons.places, page: 'service_centers' },
 ] as const;
 
 const HomeTiles: React.FC<{ onNavigate: (p: CurrentPage) => void }> = ({ onNavigate }) => {
