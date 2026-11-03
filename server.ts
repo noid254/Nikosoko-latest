@@ -1,3 +1,4 @@
+import compression from 'compression';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -289,6 +290,7 @@ async function startServer() {
 
   const app = express();
   app.use(cors());
+  app.use(compression());
   app.use(express.json({ limit: '10mb' }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -733,6 +735,7 @@ async function startServer() {
   // Providers Endpoints
   app.get('/api/providers', (req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache');
       const rows = queryAll('SELECT * FROM providers ORDER BY isVerified DESC, rating DESC');
       const formatted = rows.map(r => {
         let raw: any = {};
@@ -1008,6 +1011,7 @@ async function startServer() {
   // Catalogue Items Endpoints
   app.get('/api/catalogue', (req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache');
       const rows = queryAll('SELECT * FROM catalogue_items');
       const formatted = rows.map(r => ({
         ...r,

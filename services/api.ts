@@ -31,6 +31,26 @@ export const stripPrivate = <T extends object>(p: T): T => {
     return copy;
 };
 
+const saveProfilesIndexBulk = (list: ServiceProvider[]) => {
+    try {
+        const index = getPersistentProfilesIndex();
+        for (const raw of list) {
+            if (!raw || !raw.id) continue;
+            const provider = stripPrivate(raw);
+            index[provider.id] = provider;
+            const cleanPhone = provider.phone ? provider.phone.replace(/\D/g, '') : '';
+            if (cleanPhone) index[`phone_${cleanPhone}`] = provider;
+        }
+        localStorage.setItem(DB_KEYS.PROFILES_INDEX, JSON.stringify(index));
+    } catch (e) {
+        console.error('Failed to save to persistent profiles index:', e);
+    }
+};
+
+// What this browser saved last time, so the lists can show at once while fresh ones load.
+export const getCachedProviders = (): ServiceProvider[] => getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
+export const getCachedCatalogue = (): CatalogueItem[] => getTable<CatalogueItem>(DB_KEYS.CATALOGUE);
+
 const saveToProfilesIndex = (rawProvider: ServiceProvider) => {
     if (!rawProvider || !rawProvider.id) return;
     const provider = stripPrivate(rawProvider);
@@ -254,8 +274,9 @@ export const getProviders = async (): Promise<ServiceProvider[]> => {
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-                data.forEach((p: ServiceProvider) => saveToProfilesIndex(p));
-                saveTable(DB_KEYS.PROVIDERS, data);
+                // Write the saved copies once, after the page has had time to paint, not once per provider.
+                const keep = () => { saveProfilesIndexBulk(data); saveTable(DB_KEYS.PROVIDERS, data); };
+                if (typeof requestIdleCallback === 'function') requestIdleCallback(keep); else setTimeout(keep, 300);
                 return data;
             }
         }
@@ -271,7 +292,7 @@ export const getCatalogueItems = async (): Promise<CatalogueItem[]> => {
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-                saveTable(DB_KEYS.CATALOGUE, data);
+                setTimeout(() => saveTable(DB_KEYS.CATALOGUE, data), 300);
                 return data;
             }
         }
