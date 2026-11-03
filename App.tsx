@@ -61,7 +61,8 @@ function App() {
   const [registrationKind, setRegistrationKind] = useState<null | 'individual' | 'organization'>(null);
   const [pendingRegistration, setPendingRegistration] = useState<null | 'individual' | 'organization'>(null);
   const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // With lists saved from the last visit, show the page at once and refresh behind it.
+  const [isLoading, setIsLoading] = useState(() => api.getCachedProviders().length === 0);
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isForcedReview, setIsForcedReview] = useState(false);
@@ -103,8 +104,8 @@ function App() {
   const [reviewModalSubtitle, setReviewModalSubtitle] = useState<string>('');
   const [reviewPostponeCount, setReviewPostponeCount] = useState<number>(0);
   const [pendingCtaAction, setPendingCtaAction] = useState<(() => void) | null>(null);
-  const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
+  const [providers, setProviders] = useState<ServiceProvider[]>(() => api.getCachedProviders());
+  const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>(() => api.getCachedCatalogue());
   const [documents, setDocuments] = useState<Document[]>([]);
   const [brandingConfig, setBrandingConfig] = useState<AppBrandingConfig>(() => {
     const defaultBranding: AppBrandingConfig = {
