@@ -80,6 +80,7 @@ export interface PassRow {
     visitor_phone: string;
     purpose: string;
     host_label: string;
+    mine: boolean; // false: another host's visitor, shown to an owner or manager only after the code was used
     status: VisitStatus;
     key: string | null; // only while the pass can still be used
     created_at: string;
@@ -88,7 +89,8 @@ export interface PassRow {
     left_at: string | null;
 }
 
-// The host's expected visitors for one premise. An owner or manager sees every invite; others see their own.
+// The host's own expected visitors for one premise. An owner or manager also gets other hosts' visits, but only once the
+// code was used at the gate, as a record (no phone number).
 export const getPasses = (premise: string): Promise<{ premise: { slug: string; name: string; log_times: boolean }; passes: PassRow[] }> =>
     call(`/host/passes?premise=${encodeURIComponent(premise)}`);
 
