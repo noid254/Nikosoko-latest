@@ -6,12 +6,27 @@ const API_BASE_URL = '/api/qaribu';
 // The sign-in token is added to every request by the global fetch patch in api.ts.
 const getToken = (): string | null => null;
 const clearToken = () => {};
-const ERROR_TEXT = { sign_in_required: 'Please sign in to continue.' };
+const ERROR_TEXT: Record<string, string> = {
+    sign_in_unavailable: 'Sign-in is not available right now.',
+    invalid_phone: 'Enter a valid phone number.',
+    too_many_requests: 'Too many tries. Wait a few minutes and try again.',
+    too_many_invites: 'You have sent a lot of invites. Wait a while and try again.',
+    invalid_code: 'That code is not right, or it has expired.',
+    sign_in_required: 'Please sign in again.',
+    premise_not_found: 'That premise was not found.',
+    not_allowed: 'Your role does not allow that.',
+    gate_pass_off: 'Gate pass is switched off for this premise.',
+    pass_not_found: 'No pass found for that code.',
+    not_checked_in: 'That visitor is not checked in.',
+    too_many_attempts: 'Too many wrong codes. Wait a few minutes, then try again.',
+    brand_kit_required: 'Set up your brand kit first: your business name, address and phone.',
+    too_many_receipts: 'You have issued a lot of receipts. Wait a while and try again.',
+};
 
 const call = async (path: string, options: RequestInit = {}) => {
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, cache: 'no-store' });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(response.status, data.message || data.error || `Something went wrong (${response.status}).`);
+  if (!response.ok) throw new ApiError(response.status, data.message || ERROR_TEXT[data.error] || data.error || `Something went wrong (${response.status}).`);
   return data;
 };
 
