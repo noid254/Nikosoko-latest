@@ -20,8 +20,8 @@ const ERROR_TEXT: Record<string, string> = {
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 
-const call = async (path: string, options: RequestInit = {}) => {
-  const response = await fetch(`/api/qaribu${path}`, { ...options, headers: { 'Content-Type': 'application/json' }, cache: 'no-store', signal: AbortSignal.timeout(25000) }).catch((e: any) => {
+const call = async (path: string, options: RequestInit = {}, contentType = 'application/json') => {
+  const response = await fetch(`/api/qaribu${path}`, { ...options, headers: { 'Content-Type': contentType }, cache: 'no-store', signal: AbortSignal.timeout(25000) }).catch((e: any) => {
     throw new ApiError(0, e?.name === 'TimeoutError' ? 'Qaribu is taking too long to answer. Check your connection and try again.' : 'Could not reach Nikosoko. Check your connection and try again.');
   });
   const data = await response.json().catch(() => ({}));
@@ -151,6 +151,13 @@ export interface VacancyItem {
     confirmed_at: string;
     shown_on_page: boolean; // hidden from the public page when not confirmed in the last 14 days
     timing: 'now' | 'upcoming';
+    bedrooms: number | null;
+    bathrooms: number | null;
+    deposit: number | null;
+    features: string[];
+    photos: string[]; // addresses of the photos, in order
+    photo_refs: string[]; // their names, for removing one
+    photos_needed: number; // how many more photos before the public page shows it
 }
 
 export interface WaitingPerson {
@@ -171,7 +178,17 @@ export interface VacanciesView {
     message: string | null; // what to send the people waiting once a vacancy opens
 }
 
-export interface VacancyFields { title: string; type?: string; rent?: string; available_from?: string; notes?: string; }
+export interface VacancyFields {
+    title: string;
+    type?: string;
+    rent?: string;
+    available_from?: string;
+    notes?: string;
+    bedrooms?: string;
+    bathrooms?: string;
+    deposit?: string;
+    features?: string[];
+}
 
 const vacPath = (slug: string) => `/vacancies/${encodeURIComponent(slug)}`;
 
@@ -206,3 +223,35 @@ export const gateAdmit = (slug: string, code: string, idNumber: string): Promise
 export const gateCheckout = (slug: string, visitor: string): Promise<{ ok: boolean; visitor_name: string }> =>
     call(`/gate/${encodeURIComponent(slug)}/checkout`, { method: 'POST', body: JSON.stringify({ visitor }) });
 
+
+
+// --- The premise's page: words, numbers and photos, and photos of a vacancy (owner and manager; vacancies also the caretaker) ---
+export interface PremisePage {
+    premise?: { slug: string; name: string };
+    links?: PremiseLinks | null;
+    tagline: string;
+    about: string;
+    area: string;
+    contact_phone: string;
+    whatsapp: string;
+    cover: string | null; // address of the cover photo
+    cover_ref: string | null;
+    gallery: { ref: string; url: string }[];
+}
+
+export const MAX_GALLERY = 8;
+export const MIN_VACANCY_PHOTOS = 4;
+export const MAX_VACANCY_PHOTOS = 10;
+
+export const getPremisePage = (slug: string): Promise<PremisePage> => call(`${premisePath(slug)}/page`);
+export const savePremisePage = (slug: string, fields: { tagline: string; about: string; area: string; contact_phone: string; whatsapp: string }): Promise<PremisePage> =>
+    call(`${premisePath(slug)}/page`, { method: 'PUT', body: JSON.stringify(fields) });
+// A photo from the in-app camera: as 'cover' replaces the header photo, as 'gallery' adds to the premise's photos.
+export const uploadPremisePicture = (slug: string, as: 'cover' | 'gallery', photo: Blob): Promise<PremisePage> =>
+    call(`${premisePath(slug)}/pictures?as=${as}`, { method: 'POST', body: photo }, 'image/jpeg');
+export const deletePremisePicture = (slug: string, ref: string): Promise<PremisePage> =>
+    call(`${premisePath(slug)}/pictures/${encodeURIComponent(ref)}`, { method: 'DELETE' });
+export const uploadVacancyPhoto = (slug: string, id: string, photo: Blob): Promise<VacancyItem> =>
+    call(`${vacPath(slug)}/${encodeURIComponent(id)}/photos`, { method: 'POST', body: photo }, 'image/jpeg');
+export const deleteVacancyPhoto = (slug: string, id: string, ref: string): Promise<VacancyItem> =>
+    call(`${vacPath(slug)}/${encodeURIComponent(id)}/photos/${encodeURIComponent(ref)}`, { method: 'DELETE' });

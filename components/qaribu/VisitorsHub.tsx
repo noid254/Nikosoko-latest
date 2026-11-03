@@ -6,6 +6,7 @@ import InviteTab from './visitors/InviteTab';
 import ManageTab from './visitors/ManageTab';
 import MyDetails from './visitors/MyDetails';
 import SignUpPremise from './visitors/SignUpPremise';
+import PremisePageEditor from './visitors/PremisePageEditor';
 import VacanciesTab from './visitors/VacanciesTab';
 import { fieldClass, roleLabel } from './visitors/shared';
 
@@ -15,7 +16,7 @@ interface VisitorsHubProps {
   onBack: () => void;
 }
 
-type TabKey = 'invite' | 'expected' | 'gate' | 'vacancies' | 'manage';
+type TabKey = 'invite' | 'expected' | 'gate' | 'page' | 'vacancies' | 'manage';
 
 // What a person can do on a premise follows their role there. The server checks the role again on every call;
 // this only decides which tabs to show, so nobody is offered a button that would be refused.
@@ -23,6 +24,7 @@ const tabsFor = (m: api.Membership): { key: TabKey; label: string }[] => {
   const tabs: { key: TabKey; label: string }[] = [];
   if (m.gate_pass_enabled && m.can_invite) tabs.push({ key: 'invite', label: 'Invite' }, { key: 'expected', label: 'Expected' });
   if (m.gate_pass_enabled && m.can_run_gate) tabs.push({ key: 'gate', label: 'Gate' });
+  if (m.can_manage) tabs.push({ key: 'page', label: 'My page' });
   if (m.can_manage_vacancies) tabs.push({ key: 'vacancies', label: 'Vacancies' });
   if (m.can_manage) tabs.push({ key: 'manage', label: 'Manage' });
   return tabs;
@@ -89,7 +91,7 @@ const VisitorsHub: React.FC<VisitorsHubProps> = ({ isAuthenticated, onSignIn, on
             onCancel={() => setRegistering(false)}
             onDone={(opened) => {
               setRegistering(false);
-              setTab('vacancies'); // the next thing a new premise needs is its vacancies
+              setTab('page'); // the next thing a new premise needs is its page: a cover photo, a bio and its photos
               void refresh(opened);
             }}
           />
@@ -129,14 +131,14 @@ const VisitorsHub: React.FC<VisitorsHubProps> = ({ isAuthenticated, onSignIn, on
                   : 'Gate pass is switched off for this premise. Ask the owner or manager to turn it on.'}
               </div>
             ) : (
-              <div className="flex bg-gray-200 rounded-lg p-1" role="tablist">
+              <div className="flex bg-gray-200 rounded-lg p-1 overflow-x-auto no-scrollbar" role="tablist">
                 {tabs.map((t) => (
                   <button
                     key={t.key}
                     role="tab"
                     aria-selected={activeTab === t.key}
                     onClick={() => setTab(t.key)}
-                    className={`flex-1 py-2 rounded-md text-sm font-semibold ${activeTab === t.key ? 'bg-white shadow text-brand-navy' : 'text-gray-600'}`}
+                    className={`flex-1 whitespace-nowrap px-3 py-2 rounded-md text-sm font-semibold ${activeTab === t.key ? 'bg-white shadow text-brand-navy' : 'text-gray-600'}`}
                   >
                     {t.label}
                   </button>
@@ -147,6 +149,7 @@ const VisitorsHub: React.FC<VisitorsHubProps> = ({ isAuthenticated, onSignIn, on
             {activeTab === 'invite' && <InviteTab key={premise.slug} premise={premise} />}
             {activeTab === 'expected' && <ExpectedTab key={premise.slug} premise={premise} />}
             {activeTab === 'gate' && <GateTab key={premise.slug} premise={premise} />}
+            {activeTab === 'page' && <PremisePageEditor key={premise.slug} premise={premise} />}
             {activeTab === 'vacancies' && <VacanciesTab key={premise.slug} premise={premise} />}
             {activeTab === 'manage' && <ManageTab key={premise.slug} premise={premise} onChanged={() => void refresh()} />}
 
