@@ -17,12 +17,27 @@ const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 
 let db: Database;
 
-// Helper to persist SQLite DB to disk
-function saveDb() {
+// Writes the whole database to disk. sql.js exports by copying the entire database and resetting it, which is slow and
+// grows memory, so this must not run after every single change.
+function saveDbNow() {
   if (!db) return;
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   const data = db.export();
   const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_FILE, buffer);
+  fs.writeFileSync(DB_FILE + '.tmp', buffer);
+  fs.renameSync(DB_FILE + '.tmp', DB_FILE);
+}
+
+// Changes are saved together: a burst of writes (like the start-up checks) costs one save, about 1.5 seconds later.
+let saveTimer: NodeJS.Timeout | null = null;
+function saveDb() {
+  if (!db || saveTimer) return;
+  saveTimer = setTimeout(() => { saveTimer = null; try { saveDbNow(); } catch (e) { console.error('Could not save the database:', e); } }, 1500);
+}
+
+// Nothing waiting is lost when the app is stopped or restarted.
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(sig, () => { try { saveDbNow(); } catch (e) { console.error('Could not save the database:', e); } process.exit(0); });
 }
 
 // Helper to convert SQL query result to array of objects
@@ -1627,6 +1642,12 @@ async function startServer() {
       console.error('Check-in error:', e);
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // A request body that is not valid JSON (scanners probe for this) gets a plain 400 instead of a logged stack trace.
+  app.use((err: any, _req: any, res: any, next: any) => {
+    if (err && (err.type === 'entity.parse.failed' || err.status === 400)) return res.status(400).json({ error: 'Bad request.' });
+    next(err);
   });
 
   // 404 JSON fallback for unhandled API routes and internal control plane routes
