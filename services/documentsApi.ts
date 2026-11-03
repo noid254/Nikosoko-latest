@@ -24,7 +24,9 @@ const ERROR_TEXT: Record<string, string> = {
 };
 
 const call = async (path: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, cache: 'no-store' });
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, cache: 'no-store', signal: AbortSignal.timeout(25000) }).catch((e: any) => {
+    throw new ApiError(0, e?.name === 'TimeoutError' ? 'Qaribu is taking too long to answer. Check your connection and try again.' : 'Could not reach Nikosoko. Check your connection and try again.');
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, data.message || ERROR_TEXT[data.error] || data.error || `Something went wrong (${response.status}).`);
   return data;
