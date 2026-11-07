@@ -47,6 +47,7 @@ async function newSession(phone9: string): Promise<string> {
   const payload = JSON.stringify({ phone: `+254${phone9}` });
   const r = await once({ method: 'POST', path: '/auth/bridge', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'X-Bridge-Secret': secret } }, payload);
   const data = (() => { try { return JSON.parse(r.text); } catch { return {}; } })();
+  if (r.status !== 200 || !data.token) console.warn(`[qaribu] session request refused: the platform answered ${r.status} ${String(data.error || '').slice(0, 80)}`);
   if (r.status !== 200 || !data.token) throw Object.assign(new Error('Qaribu could not sign you in right now. Try again in a moment.'), { status: 502 });
   sessions.set(phone9, { token: data.token, until: Math.min(Date.parse(data.expires_at) - 10 * 60 * 1000, Date.now() + 11 * 3600_000) });
   return data.token;
@@ -77,7 +78,7 @@ export function registerQaribuBridge({ app, requireAuth }: Deps) {
         up.pipe(res);
       });
       upstream.setTimeout(30000, () => upstream.destroy(new Error('timeout')));
-      upstream.on('error', () => { if (!res.headersSent) res.status(502).json({ error: 'Qaribu is not answering right now. Try again in a moment.' }); else res.end(); });
+      upstream.on('error', (err: any) => { console.warn(`[qaribu] platform not reachable: ${err?.code || err?.message}`); if (!res.headersSent) res.status(502).json({ error: 'Qaribu is not answering right now. Try again in a moment.' }); else res.end(); });
       if (parsed) upstream.end(parsed);
       else if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'DELETE') upstream.end();
       else req.pipe(upstream);
