@@ -793,7 +793,7 @@ async function startServer() {
         if (p.role === 'SuperAdmin') p.role = 'Provider';
       }
       const skillsJson = JSON.stringify(p.skills || []);
-      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, ...safeP } = p;
+      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, rawData: _pNested, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
       const prior = queryOne('SELECT rating, reviewsCount, isVerified FROM providers WHERE id = ?', [id]);
 
@@ -843,7 +843,9 @@ async function startServer() {
         }
       }
       const skillsJson = JSON.stringify(updated.skills || []);
-      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, ...safeForRawData } = updated;
+      // rawData must never be stored inside itself: the database row carries it as a column, and spreading the row
+      // into the profile used to wrap the old copy inside the new one on every save (the file grew past 700 MB).
+      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, rawData: _rdNested, ...safeForRawData } = updated;
       const rawDataJson = JSON.stringify(safeForRawData);
 
       runSql(
