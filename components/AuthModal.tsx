@@ -283,16 +283,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLogin }) => {
               </div>
 
               {useApp ? (
-                <div className="text-center pt-0.5">
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => { setUseApp(false); setOtp(''); handleSendOtp(); }}
-                    className="text-[10px] font-bold text-black underline cursor-pointer"
-                  >
-                    Get an SMS code instead
-                  </button>
-                </div>
+                <p className="text-center text-[10px] text-neutral-500 pt-0.5">
+                  No SMS is sent for this number because it is protected by an authenticator app. Lost it? Type one of your backup codes above, or ask the admin to reset it.
+                </p>
               ) : (
               <div className="flex items-center justify-between text-[9.5px] pt-0.5">
                 <span className="text-neutral-500 font-medium">

@@ -178,6 +178,11 @@ if (typeof window !== 'undefined' && !(window as any).__nikosokoFetchPatched) {
 // --- Sign in ---
 // The server is the only place codes are created and checked. Nothing here knows or stores a code.
 const readJson = async (res: Response) => { try { return await res.json(); } catch { return null; } };
+// A wrong code and a broken server must not look the same: with no readable answer, say the server is the problem.
+const failText = (res: Response, data: any, fallback: string) =>
+    data?.error || (!data || res.status >= 500
+        ? `The server did not answer properly (error ${res.status}). Try again in a minute; if it keeps happening, tell the admin.`
+        : fallback);
 
 export const sendOtp = async (target: string): Promise<{ success: boolean; useAuthenticator?: boolean; message: string }> => {
     const res = await fetch('/api/auth/send-otp', {
@@ -186,7 +191,7 @@ export const sendOtp = async (target: string): Promise<{ success: boolean; useAu
         body: JSON.stringify({ target: String(target).trim() })
     });
     const data = await readJson(res);
-    if (!res.ok) throw new Error(data?.error || 'We could not send a code. Try again.');
+    if (!res.ok) throw new Error(failText(res, data, 'We could not send a code. Try again.'));
     return { success: true, useAuthenticator: Boolean(data?.useAuthenticator), message: data?.message || 'Code sent.' };
 };
 
@@ -208,7 +213,7 @@ export const verifyOtp = async (target: string, otp: string, method: 'sms' | 'to
         body: JSON.stringify({ target: String(target).trim(), code, method })
     });
     const data = await readJson(res);
-    if (!res.ok) throw new Error(data?.error || 'That code did not work.');
+    if (!res.ok) throw new Error(failText(res, data, 'That code did not work.'));
     setToken(data.token);
     if (data.provider) saveToProfilesIndex(data.provider);
     return {
