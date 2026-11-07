@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { ServiceProvider, RatingDispute, ReferralCode, OrgOffering } from '../types';
-import { ensureReferralCodes } from '../services/api';
+import { ensureReferralCodes, getPendingSaccoRequests, decideSaccoRequest, type PendingSaccoRequest } from '../services/api';
 
 interface SaccoDashboardProps {
   currentUser: ServiceProvider | null;
@@ -126,17 +126,36 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
   
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
-  // Active Sacco members list
+  // Active Sacco members list. Someone who is only waiting to be verified (or was turned down) is not a member yet.
   const activeMembers = providers.filter(p => 
     p.accountType !== 'organization' && 
-    (p.saccoMember?.saccoId === currentSaccoOrg.id || 
-     p.saccoMember?.saccoName === currentSaccoOrg.name || 
+    (((p.saccoMember?.saccoId === currentSaccoOrg.id || p.saccoMember?.saccoName === currentSaccoOrg.name) &&
+      p.saccoMember?.status !== 'Pending' && p.saccoMember?.status !== 'Rejected') ||
      p.isSaccoVerified)
   );
 
-  // Pending join requests
+  // Pending join requests: the members who typed this sacco's code, kept on the server so they survive a reload.
+  const [serverPending, setServerPending] = useState<PendingSaccoRequest[]>([]);
+  useEffect(() => {
+    let live = true;
+    void getPendingSaccoRequests(currentSaccoOrg.id).then(rows => { if (live) setServerPending(rows); });
+    return () => { live = false; };
+  }, [currentSaccoOrg.id]);
   const joinRequests = currentSaccoOrg.joinRequests || [];
-  const pendingRequests = joinRequests.filter((r: any) => r.status === 'Pending' || r.status === 'pending');
+  const pendingRequests = [
+    ...serverPending.map(r => ({ id: `srv_${r.userId}`, userId: r.userId, userName: r.userName || 'Member', userPhone: r.userPhone, status: 'Pending' })),
+    ...joinRequests.filter((r: any) => (r.status === 'Pending' || r.status === 'pending') && !serverPending.some(x => x.userId === r.userId)),
+  ];
+  const decide = async (userId: string, decision: 'approve' | 'reject') => {
+    const onServer = serverPending.some(r => r.userId === userId);
+    if (onServer) {
+      const r = await decideSaccoRequest(userId, decision);
+      if ('error' in r) { alert(r.error); return; }
+      setServerPending(prev => prev.filter(x => x.userId !== userId));
+    }
+    if (decision === 'approve') onApproveSaccoMember(currentSaccoOrg.id, userId);
+    else onRejectSaccoMember(currentSaccoOrg.id, userId);
+  };
 
   // Rating Disputes
   const disputes: RatingDispute[] = currentSaccoOrg.ratingDisputes || [];
@@ -434,13 +453,13 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => onApproveSaccoMember(currentSaccoOrg.id, req.userId)}
+                          onClick={() => void decide(req.userId, 'approve')}
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-xs"
                         >
                           ✓ Confirm
                         </button>
                         <button
-                          onClick={() => onRejectSaccoMember(currentSaccoOrg.id, req.userId)}
+                          onClick={() => void decide(req.userId, 'reject')}
                           className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-black text-[10px] px-2.5 py-1.5 rounded-xl uppercase tracking-wider"
                         >
                           ✕ Reject

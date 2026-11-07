@@ -410,6 +410,44 @@ export const redeemReferralCode = async (
     } catch { return { error: 'No connection. Try the code again.' }; }
 };
 
+// --- Joining an organization (a sacco) with its code ---
+// The member sends the code and waits. The organization decides; only then is the member verified.
+export type SaccoRequest =
+    | { status: 'none' }
+    | { status: 'pending' | 'approved' | 'rejected'; code: string; orgId: string; orgName: string; requestedAt?: string };
+
+export const requestToJoinOrg = async (code: string, userId: string): Promise<{ status: 'pending'; orgName: string } | { error: string }> => {
+    try {
+        const res = await fetch('/api/referral-codes/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, userId }) });
+        const data = await res.json().catch(() => null);
+        return res.ok ? data : { error: data?.error || 'That code could not be used.' };
+    } catch { return { error: 'No connection. Try the code again.' }; }
+};
+
+export const getMySaccoRequest = async (userId: string): Promise<SaccoRequest | null> => {
+    try {
+        const res = await fetch(`/api/referral-codes/mine/${encodeURIComponent(userId)}`);
+        return res.ok ? await res.json() : null;
+    } catch { return null; }
+};
+
+export interface PendingSaccoRequest { userId: string; userName: string; userPhone: string; code: string; createdAt: string }
+
+export const getPendingSaccoRequests = async (orgId: string): Promise<PendingSaccoRequest[]> => {
+    try {
+        const res = await fetch(`/api/referral-codes/pending/${encodeURIComponent(orgId)}`);
+        return res.ok ? await res.json() : [];
+    } catch { return []; }
+};
+
+export const decideSaccoRequest = async (userId: string, decision: 'approve' | 'reject'): Promise<{ success: true } | { error: string }> => {
+    try {
+        const res = await fetch('/api/referral-codes/decide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, decision }) });
+        const data = await res.json().catch(() => null);
+        return res.ok ? { success: true } : { error: data?.error || 'That did not go through. Try again.' };
+    } catch { return { error: 'No connection. Try again.' }; }
+};
+
 // --- Ratings ---
 // Averages are computed on the server from real ratings; the client never calculates them.
 export const submitRating = async (

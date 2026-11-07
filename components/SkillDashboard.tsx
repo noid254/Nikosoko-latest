@@ -1,20 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import * as api from '../services/api';
 import type { ServiceProvider, CurrentPage } from '../types';
 import { normalizeSkills } from '../utils/skills';
 import { calculateTrustAndRanking } from '../utils/trustEngine';
 import {
   ShieldCheck,
-  GraduationCap,
-  Search,
   Plus,
   Star,
-  ExternalLink,
   MapPin,
   ArrowLeft,
-  X,
-  TrendingUp,
-  Sparkles,
-  Flame
+  X
 } from 'lucide-react';
 
 export interface SkillItem {
@@ -32,140 +27,11 @@ export interface SkillItem {
   endorsementsCount?: number;
 }
 
-export interface LearningCenterCourse {
-  id: string;
-  category: string;
-  title: string;
-  institution: string;
-  institutionShort: string;
-  institutionUrl: string;
-  location: string;
-  distanceKm: number;
-  earningBoost: string;
-  duration: string;
-  classFormat: string;
-  estimatedFee: string;
-  prerequisites: string;
-  certificationAwarded: string;
-  demandTag: string;
-  description: string;
-}
-
 // Everything built from this list is sample content, shown so people can see how the hub will look.
 const SampleTag: React.FC = () => (
   <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">Sample</span>
 );
 
-const ACCREDITED_COURSES: LearningCenterCourse[] = [
-  {
-    id: 'crs-1',
-    category: 'Woodwork & Joinery',
-    title: 'Master Cabinetry, Wood Jointing & Finishing Grade II',
-    institution: 'National Industrial Training Authority (NITA Kenya)',
-    institutionShort: 'NITA',
-    institutionUrl: 'https://www.nita.go.ke',
-    location: 'Industrial Area, Nairobi (3.2 km)',
-    distanceKm: 3.2,
-    earningBoost: '+KES 2,500/day',
-    duration: '2 Weeks',
-    classFormat: 'Practical Shop Workshops',
-    estimatedFee: 'KES 8,500',
-    prerequisites: 'Basic carpentry tools familiarity',
-    certificationAwarded: 'NITA Grade II Joinery Trade Certificate',
-    demandTag: 'HIGH DEMAND (+38% EARNINGS)',
-    description: 'Advanced hardwood jointing techniques, veneer lamination, custom kitchen cabinet fitting, and high-gloss spray varnishing.'
-  },
-  {
-    id: 'crs-2',
-    category: 'Electrical & Solar',
-    title: 'EPRA Class T3 Solar PV & Hybrid Inverter Certification',
-    institution: 'Energy & Petroleum Regulatory Authority (EPRA / NITA)',
-    institutionShort: 'EPRA',
-    institutionUrl: 'https://www.epra.go.ke',
-    location: 'Upper Hill, Nairobi (4.5 km)',
-    distanceKm: 4.5,
-    earningBoost: '+KES 2,000/day',
-    duration: '3 Weeks',
-    classFormat: 'Evening / Weekend Hybrid',
-    estimatedFee: 'KES 12,000',
-    prerequisites: 'Electrical Trade Test Grade III or Diploma',
-    certificationAwarded: 'EPRA Class T3 Solar Contractor License',
-    demandTag: 'CRITICAL TRADE',
-    description: 'High-voltage hybrid solar inverter sizing, lithium battery bank wiring, surge protection, and grid-tie net metering standards.'
-  },
-  {
-    id: 'crs-3',
-    category: 'Metalwork & Fabrication',
-    title: 'MIG & Structural Arc Welding for Steel Structures',
-    institution: 'Kenya Industrial Training Institute (KITI)',
-    institutionShort: 'KITI',
-    institutionUrl: 'https://www.kiti.ac.ke',
-    location: 'Industrial Grounds, Nairobi (12.0 km)',
-    distanceKm: 12.0,
-    earningBoost: '+KES 1,800/day',
-    duration: '2 Weeks',
-    classFormat: 'Full-time Metal Workshop',
-    estimatedFee: 'KES 9,500',
-    prerequisites: 'Safety boots & welding mask',
-    certificationAwarded: 'KITI Certified Structural Welder Badge',
-    demandTag: 'HIGH EMPLOYMENT',
-    description: 'Electric arc welding, MIG steel jointing, security gate fabrication, pressure testing, and E7018 low-hydrogen rod application.'
-  },
-  {
-    id: 'crs-4',
-    category: 'Agribusiness',
-    title: 'Commercial Bee Hive Management & Honey Extraction',
-    institution: 'Kenya Agricultural & Livestock Research Org (KALRO)',
-    institutionShort: 'KALRO',
-    institutionUrl: 'https://www.kalro.org',
-    location: 'Loresho Station, Nairobi (8.0 km)',
-    distanceKm: 8.0,
-    earningBoost: '+KES 1,800/day',
-    duration: '5 Days',
-    classFormat: 'Field Demonstration',
-    estimatedFee: 'KES 6,500',
-    prerequisites: 'Open to all artisans & farmers',
-    certificationAwarded: 'KALRO Certified Commercial Apiarist',
-    demandTag: 'EXPORT GRADE',
-    description: 'Langstroth hive setup, queen bee rearing, hive disease control, smoker operation, and centrifuge honey refining.'
-  },
-  {
-    id: 'crs-5',
-    category: 'Plumbing & Heating',
-    title: 'Solar Water Heating & Thermosiphon Piping Installation',
-    institution: 'Technical & Vocational Education Training Authority (TVETA)',
-    institutionShort: 'TVETA',
-    institutionUrl: 'https://www.tveta.go.ke',
-    location: 'Kabete National Polytechnic (5.0 km)',
-    distanceKm: 5.0,
-    earningBoost: '+KES 1,400/day',
-    duration: '2 Weeks',
-    classFormat: 'Evening / Saturday Classes',
-    estimatedFee: 'KES 9,000',
-    prerequisites: 'Basic plumbing experience',
-    certificationAwarded: 'TVETA Solar Thermal Systems Technician',
-    demandTag: 'RENEWABLE ENERGY',
-    description: 'Pressurized thermosiphon collectors, solar circulator pumps, PPR pipe fusion, and thermostatic mixing valve regulation.'
-  },
-  {
-    id: 'crs-6',
-    category: 'Industrial Automation',
-    title: 'PLC Programming & Factory Motor Control Panels',
-    institution: 'Nairobi Technical Training Institute (NTTI)',
-    institutionShort: 'NTTI',
-    institutionUrl: 'https://www.nairobibits.org',
-    location: 'Ngara, Nairobi (2.1 km)',
-    distanceKm: 2.1,
-    earningBoost: '+KES 3,000/day',
-    duration: '4 Weeks',
-    classFormat: 'Weekend Laboratory',
-    estimatedFee: 'KES 15,000',
-    prerequisites: 'Electrical principles knowledge',
-    certificationAwarded: 'Industrial Motor Automation Certificate',
-    demandTag: 'INDUSTRIAL TECH',
-    description: 'Ladder logic programming for PLCs, variable speed drives (VSD), relay control circuits, and three-phase motor star-delta starters.'
-  }
-];
 
 // Nairobi-area estates used for the local demand heatmap below. Intensity is
 // derived deterministically from the estate + the member's primary category
@@ -257,11 +123,15 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
   onBack,
   onUpdateUser
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedCourseModal, setSelectedCourseModal] = useState<LearningCenterCourse | null>(null);
+
+  // Joining a sacco with its code: the member sends the code, then waits for the organization to verify.
+  const [showSacco, setShowSacco] = useState(false);
+  const [saccoReq, setSaccoReq] = useState<api.SaccoRequest | null>(null);
+  const [saccoCodeInput, setSaccoCodeInput] = useState('');
+  const [saccoBusy, setSaccoBusy] = useState(false);
+  const [saccoError, setSaccoError] = useState('');
 
   // Form states for adding skill
   const [formTitle, setFormTitle] = useState('');
@@ -273,56 +143,55 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
   const [formLicenseNo, setFormLicenseNo] = useState('');
   const [formDesc, setFormDesc] = useState('');
 
-  // User Skills Normalized
-  const [skillsList, setSkillsList] = useState<SkillItem[]>(() => {
-    const norm = normalizeSkills(currentUser?.skills);
-    if (norm.length > 0) {
-      return norm.map((s: any, idx: number) => ({
-        id: s.id || `sk-${idx}`,
-        skillTitle: s.skillTitle || s.name || 'Verified Trade Skill',
-        category: s.category || 'General Services',
-        certificationName: s.certificationName || 'Trade Test Grade II',
-        issuingSchool: s.issuingSchool || 'NITA / TVET Kenya',
-        yearObtained: s.yearObtained || '2023',
-        hourlyRate: s.hourlyRate || currentUser?.hourlyRate || 2500,
-        currency: s.currency || 'KES',
-        description: s.description || 'Verified practical competency in specialized trade installations.',
-        verificationStatus: s.isVerified ? 'verified' : 'verified',
-        licenseNumber: `NITA-${Math.floor(1000 + Math.random() * 9000)}-2023`,
-        endorsementsCount: 12
-      }));
+  const refreshSacco = async () => {
+    if (!currentUser?.id) return;
+    const r = await api.getMySaccoRequest(currentUser.id);
+    if (!r) return;
+    setSaccoReq(r);
+    // Approved since the last visit: carry the verification into the signed-in profile.
+    if (r.status === 'approved' && !currentUser.isSaccoVerified) {
+      onUpdateUser?.({ ...currentUser, isSaccoVerified: true, verifiedByOrgName: r.orgName, saccoMember: { saccoId: r.orgId, saccoName: r.orgName, saccoCode: r.code, status: 'Confirmed', requestedAt: r.requestedAt || '', confirmedAt: new Date().toISOString() } } as any);
     }
-    return [
-      {
-        id: 'sk-1',
-        skillTitle: 'Cabinetry & Custom Furniture Jointing',
-        category: 'Woodwork & Joinery',
-        certificationName: 'NITA Grade II Joinery Trade Certificate',
-        issuingSchool: 'National Industrial Training Authority (NITA Kenya)',
-        yearObtained: '2023',
-        hourlyRate: 2800,
-        currency: 'KES',
-        description: 'Hardwood mortise-and-tenon joints, kitchen cabinet fitting, veneer laminates, and varnish finishing.',
-        verificationStatus: 'verified',
-        licenseNumber: 'NITA-J-2023-882',
-        endorsementsCount: 14
-      },
-      {
-        id: 'sk-2',
-        skillTitle: 'EPRA Solar PV & Inverter System Wiring',
-        category: 'Electrical & Solar',
-        certificationName: 'EPRA Class T3 Electrical License',
-        issuingSchool: 'Energy & Petroleum Regulatory Authority / NITA',
-        yearObtained: '2023',
-        hourlyRate: currentUser?.hourlyRate || 2500,
-        currency: 'KES',
-        description: 'Off-grid hybrid solar inverter hookups, lithium battery bank balancing, DC surge protection, and line testing.',
-        verificationStatus: 'verified',
-        licenseNumber: 'EPRA-T3-2023-112',
-        endorsementsCount: 9
-      }
-    ];
-  });
+  };
+  useEffect(() => { void refreshSacco(); }, [currentUser?.id]);
+
+  const sendSaccoCode = async () => {
+    const code = saccoCodeInput.trim();
+    if (!code || !currentUser?.id) { setSaccoError('Enter the code your organization gave you.'); return; }
+    setSaccoBusy(true); setSaccoError('');
+    const r = await api.requestToJoinOrg(code, currentUser.id);
+    setSaccoBusy(false);
+    if ('error' in r) { setSaccoError(r.error); return; }
+    setSaccoCodeInput('');
+    await refreshSacco();
+  };
+
+  const saccoStatus: 'approved' | 'pending' | 'rejected' | 'none' =
+    saccoReq && saccoReq.status !== 'none' ? saccoReq.status
+    : currentUser?.isSaccoVerified && currentUser?.saccoMember?.status !== 'Pending' ? 'approved'
+    : currentUser?.saccoMember?.status === 'Pending' ? 'pending'
+    : 'none';
+  const saccoOrgName = (saccoReq && saccoReq.status !== 'none' ? saccoReq.orgName : '') || currentUser?.saccoMember?.saccoName || currentUser?.verifiedByOrgName || '';
+
+  // User Skills Normalized
+  // Only what the member entered. Nothing is made up: no sample skills, no licence numbers, no endorsements.
+  const [skillsList, setSkillsList] = useState<SkillItem[]>(() =>
+    normalizeSkills(currentUser?.skills).map((s: any, idx: number) => ({
+      id: s.id || `sk-${idx}`,
+      skillTitle: s.skillTitle || s.name || 'Skill',
+      category: s.category || 'General',
+      certificationName: s.certificationName || '',
+      issuingSchool: s.issuingSchool || '',
+      yearObtained: s.yearObtained || '',
+      hourlyRate: Number(s.hourlyRate) || Number(currentUser?.hourlyRate) || 0,
+      currency: s.currency || 'KES',
+      description: s.description || '',
+      // Verified only when an organization or the admin has verified it, never because the member typed it.
+      verificationStatus: s.isVerified ? 'verified' : 'unverified',
+      licenseNumber: s.licenseNumber || '',
+      endorsementsCount: Number(s.endorsementsCount) || 0,
+    }))
+  );
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -337,14 +206,14 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
       id: `sk-${Date.now()}`,
       skillTitle: formTitle.trim(),
       category: formCategory,
-      certificationName: formCertName.trim() || 'Practical Trade Competency Badge',
-      issuingSchool: formSchool.trim() || 'Accredited TVET Institution',
-      yearObtained: formYear || '2024',
-      hourlyRate: parseFloat(formRate) || 2000,
+      certificationName: formCertName.trim(),
+      issuingSchool: formSchool.trim(),
+      yearObtained: formYear,
+      hourlyRate: parseFloat(formRate) || 0,
       currency: 'KES',
-      description: formDesc.trim() || 'Verified trade skill added to NikoSoko skill passport.',
-      verificationStatus: 'verified',
-      licenseNumber: formLicenseNo.trim() || `VERIF-${Math.floor(10000 + Math.random() * 90000)}`,
+      description: formDesc.trim(),
+      verificationStatus: 'unverified',
+      licenseNumber: formLicenseNo.trim(),
       endorsementsCount: 0
     };
 
@@ -359,20 +228,8 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
     setFormSchool('');
     setFormLicenseNo('');
     setFormDesc('');
-    showToast('✓ Skill credential added to passport');
+    showToast('✓ Skill added');
   };
-
-  // Filtered courses
-  const filteredCourses = useMemo(() => {
-    return ACCREDITED_COURSES.filter(c => {
-      const matchCat = selectedCategory === 'ALL' || c.category === selectedCategory;
-      const matchQuery = !searchQuery ||
-        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.institution.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchQuery;
-    });
-  }, [selectedCategory, searchQuery]);
 
   // Compute 5-Pillar Trust and Ranking Breakdown
   const trustBreakdown = useMemo(() => {
@@ -391,15 +248,6 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
   const clientRating = currentUser?.rating || 0;
   const reviewsCount = currentUser?.reviewsCount || 0;
 
-  // Recommended skills: courses in categories the member doesn't already
-  // hold, ranked by whichever carries the strongest demand signal.
-  const recommendedCourses = useMemo(() => {
-    const ownedCategories = new Set(skillsList.map(s => s.category));
-    const notOwned = ACCREDITED_COURSES.filter(c => !ownedCategories.has(c.category));
-    const pool = notOwned.length > 0 ? notOwned : ACCREDITED_COURSES;
-    return pool.slice(0, 4);
-  }, [skillsList]);
-
   // Local demand heatmap for the member's primary trade category.
   const primaryCategory = skillsList[0]?.category || 'General Services';
   const heatmapData = useMemo(() => {
@@ -408,8 +256,6 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
       return { area, intensity };
     }).sort((a, b) => b.intensity - a.intensity);
   }, [primaryCategory]);
-
-  const categories = ['ALL', 'Woodwork & Joinery', 'Electrical & Solar', 'Metalwork & Fabrication', 'Agribusiness', 'Plumbing & Heating', 'Industrial Automation'];
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-black w-full max-w-5xl mx-auto border-x border-gray-200 pb-20">
@@ -433,7 +279,7 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           </button>
           <div>
             <h1 className="text-sm font-black uppercase tracking-wider text-white">Skill Hub</h1>
-            <p className="text-[11px] text-gray-400">Trust score, demand insights & accredited training</p>
+            <p className="text-[11px] text-gray-400">Your trust score and skills</p>
           </div>
         </div>
 
@@ -447,13 +293,6 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
       </header>
 
       <main className="p-4 sm:p-6 space-y-5">
-
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="note">
-          <p className="font-bold">Some of this page is sample content</p>
-          <p className="mt-1 leading-relaxed">
-            Training courses, fees, earnings boosts and area demand are examples marked <strong>Sample</strong>. Institutions will add their real courses here. Your own skills, rating and trust score are real.
-          </p>
-        </div>
 
         {/* RATING GAUGE HERO */}
         <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs">
@@ -503,38 +342,19 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
                   <span className="text-[9px] text-gray-400 uppercase font-bold block">Daily Rate</span>
                   <span className="text-sm font-black text-black block">{currentUser?.hourlyRate ? `KES ${currentUser.hourlyRate}` : 'Not set yet'}</span>
                 </div>
-                <div className="bg-gray-50 p-2.5 border border-gray-200 rounded-xl col-span-2 sm:col-span-1">
+                <button
+                  type="button"
+                  data-testid="sacco-tile"
+                  onClick={() => { setSaccoError(''); setShowSacco(true); void refreshSacco(); }}
+                  className="text-left bg-gray-50 p-2.5 border border-gray-200 rounded-xl col-span-2 sm:col-span-1 cursor-pointer hover:border-emerald-400 active:scale-[0.99] transition"
+                >
                   <span className="text-[9px] text-gray-400 uppercase font-bold block">Sacco</span>
-                  <span className="text-sm font-black text-emerald-700 block truncate">{currentUser?.saccoMember?.saccoName || currentUser?.verifiedByOrgName || 'Not linked yet'}</span>
-                </div>
+                  {saccoStatus === 'approved' && <span className="text-sm font-black text-emerald-700 block truncate">{saccoOrgName} ✓</span>}
+                  {saccoStatus === 'pending' && <span className="text-sm font-black text-amber-700 block truncate">Waiting for {saccoOrgName || 'verification'}</span>}
+                  {(saccoStatus === 'none' || saccoStatus === 'rejected') && <span className="text-sm font-black text-emerald-700 block truncate underline">{saccoStatus === 'rejected' ? 'Not accepted · try again' : 'Not linked · tap to join'}</span>}
+                </button>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* RECOMMENDED SKILLS ON DEMAND */}
-        <section className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-black">Recommended For You</h3>
-            <SampleTag />
-          </div>
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-            {recommendedCourses.map(course => (
-              <button
-                key={course.id}
-                onClick={() => setSelectedCourseModal(course)}
-                className="text-left shrink-0 w-56 bg-white border border-gray-200 hover:border-emerald-400 rounded-xl p-3.5 transition-colors cursor-pointer"
-              >
-                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  <Flame className="w-2.5 h-2.5" />
-                  {course.demandTag}
-                </span>
-                <h4 className="text-xs font-bold text-black mt-2 leading-snug line-clamp-2">{course.title}</h4>
-                <p className="text-[10.5px] text-gray-500 mt-1">{course.institutionShort} • {course.duration}</p>
-                <p className="text-[11px] font-black text-emerald-700 mt-1.5">{course.earningBoost}</p>
-              </button>
-            ))}
           </div>
         </section>
 
@@ -619,153 +439,111 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Verified Skills ({skillsList.length})</span>
+              <span>Your Skills ({skillsList.length})</span>
             </h3>
           </div>
 
           <div className="space-y-2.5">
+            {skillsList.length === 0 && (
+              <div className="bg-white border border-dashed border-gray-300 rounded-xl p-6 text-center space-y-2" data-testid="no-skills">
+                <p className="text-sm font-bold text-black">No skills listed yet</p>
+                <p className="text-xs text-gray-500">Add the skills you work in. Adding a certificate name and the school that issued it counts toward your trust score.</p>
+              </div>
+            )}
             {skillsList.map((skill) => (
               <div key={skill.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2 hover:border-emerald-300 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-sm text-black">{skill.skillTitle}</h4>
-                      <span className="text-[9px] uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black">
-                        Verified
-                      </span>
+                      {skill.verificationStatus === 'verified'
+                        ? <span className="text-[9px] uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black">Verified</span>
+                        : <span className="text-[9px] uppercase bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-black">Not verified yet</span>}
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      <span className="font-bold text-black">{skill.category}</span> • {skill.issuingSchool}
+                      <span className="font-bold text-black">{skill.category}</span>{skill.issuingSchool ? <> • {skill.issuingSchool}</> : null}
                     </p>
                   </div>
-                  <div className="text-left sm:text-right text-xs">
-                    <span className="text-emerald-800 font-bold">{skill.certificationName}</span>
-                    <p className="text-[11px] text-gray-400">License #: {skill.licenseNumber} ({skill.yearObtained})</p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-600 leading-relaxed">{skill.description}</p>
-                <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
-                  <span>Standard Rate: <strong className="text-black">KES {skill.hourlyRate} / day</strong></span>
-                  <span className="bg-gray-100 px-2 py-0.5 rounded-full text-gray-700 font-bold">
-                    {skill.endorsementsCount} peer endorsements
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ACCREDITED LEARNING CENTERS CATALOGUE */}
-        <section className="space-y-3 pt-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h3 className="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-emerald-600" />
-              <span>Learning centers</span>
-              <SampleTag />
-            </h3>
-          </div>
-
-          <div className="space-y-2.5">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search courses, institutions, or trades..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-black placeholder-gray-400 outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase whitespace-nowrap cursor-pointer transition-all border ${
-                    selectedCategory === cat
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400 hover:text-emerald-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {filteredCourses.map(course => (
-              <div key={course.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 hover:border-emerald-300 transition-colors">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-gray-100 pb-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] uppercase bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">
-                        {course.category}
-                      </span>
-                      <SampleTag />
-                      <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        {course.demandTag}
-                      </span>
+                  {(skill.certificationName || skill.licenseNumber) && (
+                    <div className="text-left sm:text-right text-xs">
+                      {skill.certificationName && <span className="text-emerald-800 font-bold">{skill.certificationName}</span>}
+                      {skill.licenseNumber && <p className="text-[11px] text-gray-400">License #: {skill.licenseNumber}{skill.yearObtained ? ` (${skill.yearObtained})` : ''}</p>}
                     </div>
-                    <h4 className="font-bold text-sm text-black">{course.title}</h4>
-                    <p className="text-xs text-gray-500">
-                      <strong className="text-black">{course.institution}</strong> • {course.location}
-                    </p>
-                  </div>
-                  <div className="text-left sm:text-right text-xs shrink-0">
-                    <span className="text-black font-black text-sm">{course.estimatedFee}</span>
-                    <p className="text-[11px] text-emerald-700 font-bold mt-0.5">Boost: {course.earningBoost}</p>
-                  </div>
+                  )}
                 </div>
-
-                <p className="text-xs text-gray-600 leading-relaxed">{course.description}</p>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
-                  <div>
-                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Duration</span>
-                    <span className="text-black font-bold">{course.duration}</span>
+                {skill.description && <p className="text-xs text-gray-600 leading-relaxed">{skill.description}</p>}
+                {(skill.hourlyRate > 0 || (skill.endorsementsCount ?? 0) > 0) && (
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+                    {skill.hourlyRate > 0 ? <span>Standard Rate: <strong className="text-black">KES {skill.hourlyRate} / day</strong></span> : <span />}
+                    {(skill.endorsementsCount ?? 0) > 0 && (
+                      <span className="bg-gray-100 px-2 py-0.5 rounded-full text-gray-700 font-bold">{skill.endorsementsCount} peer endorsements</span>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Prerequisites</span>
-                    <span className="text-black font-bold">{course.prerequisites}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-[9px] text-gray-400 uppercase font-bold block">Awarded Certification</span>
-                    <span className="text-emerald-800 font-bold">{course.certificationAwarded}</span>
-                  </div>
-                </div>
-
-                <div className="pt-1 flex items-center justify-end gap-2">
-                  <a
-                    href={course.institutionUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-white hover:bg-gray-50 text-black border border-gray-200 text-xs font-bold rounded-full flex items-center gap-1 transition-colors"
-                  >
-                    <span>Portal</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <button
-                    onClick={() => setSelectedCourseModal(course)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-full transition-all cursor-pointer"
-                  >
-                    View Details & Enroll
-                  </button>
-                </div>
+                )}
               </div>
             ))}
-
-            {filteredCourses.length === 0 && (
-              <div className="py-12 text-center text-gray-400 text-xs border border-dashed border-gray-300 rounded-xl bg-white">
-                No courses found matching criteria.
-              </div>
-            )}
           </div>
         </section>
 
       </main>
+
+      {/* SACCO: ENTER A REFERRAL CODE AND WAIT FOR VERIFICATION */}
+      {showSacco && (
+        <div className="fixed inset-0 z-[200] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setShowSacco(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Join a sacco">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase text-black">Your Sacco</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Join with the referral code your sacco gave you.</p>
+              </div>
+              <button type="button" aria-label="Close" onClick={() => setShowSacco(false)} className="text-gray-400 hover:text-black cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+
+            {saccoStatus === 'approved' && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <p className="font-black">You are a verified member of {saccoOrgName} ✓</p>
+                <p className="mt-1 text-xs">Your profile shows this sacco and it counts toward your trust score.</p>
+              </div>
+            )}
+
+            {saccoStatus === 'pending' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 space-y-2" role="status">
+                <p className="font-black">Waiting for verification</p>
+                <p className="text-xs leading-relaxed">
+                  Your code{saccoReq && saccoReq.status !== 'none' ? ` (${saccoReq.code})` : ''} was sent to {saccoOrgName || 'the sacco'}. You are verified once they confirm you. This can take a day or two.
+                </p>
+                <button type="button" onClick={() => void refreshSacco()} className="text-xs font-bold underline cursor-pointer">Check again</button>
+              </div>
+            )}
+
+            {(saccoStatus === 'none' || saccoStatus === 'rejected') && (
+              <form onSubmit={(e) => { e.preventDefault(); void sendSaccoCode(); }} className="space-y-3">
+                {saccoStatus === 'rejected' && (
+                  <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800" role="status">
+                    {saccoOrgName || 'The sacco'} did not confirm your last request. Check the code with them, or try another.
+                  </p>
+                )}
+                <label htmlFor="saccoCode" className="block text-xs font-bold text-gray-700">Referral code</label>
+                <input
+                  id="saccoCode"
+                  value={saccoCodeInput}
+                  onChange={(e) => setSaccoCodeInput(e.target.value.toUpperCase())}
+                  maxLength={32}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  placeholder="Type the code"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-3 text-base font-bold tracking-wider focus:outline-none focus:border-emerald-500"
+                />
+                {saccoError && <p className="text-xs font-semibold text-red-700" role="alert">{saccoError}</p>}
+                <button type="submit" disabled={saccoBusy || !saccoCodeInput.trim()} className="w-full bg-black text-white font-black text-sm py-3 rounded-xl disabled:opacity-40 cursor-pointer">
+                  {saccoBusy ? 'Sending…' : 'Send for verification'}
+                </button>
+                <p className="text-[11px] text-gray-500">The sacco sees your name and phone number to check you. Nobody else does.</p>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ADD SKILL MODAL */}
       {showAddModal && (
@@ -896,85 +674,6 @@ export const SkillDashboard: React.FC<SkillDashboardProps> = ({
         </div>
       )}
 
-      {/* COURSE DETAIL & ENROLL MODAL */}
-      {selectedCourseModal && (
-        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-lg space-y-4 text-black shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-sm font-black uppercase text-black">Course & Institution Details</h3>
-                <SampleTag />
-              </div>
-              <button onClick={() => setSelectedCourseModal(null)} className="text-gray-400 hover:text-black cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[10px] text-gray-400 uppercase font-bold block">Institution</span>
-                <h4 className="text-sm font-bold text-black">{selectedCourseModal.institution}</h4>
-                <p className="text-gray-500">{selectedCourseModal.location}</p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-gray-400 uppercase font-bold block">Course Title</span>
-                <p className="text-emerald-900 font-bold text-sm">{selectedCourseModal.title}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
-                <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Estimated Fee</span>
-                  <span className="text-black font-black text-sm">{selectedCourseModal.estimatedFee}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Projected Revenue Boost</span>
-                  <span className="text-emerald-700 font-black text-sm">{selectedCourseModal.earningBoost}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Duration</span>
-                  <span className="text-black font-semibold">{selectedCourseModal.duration}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-bold block">Class Format</span>
-                  <span className="text-black font-semibold">{selectedCourseModal.classFormat}</span>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-gray-400 uppercase font-bold block">Syllabus & Description</span>
-                <p className="text-gray-600 leading-relaxed text-[11px]">{selectedCourseModal.description}</p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-gray-400 uppercase font-bold block">Awarded Credential</span>
-                <p className="text-emerald-800 font-black">{selectedCourseModal.certificationAwarded}</p>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
-              <a
-                href={selectedCourseModal.institutionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-gray-500 underline hover:text-black font-bold"
-              >
-                Visit Official Portal
-              </a>
-              <button
-                onClick={() => {
-                  showToast(`✓ Enrollment request submitted for ${selectedCourseModal.institutionShort}!`);
-                  setSelectedCourseModal(null);
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-full cursor-pointer"
-              >
-                Submit Enrollment Request
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
