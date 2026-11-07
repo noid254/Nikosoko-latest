@@ -14,10 +14,12 @@ const lib = TARGET.protocol === 'https:' ? https : http;
 const sessions = new Map<string, { token: string; until: number }>();
 // Calls that arrive together (a screen asks for several things at once) share one request for the session.
 const pending = new Map<string, Promise<string>>();
-// Keep the connection to the platform open between calls instead of opening a new one each time.
-const agent = new (lib as typeof http).Agent({ keepAlive: true, maxSockets: 32 });
+// Keep the connection to the platform open between calls, but let go of an idle one after 3 s. The platform closes idle
+// connections at about 5 s; reusing one it has just closed is what caused "ECONNRESET".
+const agent = new (lib as typeof http).Agent({ keepAlive: true, maxSockets: 32, timeout: 3000 });
+const stale = (e: any) => e?.code === 'ECONNRESET' || e?.code === 'EPIPE';
 
-const once = (opts: http.RequestOptions, body?: Buffer | string): Promise<{ status: number; text: string }> =>
+const once1 = (opts: http.RequestOptions, body?: Buffer | string): Promise<{ status: number; text: string }> =>
   new Promise((resolve, reject) => {
     const r = lib.request({ host: TARGET.hostname, port: TARGET.port || (TARGET.protocol === 'https:' ? 443 : 80), agent, ...opts }, res => {
       const chunks: Buffer[] = [];
@@ -29,6 +31,7 @@ const once = (opts: http.RequestOptions, body?: Buffer | string): Promise<{ stat
     if (body) r.write(body);
     r.end();
   });
+const once = (opts: http.RequestOptions, body?: Buffer | string) => once1(opts, body).catch(e => (stale(e) ? once1(opts, body) : Promise.reject(e)));
 
 // The Qaribu session for a phone (last 9 digits), kept until shortly before it expires.
 function sessionFor(phone9: string): Promise<string> {
@@ -72,19 +75,28 @@ export function registerQaribuBridge({ app, requireAuth }: Deps) {
       if (parsed) headers['Content-Length'] = parsed.length;
       else if (req.headers['content-length']) headers['Content-Length'] = String(req.headers['content-length']);
 
-      const upstream = lib.request({ host: TARGET.hostname, port: TARGET.port || (TARGET.protocol === 'https:' ? 443 : 80), method: req.method, path: req.url, headers, agent }, up => {
-        const out: Record<string, string> = {};
-        for (const h of ['content-type', 'cache-control', 'content-disposition']) if (up.headers[h]) out[h] = String(up.headers[h]);
-        answerMs = Date.now() - started - sessionMs;
-        if (up.statusCode === 401) sessions.delete(req.auth.phone);
-        res.writeHead(up.statusCode || 502, out);
-        up.pipe(res);
-      });
-      upstream.setTimeout(30000, () => upstream.destroy(new Error('timeout')));
-      upstream.on('error', (err: any) => { console.warn(`[qaribu] platform not reachable: ${err?.code || err?.message}`); if (!res.headersSent) res.status(502).json({ error: 'Qaribu is not answering right now. Try again in a moment.' }); else res.end(); });
-      if (parsed) upstream.end(parsed);
-      else if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'DELETE') upstream.end();
-      else req.pipe(upstream);
+      const canRetry = (req.method === 'GET' || req.method === 'HEAD') && !parsed;
+      const send = (retry: boolean) => {
+        const upstream = lib.request({ host: TARGET.hostname, port: TARGET.port || (TARGET.protocol === 'https:' ? 443 : 80), method: req.method, path: req.url, headers, agent }, up => {
+          answerMs = Date.now() - started - sessionMs;
+          const out: Record<string, string> = {};
+          for (const h of ['content-type', 'cache-control', 'content-disposition']) if (up.headers[h]) out[h] = String(up.headers[h]);
+          if (up.statusCode === 401) sessions.delete(req.auth.phone);
+          res.writeHead(up.statusCode || 502, out);
+          up.pipe(res);
+        });
+        upstream.setTimeout(30000, () => upstream.destroy(new Error('timeout')));
+        upstream.on('error', (err: any) => {
+          // A connection the platform had just closed: nothing was sent that matters, so ask once more on a fresh one.
+          if (retry && stale(err) && !res.headersSent) return send(false);
+          console.warn(`[qaribu] platform not reachable: ${err?.code || err?.message}`);
+          if (!res.headersSent) res.status(502).json({ error: 'Qaribu is not answering right now. Try again in a moment.' }); else res.end();
+        });
+        if (parsed) upstream.end(parsed);
+        else if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'DELETE') upstream.end();
+        else req.pipe(upstream);
+      };
+      send(canRetry);
     } catch (e: any) {
       res.status(e.status || 502).json({ error: e.message, message: e.message });
     }
