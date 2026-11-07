@@ -538,6 +538,25 @@ const DESCRIPTION_TEMPLATES: Record<string, string> = {
   'Other Service': 'Handyman and home repair jobs. Message me the details of the job for a quote.'
 };
 
+const SELL_FIELD = 'w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:bg-white transition-all';
+const SELL_CATEGORIES = [
+  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '📚' },
+  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '📺' },
+  { id: 'Key Cutter', label: 'Key Cutter', icon: '🔑' },
+  { id: 'Braiding', label: 'Hair Braiding', icon: '💇' },
+  { id: 'Water Refill', label: 'Water Refill', icon: '💧' },
+  { id: 'Gas Refill', label: 'Gas Refill', icon: '⛽' },
+  { id: 'Electrical', label: 'Electrical Work', icon: '⚡' },
+  { id: 'Plumbing', label: 'Plumbing', icon: '🚰' },
+  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '👟' },
+  { id: 'Other Service', label: 'Other Skill', icon: '🛠️' },
+];
+const SELL_UNITS = [
+  { id: '/ hour', label: 'hour' }, { id: '/ lesson', label: 'lesson' }, { id: '/ session', label: 'session' },
+  { id: '/ refill', label: 'refill' }, { id: '/ job', label: 'job' }, { id: '/ day', label: 'day' }, { id: 'fixed', label: 'Fixed price' },
+];
+const SELL_DURATIONS = ['15 mins', '30 mins', '45 mins', '1 hour', '2 hours', '3 hours', 'Half day', 'Full day', '2 days', '1 week'];
+
 const SellServicePage: React.FC<SellServicePageProps> = ({
   currentUser,
   onBack,
@@ -553,11 +572,13 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
   const [description, setDescription] = useState('');
   const [offerNote, setOfferNote] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [customTitle, setCustomTitle] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCategoryChange = (newCat: string) => {
     setCategory(newCat);
+    setCustomTitle(false);
     const defaultTitle = TITLE_PRESETS[newCat]?.[0] || 'Professional Service Listing';
     setTitle(defaultTitle);
 
@@ -566,19 +587,19 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
       setRateUnit('/ hour');
       setDuration('1 hour');
       setDescription(DESCRIPTION_TEMPLATES['Tutoring']);
-      setOfferNote('First trial lesson 50% off');
+      setOfferNote(OFFER_PRESETS[0]);
     } else if (newCat === 'TV Mounting') {
       setPriceAmount('1500');
       setRateUnit('fixed');
       setDuration('45 mins');
       setDescription(DESCRIPTION_TEMPLATES['TV Mounting']);
-      setOfferNote('Free travel within 3km');
+      setOfferNote(OFFER_PRESETS[1]);
     } else {
       setPriceAmount('500');
       setRateUnit('/ job');
       setDuration('1 hour');
       setDescription(DESCRIPTION_TEMPLATES[newCat] || DESCRIPTION_TEMPLATES['Other Service']);
-      setOfferNote('Free inspection');
+      setOfferNote(OFFER_PRESETS[3]);
     }
   };
 
@@ -678,14 +699,14 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
   const currentPresets = CATEGORY_PHOTO_PRESETS[category] || ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
   const activeCoverImage = uploadedImages[0] || currentPresets[0];
 
-  const totalSteps = 6;
+  const totalSteps = 2;
 
   const nextStep = () => {
-    if (currentStep === 2 && !title.trim()) {
-      alert("Please enter a service title.");
+    if (currentStep === 1 && !title.trim()) {
+      alert("Please choose or type a service name.");
       return;
     }
-    if (currentStep === 3 && (!priceAmount || Number(priceAmount) <= 0)) {
+    if (currentStep === 1 && (!priceAmount || Number(priceAmount) <= 0)) {
       alert("Please enter a valid price amount.");
       return;
     }
@@ -730,7 +751,7 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
               Step {currentStep} of {totalSteps}
             </span>
             <h1 className="text-xs font-black text-brand-navy uppercase tracking-tight leading-none mt-0.5">
-              Sell Skill Wizard
+              Sell a Service
             </h1>
           </div>
 
@@ -743,7 +764,7 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
 
         {/* Step dots for quick jump */}
         <div className="flex items-center justify-center gap-1.5 pb-2 border-t border-gray-50 pt-1.5 px-3">
-          {[1, 2, 3, 4, 5, 6].map((stepNum) => (
+          {[1, 2].map((stepNum) => (
             <button
               key={stepNum}
               type="button"
@@ -800,194 +821,66 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
           </div>
         )}
 
-        {/* STEP 1: CATEGORY SELECTION */}
+        {/* STEP 1: WHAT, PRICE AND TIME (all dropdowns) */}
         {currentStep === 1 && (
           <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">🏷️</span>
-                <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 1: Choose Skill Category
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    Select the main category for the service or skill you want to offer to clients.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
-              <label className="block text-xs font-black uppercase tracking-wider text-gray-800">
-                Select Skill Category
-              </label>
-
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '📚', desc: 'Maths, Science, Languages' },
-                  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '📺', desc: 'Brackets & Cable conceals' },
-                  { id: 'Key Cutter', label: 'Key Cutter', icon: '🔑', desc: 'Duplicates & Locks' },
-                  { id: 'Braiding', label: 'Hair Braiding', icon: '💇', desc: 'Knotless, Lines & Styling' },
-                  { id: 'Water Refill', label: 'Water Refill', icon: '💧', desc: 'Clean 20L Doorstep Water' },
-                  { id: 'Gas Refill', label: 'Gas Refill', icon: '⛽', desc: '6kg & 13kg Cylinder Delivery' },
-                  { id: 'Electrical', label: 'Electrical Work', icon: '⚡', desc: 'Wiring, Sockets, Repairs' },
-                  { id: 'Plumbing', label: 'Plumbing', icon: '🚰', desc: 'Leaks, Taps & Drains' },
-                  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '👟', desc: 'Soles, Stitching & Polish' },
-                  { id: 'Other Service', label: 'Other Skill', icon: '🛠️', desc: 'Custom Crafts & Handyman' }
-                ].map(cat => (
-                  <button
-                    type="button"
-                    key={cat.id}
-                    onClick={() => handleCategoryChange(cat.id)}
-                    className={`p-3 rounded-2xl text-left border-2 transition-all flex items-start gap-2.5 cursor-pointer ${
-                      category === cat.id 
-                        ? 'bg-brand-navy text-white border-brand-navy shadow-md scale-[1.01]' 
-                        : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="text-2xl shrink-0 mt-0.5">{cat.icon}</span>
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-xs leading-tight truncate">{cat.label}</div>
-                      <div className={`text-[9.5px] mt-0.5 leading-snug font-medium line-clamp-1 ${category === cat.id ? 'text-amber-300' : 'text-gray-500'}`}>
-                        {cat.desc}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: SERVICE TITLE */}
-        {currentStep === 2 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">✏️</span>
-                <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 2: Service Title
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    What specific service or lesson package are you listing?
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Service Title *
-                </label>
-                <input 
-                  type="text" 
-                  required 
-                  value={title} 
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="e.g. High School Maths Tuition & Exam Coaching"
-                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
-                />
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Category</label>
+                <select value={category} onChange={e => handleCategoryChange(e.target.value)} className={SELL_FIELD}>
+                  {SELL_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                </select>
               </div>
 
-              {/* Quick Title Suggestion Chips */}
-              <div className="space-y-2 pt-2 border-t border-gray-100">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
-                  Tap suggested title for {category}:
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {(TITLE_PRESETS[category] || TITLE_PRESETS['Other Service']).map((preset, pIdx) => (
-                    <button
-                      type="button"
-                      key={pIdx}
-                      onClick={() => setTitle(preset)}
-                      className={`text-left p-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-between cursor-pointer ${
-                        title === preset 
-                          ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-xs' 
-                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span>{preset}</span>
-                      {title === preset && <span className="text-amber-600 font-black">✓</span>}
-                    </button>
-                  ))}
-                </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Service</label>
+                <select
+                  value={customTitle ? '__custom' : title}
+                  onChange={e => {
+                    if (e.target.value === '__custom') { setCustomTitle(true); setTitle(''); }
+                    else { setCustomTitle(false); setTitle(e.target.value); }
+                  }}
+                  className={SELL_FIELD}
+                >
+                  {(TITLE_PRESETS[category] || TITLE_PRESETS['Other Service']).map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="__custom">Other: I will type it</option>
+                </select>
+                {customTitle && (
+                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Name your service" className={`${SELL_FIELD} mt-2`} />
+                )}
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* STEP 3: PRICE & BILLING UNIT */}
-        {currentStep === 3 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">💰</span>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 3: Rate & Pricing
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    Set your service fee and billing frequency.
-                  </p>
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Price (Ksh)</label>
+                  <input type="number" inputMode="numeric" min="1" value={priceAmount} onChange={e => setPriceAmount(e.target.value)} placeholder="200" className={SELL_FIELD} />
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Rate Amount (Ksh) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-black text-sm">
-                    Ksh
-                  </span>
-                  <input 
-                    type="number" 
-                    required 
-                    value={priceAmount} 
-                    onChange={e => setPriceAmount(e.target.value)}
-                    placeholder="200"
-                    className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl py-3.5 pl-14 pr-4 text-base font-black text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
-                  />
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Per</label>
+                  <select value={rateUnit} onChange={e => setRateUnit(e.target.value)} className={SELL_FIELD}>
+                    {SELL_UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Billing Frequency
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[
-                    { id: '/ hour', label: '/ hour' },
-                    { id: '/ lesson', label: '/ lesson' },
-                    { id: '/ session', label: '/ session' },
-                    { id: '/ refill', label: '/ refill' },
-                    { id: '/ job', label: '/ job' },
-                    { id: '/ day', label: '/ day' },
-                    { id: 'fixed', label: 'Fixed Price' }
-                  ].map((unit) => (
-                    <button
-                      type="button"
-                      key={unit.id}
-                      onClick={() => setRateUnit(unit.id)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-black border text-center transition-all cursor-pointer ${
-                        rateUnit === unit.id 
-                          ? 'bg-brand-navy text-white border-brand-navy shadow-xs' 
-                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      {unit.label}
-                    </button>
-                  ))}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Takes about</label>
+                  <select value={duration} onChange={e => setDuration(e.target.value)} className={SELL_FIELD}>
+                    {(SELL_DURATIONS.includes(duration) ? SELL_DURATIONS : [duration, ...SELL_DURATIONS]).map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Offer</label>
+                  <select value={offerNote} onChange={e => setOfferNote(e.target.value)} className={SELL_FIELD}>
+                    <option value="">No offer</option>
+                    {(OFFER_PRESETS.includes(offerNote) || !offerNote ? OFFER_PRESETS : [offerNote, ...OFFER_PRESETS]).map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
                 </div>
               </div>
 
-              {/* Price Preview Box */}
               <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-900">Client Rate Display:</span>
+                <span className="text-xs font-bold text-amber-900">Clients will see:</span>
                 <span className="text-sm font-black text-brand-navy bg-white px-3 py-1 rounded-xl border border-amber-300 shadow-2xs">
                   {rateUnit === 'fixed' ? `Ksh ${priceAmount || 0}` : `Ksh ${priceAmount || 0} ${rateUnit}`}
                 </span>
@@ -996,136 +889,12 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
           </div>
         )}
 
-        {/* STEP 4: DURATION & OFFER NOTE */}
-        {currentStep === 4 && (
+        {/* STEP 2: PHOTOS, SHORT DESCRIPTION, PREVIEW AND PUBLISH */}
+        {currentStep === 2 && (
           <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">⏱️</span>
-                <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 4: Duration & Special Offer
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    How long does the service take and any promotional discounts?
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Est. Duration / Completion Time
-                </label>
-                <input 
-                  type="text" 
-                  value={duration} 
-                  onChange={e => setDuration(e.target.value)}
-                  placeholder="e.g. 1 hour, 45 mins, 2 days"
-                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Special Offer / Discount Note (Optional)
-                </label>
-                <input 
-                  type="text" 
-                  value={offerNote} 
-                  onChange={e => setOfferNote(e.target.value)}
-                  placeholder="e.g. First trial lesson 50% off"
-                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-bold text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner"
-                />
-              </div>
-
-              {/* Offer presets */}
-              <div className="space-y-2 pt-2 border-t border-gray-100">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 block">
-                  Or tap quick offer note:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {OFFER_PRESETS.map((offer, oIdx) => (
-                    <button
-                      type="button"
-                      key={oIdx}
-                      onClick={() => setOfferNote(offer)}
-                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        offerNote === offer
-                          ? 'bg-amber-400 text-black border-amber-500 font-black'
-                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {offer}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 5: SERVICE DESCRIPTION */}
-        {currentStep === 5 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">📝</span>
-                <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 5: Service Description
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    Describe what is included, your experience, and service coverage area.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">
-                  Detailed Description
-                </label>
-                <textarea 
-                  rows={5}
-                  value={description} 
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Provide details on tools brought, qualifications, doorstep area..."
-                  className="w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-xs font-medium text-gray-900 focus:outline-none focus:bg-white transition-all shadow-inner leading-relaxed resize-none"
-                />
-              </div>
-
-              {/* Reset to Category Template */}
-              <div className="pt-2 border-t border-gray-100 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setDescription(DESCRIPTION_TEMPLATES[category] || DESCRIPTION_TEMPLATES['Other Service'])}
-                  className="text-xs font-extrabold text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                >
-                  ⚡ Fill with {category} Template
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 6: PHOTOS & LIVE PREVIEW / PUBLISH */}
-        {currentStep === 6 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-gradient-to-br from-brand-navy via-slate-900 to-black text-white p-4 rounded-2xl shadow-md border border-gray-800">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 bg-white/10 rounded-2xl">📸</span>
-                <div>
-                  <h2 className="text-sm font-black text-amber-400 uppercase tracking-wide">
-                    Step 6: Photos & Publish
-                  </h2>
-                  <p className="text-xs text-gray-300 font-medium leading-snug mt-0.5">
-                    Upload photos from gallery and preview your live marketplace card.
-                  </p>
-                </div>
-              </div>
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-1.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-gray-800">About this service <span className="text-gray-400 normal-case font-semibold">(optional, we filled it in)</span></label>
+              <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className={`${SELL_FIELD} font-medium leading-relaxed resize-none`} />
             </div>
 
             {/* Photo Upload Card */}
