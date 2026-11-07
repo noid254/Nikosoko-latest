@@ -22,10 +22,14 @@ let db: Database;
 function saveDbNow() {
   if (!db) return;
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  const started = Date.now();
   const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(DB_FILE + '.tmp', buffer);
   fs.renameSync(DB_FILE + '.tmp', DB_FILE);
+  // The whole server stands still while this runs, so say when it is long (and how big the database is).
+  const ms = Date.now() - started;
+  if (ms > 300) console.warn(`[db] save blocked the server for ${ms}ms (database ${(buffer.length / 1048576).toFixed(1)} MB)`);
 }
 
 // Changes are saved together: a burst of writes (like the start-up checks) costs one save, about 1.5 seconds later.
@@ -288,6 +292,24 @@ async function startServer() {
   await initDatabase();
 
   const app = express();
+
+  // Finds what freezes the server: a long request, or any stretch where nothing could run (no ids or query text are logged).
+  app.use((req: any, res: any, next: any) => {
+    const t = Date.now();
+    res.on('finish', () => {
+      const ms = Date.now() - t;
+      if (ms > 1500 && String(req.path).startsWith('/api') && !String(req.path).startsWith('/api/qaribu')) {
+        console.warn(`[slow] ${req.method} ${String(req.path).split('/').slice(0, 4).join('/')} ${res.statusCode} ${ms}ms`);
+      }
+    });
+    next();
+  });
+  let lastTick = Date.now();
+  setInterval(() => {
+    const now = Date.now();
+    if (now - lastTick > 1500) console.warn(`[loop] the server was frozen for about ${now - lastTick - 500}ms`);
+    lastTick = now;
+  }, 500).unref();
   app.use(cors());
   app.use(compression());
   app.use(express.json({ limit: '10mb' }));
