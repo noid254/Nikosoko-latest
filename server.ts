@@ -241,6 +241,7 @@ async function initDatabase() {
   `);
 
   // Safe migration for newly added columns if table already exists
+  try { runSql("ALTER TABLE referral_redemptions ADD COLUMN status TEXT DEFAULT 'approved'"); } catch (_) {} // 'pending' | 'approved' | 'rejected'
   try { runSql('ALTER TABLE bookings ADD COLUMN cancellationReason TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE bookings ADD COLUMN cancelledBy TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE bookings ADD COLUMN cancelledAt TEXT'); } catch (_) {}
@@ -837,7 +838,7 @@ async function startServer() {
       if (!isAdminAuth(a)) {
         updated.isVerified = existing?.isVerified ?? 0;
         updated.role = existing?.role ?? 'Provider';
-        for (const k of ['isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'flagCount', 'adminNotes', 'verifiedByOrgId', 'verifiedByOrgName', 'referralCodeUsed', 'isSaccoVerified']) {
+        for (const k of ['isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'flagCount', 'adminNotes', 'verifiedByOrgId', 'verifiedByOrgName', 'referralCodeUsed', 'isSaccoVerified', 'saccoMember', 'verifiedForCourse']) {
           updated[k] = (existing as any)?.[k] ?? existingRaw[k];
         }
       }
@@ -941,6 +942,94 @@ async function startServer() {
               saccoMember: { saccoId: org.id, saccoName: org.name, saccoCode: code, status: 'Confirmed', requestedAt: new Date().toISOString(), confirmedAt: new Date().toISOString() } };
       runSql('UPDATE providers SET isVerified = 1, rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
       res.json({ success: true, orgId: org.id, orgName: org.name, courseTitle: ref.label || null, kind: ref.kind });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // --- Joining an organization (a sacco) with its code ---
+  // The member types the code and waits. Nothing is verified until the organization says yes, and only the organization's
+  // own owner can say it.
+  const setSaccoState = (userId: string, patch: (raw: any) => any, verified?: boolean) => {
+    const user = queryOne('SELECT rawData FROM providers WHERE id = ?', [userId]);
+    let raw: any = {};
+    try { raw = JSON.parse(user?.rawData || '{}'); } catch (_) {}
+    raw = patch(raw);
+    if (verified) runSql('UPDATE providers SET isVerified = 1, rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
+    else runSql('UPDATE providers SET rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
+  };
+
+  app.post('/api/referral-codes/request', requireAuth, (req: any, res) => {
+    try {
+      const code = String(req.body?.code || '').trim().toUpperCase();
+      const userId = String(req.body?.userId || '');
+      if (!code || !userId) return res.status(400).json({ error: 'Enter the code your organization gave you.' });
+      if (!ownsProfile(req.auth, userId)) return res.status(403).json({ error: 'You can only use a code for your own account.' });
+      const ref = queryOne('SELECT * FROM referral_codes WHERE code = ?', [code]);
+      if (!ref) return res.status(404).json({ error: 'That code does not exist. Check it with your organization.' });
+      if (ref.orgId === userId) return res.status(400).json({ error: 'An organization cannot use its own code.' });
+      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [ref.orgId]);
+      if (!org || !queryOne('SELECT id FROM providers WHERE id = ?', [userId])) return res.status(404).json({ error: 'That code could not be used.' });
+      const existing = queryOne('SELECT status FROM referral_redemptions WHERE userId = ?', [userId]);
+      if (existing && (existing.status || 'approved') === 'approved') return res.status(409).json({ error: 'You are already verified through an organization.' });
+      if (existing && existing.status === 'pending') return res.status(409).json({ error: 'Your request is already waiting for the organization to verify you.' });
+      const now = new Date().toISOString();
+      // A rejected request may be tried again, with the same code or another.
+      runSql('INSERT OR REPLACE INTO referral_redemptions (userId, code, orgId, createdAt, status) VALUES (?, ?, ?, ?, ?)', [userId, code, ref.orgId, now, 'pending']);
+      setSaccoState(userId, (raw) => ({ ...raw, isSaccoVerified: false, saccoMember: { saccoId: org.id, saccoName: org.name, saccoCode: code, status: 'Pending', requestedAt: now } }));
+      res.json({ status: 'pending', orgId: org.id, orgName: org.name, courseTitle: ref.label || null });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Where the member's request stands: none, pending, approved or rejected.
+  app.get('/api/referral-codes/mine/:userId', requireAuth, (req: any, res) => {
+    try {
+      const userId = String(req.params.userId);
+      if (!ownsProfile(req.auth, userId)) return res.status(403).json({ error: 'You can only look at your own request.' });
+      const r = queryOne('SELECT r.code, r.orgId, r.status, r.createdAt, p.name AS orgName FROM referral_redemptions r LEFT JOIN providers p ON p.id = r.orgId WHERE r.userId = ?', [userId]);
+      if (!r) return res.json({ status: 'none' });
+      res.json({ status: r.status || 'approved', code: r.code, orgId: r.orgId, orgName: r.orgName || '', requestedAt: r.createdAt });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // The organization's own owner sees who is waiting, with the number to check them by.
+  app.get('/api/referral-codes/pending/:orgId', requireAuth, (req: any, res) => {
+    try {
+      const orgId = String(req.params.orgId);
+      if (!ownsProfile(req.auth, orgId)) return res.status(403).json({ error: 'Only the organization can see its requests.' });
+      res.json(queryAll(
+        `SELECT r.userId, r.code, r.createdAt, p.name AS userName, p.phone AS userPhone
+           FROM referral_redemptions r JOIN providers p ON p.id = r.userId
+          WHERE r.orgId = ? AND r.status = 'pending' ORDER BY r.createdAt`, [orgId]));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/referral-codes/decide', requireAuth, (req: any, res) => {
+    try {
+      const userId = String(req.body?.userId || '');
+      const decision = req.body?.decision === 'approve' ? 'approve' : req.body?.decision === 'reject' ? 'reject' : '';
+      if (!userId || !decision) return res.status(400).json({ error: 'Say who, and approve or reject.' });
+      const r = queryOne("SELECT * FROM referral_redemptions WHERE userId = ? AND status = 'pending'", [userId]);
+      if (!r) return res.status(404).json({ error: 'There is no request waiting from that member.' });
+      if (!ownsProfile(req.auth, r.orgId)) return res.status(403).json({ error: 'Only the organization can decide this request.' });
+      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [r.orgId]);
+      const label = queryOne('SELECT label FROM referral_codes WHERE code = ?', [r.code])?.label;
+      const now = new Date().toISOString();
+      if (decision === 'approve') {
+        runSql("UPDATE referral_redemptions SET status = 'approved' WHERE userId = ?", [userId]);
+        setSaccoState(userId, (raw) => ({ ...raw, referralCodeUsed: r.code, isReferred: true, isSaccoVerified: true, verifiedByOrgId: org?.id, verifiedByOrgName: org?.name, verifiedForCourse: label || undefined,
+          saccoMember: { ...(raw.saccoMember || {}), saccoId: org?.id, saccoName: org?.name, saccoCode: r.code, status: 'Confirmed', confirmedAt: now } }), true);
+      } else {
+        runSql("UPDATE referral_redemptions SET status = 'rejected' WHERE userId = ?", [userId]);
+        setSaccoState(userId, (raw) => ({ ...raw, isSaccoVerified: false, saccoMember: { ...(raw.saccoMember || {}), status: 'Rejected' } }));
+      }
+      res.json({ success: true, status: decision === 'approve' ? 'approved' : 'rejected' });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
