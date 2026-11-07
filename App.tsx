@@ -32,6 +32,28 @@ import DesktopBannerLayout from './components/DesktopBannerLayout';
 import AuthenticatorModal from './components/AuthenticatorModal';
 import RegistrationFlow from './components/RegistrationFlow';
 
+// A person tapping Call, Chat or Book on the same profile again and again is one contact, not many: the provider
+// gets one notice, the view counts once and the tapper sees one short confirmation, per profile per half hour.
+const CTA_DEDUPE_MS = 30 * 60 * 1000;
+const CTA_RECENT_KEY = 'nikosoko_cta_recent_v1';
+// The rating reminder (inbox message and banner) comes once, this long after the first contact.
+const RATING_PROMPT_HOURS = 3;
+
+const claimCtaSlot = (key: string): boolean => {
+  try {
+    const now = Date.now();
+    const raw = JSON.parse(localStorage.getItem(CTA_RECENT_KEY) || '{}') as Record<string, number>;
+    const fresh: Record<string, number> = {};
+    for (const [k, t] of Object.entries(raw)) if (now - t < CTA_DEDUPE_MS) fresh[k] = t;
+    if (fresh[key]) return false;
+    fresh[key] = now;
+    localStorage.setItem(CTA_RECENT_KEY, JSON.stringify(fresh));
+    return true;
+  } catch {
+    return true; // storage blocked: behave as before rather than lose the notice
+  }
+};
+
 function App() {
   const [currentUser, setCurrentUser] = useState<ServiceProvider | null>(() => {
     try {
@@ -197,7 +219,7 @@ function App() {
   // viewed/contacted the number, instead of instantly. Checked on load and
   // then periodically so it fires even without other app activity.
   useEffect(() => {
-    const REMINDER_DELAY_HOURS = 3;
+    const REMINDER_DELAY_HOURS = RATING_PROMPT_HOURS;
 
     const dispatchDueReminders = () => {
       const now = Date.now();
@@ -802,17 +824,30 @@ function App() {
   const handleCtaInteraction = (provider: ServiceProvider, actionType: string = 'contact', actionCallback?: () => void): boolean => {
       if (!provider || !provider.id) return false;
 
-      // Record contact timestamp for post-service 2-3 hour follow-up reminder
+      // Someone opening their own profile's buttons is not a customer contact.
+      if (currentUser?.id === provider.id) {
+          if (actionCallback) actionCallback();
+          return true;
+      }
+
+      // Record contact timestamp for the post-service rating reminder (first contact only)
       recordContact(provider.id);
+
+      // The same person on the same profile within half an hour: nothing more to announce.
+      const tapperKey = currentUser?.id || 'guest';
+      if (!claimCtaSlot(`${tapperKey}:${provider.id}:${actionType}`)) {
+          if (actionCallback) actionCallback();
+          return true;
+      }
 
       // Update provider view count
       setProviders(prev => prev.map(p => p.id === provider.id ? { ...p, views: (p.views || 0) + 1 } : p));
 
-      // Dispatch notifications to inbox
+      // One notice for the provider's inbox. The tapper's own rating reminder comes later (see the reminder effect).
       const tapperName = currentUser?.name || 'A customer';
       const providerMsg: Omit<InboxMessage, 'id'> = {
           sender: 'team',
-          text: `🔔 ${tapperName} tapped your '${actionType.toUpperCase()}' button! Click here to send them a rating reminder.`,
+          text: `🔔 ${tapperName} contacted you. Click here to send them a rating reminder.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           type: 'cta_tap',
           targetProviderId: provider.id,
@@ -821,18 +856,12 @@ function App() {
           tapperName,
           isActionable: true
       };
-
-      // Note: the tapper's own rating-reminder notification is NOT sent here.
-      // It's dispatched automatically ~3 hours after contact (see the
-      // rating-reminder scheduling effect), not the instant they view/contact.
       api.addInboxMessage(providerMsg);
 
-      // Trigger floating CTA Toast Notification
-      showCtaToast(
-          `🔔 Notification sent! Tapped '${actionType.toUpperCase()}'. Click to remind client or rate!`,
-          provider.id,
-          5000
-      );
+      // One short confirmation for the tapper, and none while the rating banner is already on screen.
+      if (!(active6HourProvider && active6HourItem)) {
+          showCtaToast(`✓ ${provider.name} has been notified`, provider.id, 3000);
+      }
 
       if (actionCallback) actionCallback();
       return true;
@@ -1245,7 +1274,7 @@ function App() {
       const now = Date.now();
       if (c.snoozedUntil && now < c.snoozedUntil) return false;
       const hoursPassed = (now - c.contactedAt) / (1000 * 3600);
-      return hoursPassed >= 6;
+      return hoursPassed >= RATING_PROMPT_HOURS;
   });
 
   const active6HourProvider = active6HourItem ? providers.find(p => p.id === active6HourItem.providerId) : null;
@@ -1290,11 +1319,10 @@ function App() {
                   onClick={() => {
                     if (ctaToastTimerRef.current) clearTimeout(ctaToastTimerRef.current);
                     setCtaToast(null);
-                    setCurrentPage('messages');
                   }}
                   className="bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl hover:bg-amber-300 transition-all uppercase text-[10px] tracking-wider shrink-0 cursor-pointer"
                 >
-                  Open Messages &rarr;
+                  OK
                 </button>
               </div>
             </div>
@@ -1309,7 +1337,7 @@ function App() {
                   <div className="min-w-0 flex-1">
                     <div className="font-black text-amber-300 text-[9.5px] uppercase tracking-wider flex items-center gap-1.5">
                       <span>Post-Service Reminder</span>
-                      <span className="bg-amber-400/20 text-amber-300 text-[8px] px-1.5 py-0.5 rounded-md font-bold">Returns in 6h if unacted</span>
+                      <span className="bg-amber-400/20 text-amber-300 text-[8px] px-1.5 py-0.5 rounded-md font-bold">Asks again in 6h</span>
                     </div>
                     <p className="text-gray-100 font-bold text-xs leading-tight truncate">
                       Rate your service with <span className="text-amber-400 font-extrabold">{active6HourProvider.name}</span>?
