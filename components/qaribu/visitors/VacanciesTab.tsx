@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../../services/visitorsApi';
 import Camera from '../Camera';
+import NewListing from './NewListing';
 import { fieldClass, primaryButton } from './shared';
 
 const KINDS = ['Bedsitter', 'One bedroom', 'Two bedroom', 'Three bedroom', 'House', 'Shop', 'Office', 'Godown'];
@@ -37,6 +38,7 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
   const [photosFor, setPhotosFor] = useState(''); // the vacancy whose photos are open
   const [camera, setCamera] = useState(false);
   const [confirmPhoto, setConfirmPhoto] = useState('');
+  const [adding, setAdding] = useState(false); // the quick new-listing screen
 
   const load = () =>
     api
@@ -66,23 +68,15 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
     }
   };
 
+  // Editing an existing vacancy. New ones go through the quick screen (NewListing).
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     const fields: api.VacancyFields = { ...form };
-    void act(
-      async () => {
-        if (editing) {
-          await api.updateVacancy(premise.slug, editing, fields);
-        } else {
-          // A new vacancy needs its photos next: open them at once, so it can go on the page.
-          const added = await api.addVacancy(premise.slug, fields);
-          setPhotosFor(added.id);
-        }
-        setForm(EMPTY);
-        setEditing('');
-      },
-      editing ? 'Saved.' : 'Added. Now add its photos: four are needed before it shows on your page.',
-    );
+    void act(async () => {
+      await api.updateVacancy(premise.slug, editing, fields);
+      setForm(EMPTY);
+      setEditing('');
+    }, 'Saved.');
   };
 
   const startEdit = (v: api.VacancyItem) => {
@@ -138,6 +132,11 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Vacancies ({data.vacancies.length})</h2>
         {data.vacancies.length === 0 && <p className="text-sm text-gray-500">No vacancies yet. Your page tells visitors so, and invites them to leave a number.</p>}
+        <button type="button" onClick={() => { setNotice(''); setError(''); setAdding(true); }} data-testid="add-vacancy" className={primaryButton}>
+          + Add a vacancy
+        </button>
+        {data.vacancies.length === 0 && <p className="text-sm text-gray-500 text-center">Take four photos, name it, give the rent. That is all a listing needs.</p>}
+
         {data.vacancies.map((v) => (
           <div key={v.id} data-testid="vacancy-row" className="bg-white rounded-xl shadow overflow-hidden">
             <button type="button" onClick={() => setPhotosFor(v.id)} className="relative block w-full aspect-[16/9] bg-gray-100" aria-label={`Photos of ${v.title}`}>
@@ -192,8 +191,9 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
           </div>
         ))}
 
+        {editing && (
         <form onSubmit={save} className="bg-white rounded-xl shadow p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">{editing ? 'Edit vacancy' : 'Add a vacancy'}</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Edit vacancy</h3>
           <div>
             <label htmlFor="vacTitle" className="block text-sm font-medium text-gray-700">Name</label>
             <input id="vacTitle" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required maxLength={80} placeholder="House 4" className={fieldClass} />
@@ -251,11 +251,10 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
             <label htmlFor="vacNotes" className="block text-sm font-medium text-gray-700">Notes <span className="text-gray-400">(optional)</span></label>
             <input id="vacNotes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={200} placeholder="Ground floor, own meter" className={fieldClass} />
           </div>
-          <button type="submit" disabled={busy} className={primaryButton}>{editing ? 'Save changes' : 'Add vacancy and take photos'}</button>
-          {editing && (
-            <button type="button" onClick={() => { setEditing(''); setForm(EMPTY); }} className="block w-full text-center text-sm text-blue-600 hover:underline">Cancel</button>
-          )}
+          <button type="submit" disabled={busy} className={primaryButton}>Save changes</button>
+          <button type="button" onClick={() => { setEditing(''); setForm(EMPTY); }} className="block w-full text-center text-sm text-blue-600 hover:underline">Cancel</button>
         </form>
+        )}
       </section>
 
       <section className="bg-white rounded-xl shadow p-5 space-y-3">
@@ -277,6 +276,23 @@ const VacanciesTab: React.FC<{ premise: api.Membership }> = ({ premise }) => {
           </div>
         ))}
       </section>
+
+      {adding && (
+        <NewListing
+          premise={premise}
+          onClose={() => setAdding(false)}
+          onDone={(id, leftover) => {
+            setAdding(false);
+            if (leftover > 0) {
+              setError('The listing is saved, but some photos did not go up. Add them here.');
+              setPhotosFor(id);
+            } else {
+              setNotice('Published. It is on your page now.');
+            }
+            void load();
+          }}
+        />
+      )}
 
       {photosFor && (() => {
         const v = data.vacancies.find((x) => x.id === photosFor);

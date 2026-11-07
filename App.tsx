@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { recalculateProvidersDistances } from './utils/geoLocations';
 import * as api from './services/api';
 import { 
@@ -19,8 +19,9 @@ import ProfileView from './components/ProfileView';
 import ReviewModal from './components/ReviewModal';
 import SkillDashboard from './components/SkillDashboard';
 import Marketplace from './components/Marketplace';
-import VisitorsHub from './components/qaribu/VisitorsHub';
-import DocumentsHub from './components/qaribu/documents/DocumentsHub';
+import { clearQaribuCache, prefetchQaribu } from './services/qaribuPrefetch';
+const VisitorsHub = lazy(() => import('./components/qaribu/VisitorsHub'));
+const DocumentsHub = lazy(() => import('./components/qaribu/documents/DocumentsHub'));
 import ServiceCenters from './components/ServiceCenters';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
@@ -572,7 +573,15 @@ function App() {
     );
   }, [isAuthenticated, currentUser?.id]);
 
+  // For someone who has used Qaribu before, fetch its first screens while they are still on the home page.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const t = window.setTimeout(prefetchQaribu, 1500);
+    return () => window.clearTimeout(t);
+  }, [isAuthenticated]);
+
   const handleLogout = () => {
+    clearQaribuCache();
     setCurrentUser(null);
     setIsAuthenticated(false);
     setIsSuperAdmin(false);
@@ -892,9 +901,9 @@ function App() {
 
     switch (currentPage) {
       case 'qaribu_gate':
-        return <VisitorsHub isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
+        return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><VisitorsHub isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} /></Suspense>;
       case 'my_invoice':
-        return <DocumentsHub start="received" isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} />;
+        return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><DocumentsHub start="received" isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} /></Suspense>;
       case 'service_centers':
         return (
           <ServiceCenters
