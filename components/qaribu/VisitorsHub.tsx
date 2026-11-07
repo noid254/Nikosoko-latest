@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../services/visitorsApi';
+import { markQaribuUsed } from '../../services/qaribuPrefetch';
 import ExpectedTab from './visitors/ExpectedTab';
 import GateTab from './visitors/GateTab';
 import InviteTab from './visitors/InviteTab';
@@ -31,11 +32,13 @@ const tabsFor = (m: api.Membership): { key: TabKey; label: string }[] => {
 };
 
 const VisitorsHub: React.FC<VisitorsHubProps> = ({ isAuthenticated, onSignIn, onBack }) => {
-  const [memberships, setMemberships] = useState<api.Membership[]>([]);
-  const [account, setAccount] = useState<{ phone: string; name: string } | null>(null);
+  // What was fetched last time (or while the person was still on the home page) shows at once; a fresh copy replaces it.
+  const cached = isAuthenticated ? api.peekMe() : null;
+  const [memberships, setMemberships] = useState<api.Membership[]>(cached?.memberships ?? []);
+  const [account, setAccount] = useState<{ phone: string; name: string } | null>(cached ? { phone: cached.account.phone, name: cached.account.name } : null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const [slug, setSlug] = useState('');
+  const [slug, setSlug] = useState(cached?.memberships[0]?.slug ?? '');
   const [tab, setTab] = useState<TabKey | ''>('');
   const [registering, setRegistering] = useState(false);
 
@@ -55,8 +58,10 @@ const VisitorsHub: React.FC<VisitorsHubProps> = ({ isAuthenticated, onSignIn, on
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    setIsLoading(true);
+    markQaribuUsed();
     setLoadError('');
+    // With something to show already, refresh quietly behind it instead of showing "Loading…".
+    if (!api.peekMe()) setIsLoading(true);
     void refresh().finally(() => setIsLoading(false));
   }, [isAuthenticated]);
 

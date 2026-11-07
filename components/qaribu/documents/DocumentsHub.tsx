@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { markQaribuUsed } from '../../../services/qaribuPrefetch';
 import * as api from '../../../services/documentsApi';
 import BrandKitForm from './BrandKitForm';
 import DocumentList from './DocumentList';
@@ -34,7 +35,7 @@ const KINDS: { key: 'receipt' | 'invoice' | 'quote'; label: string }[] = [
 // first sets up their brand kit (the owner's rule, architecture section 23); until they have, Issue and Issued show
 // the set-up and nothing else. The server refuses to issue without one as well.
 const DocumentsHub: React.FC<DocumentsHubProps> = ({ isAuthenticated, onSignIn, onBack, onOpenAssets, start }) => {
-  const [kit, setKit] = useState<api.BrandKit | null>(null);
+  const [kit, setKit] = useState<api.BrandKit | null>(isAuthenticated ? api.peekBrandKit() : null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [tab, setTab] = useState<TabKey>(start === 'brandKit' ? 'brandKit' : start === 'received' ? 'received' : 'issue');
@@ -43,8 +44,9 @@ const DocumentsHub: React.FC<DocumentsHubProps> = ({ isAuthenticated, onSignIn, 
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    setLoading(true);
+    markQaribuUsed();
     setLoadError('');
+    if (!api.peekBrandKit()) setLoading(true);
     api
       .getBrandKit()
       .then(setKit)

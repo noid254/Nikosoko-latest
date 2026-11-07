@@ -57,7 +57,10 @@ export interface BrandKit {
     designs: { key: string; label: string }[];
 }
 
-export const getBrandKit = (): Promise<BrandKit> => call('/me/brand-kit');
+let kitCache: BrandKit | null = null;
+export const peekBrandKit = (): BrandKit | null => kitCache;
+export const clearBrandKitCache = (): void => { kitCache = null; };
+export const getBrandKit = (): Promise<BrandKit> => call('/me/brand-kit').then((kit: BrandKit) => (kitCache = kit));
 
 export const saveBrandKit = (input: {
     business_name: string;

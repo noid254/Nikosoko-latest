@@ -51,8 +51,13 @@ export interface Membership {
 // The person profile: the Nikosoko lens on this same account. A name is all it needs.
 export interface PersonProfile { id: string; name: string; visibility: string; }
 
-export const getMe = (): Promise<{ account: Account; profile: PersonProfile | null; premises: HostPremise[]; memberships: Membership[] }> =>
-    call('/me');
+export interface Me { account: Account; profile: PersonProfile | null; premises: HostPremise[]; memberships: Membership[]; }
+
+// The last answer, kept in memory so the screen can open at once and refresh behind itself.
+let meCache: Me | null = null;
+export const peekMe = (): Me | null => meCache;
+export const clearMeCache = (): void => { meCache = null; };
+export const getMe = (): Promise<Me> => call('/me').then((me: Me) => (meCache = me));
 
 export const setMyName = (name: string): Promise<{ account: Account; profile: PersonProfile | null }> =>
     call('/me/profile', { method: 'PUT', body: JSON.stringify({ name }) });
