@@ -56,13 +56,15 @@ async function newSession(phone9: string): Promise<string> {
 export function registerQaribuBridge({ app, requireAuth }: Deps) {
   app.use('/api/qaribu', requireAuth, async (req: any, res: any) => {
     const started = Date.now();
+    let sessionMs = -1, answerMs = -1; // where the time went: getting the session, then the platform's own answer
     // Say so in the log when a call is slow, with only the start of the path (no ids, no query), so the cause can be found.
     res.on('finish', () => {
       const ms = Date.now() - started;
-      if (ms > 1500) console.warn(`[qaribu] slow ${req.method} ${String(req.originalUrl || '').split('?')[0].split('/').slice(0, 4).join('/')} ${res.statusCode} ${ms}ms`);
+      if (ms > 1500) console.warn(`[qaribu] slow ${req.method} ${String(req.originalUrl || '').split('?')[0].split('/').slice(0, 4).join('/')} ${res.statusCode} ${ms}ms (session ${sessionMs}ms, platform answered after ${answerMs}ms)`);
     });
     try {
       const token = await sessionFor(req.auth.phone);
+      sessionMs = Date.now() - started;
       // A JSON body was already read by the app's parser; anything else (a logo or letterhead picture) is still a stream.
       const parsed = req.is('application/json') ? Buffer.from(JSON.stringify(req.body ?? {})) : null;
       const headers: Record<string, string | number> = { Authorization: `Bearer ${token}`, Accept: String(req.headers.accept || '*/*') };
@@ -73,6 +75,7 @@ export function registerQaribuBridge({ app, requireAuth }: Deps) {
       const upstream = lib.request({ host: TARGET.hostname, port: TARGET.port || (TARGET.protocol === 'https:' ? 443 : 80), method: req.method, path: req.url, headers, agent }, up => {
         const out: Record<string, string> = {};
         for (const h of ['content-type', 'cache-control', 'content-disposition']) if (up.headers[h]) out[h] = String(up.headers[h]);
+        answerMs = Date.now() - started - sessionMs;
         if (up.statusCode === 401) sessions.delete(req.auth.phone);
         res.writeHead(up.statusCode || 502, out);
         up.pipe(res);
