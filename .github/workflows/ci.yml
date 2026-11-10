@@ -1,0 +1,44 @@
+name: CI — Lint & Build
+
+on:
+  push:
+    branches: ["**"]          # runs on every branch push
+  pull_request:
+    branches: [main]          # runs on every PR targeting main
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check (lint)
+        run: npm run lint
+
+      - name: Build frontend + server
+        run: npm run build
+        env:
+          # Build-time env vars — safe to be empty during CI lint/build check
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Confirm build output exists
+        run: |
+          test -f dist/server.cjs && echo "✅ server.cjs built" || (echo "❌ server.cjs missing" && exit 1)
+          test -d dist/assets && echo "✅ frontend assets built" || (echo "❌ frontend assets missing" && exit 1)
