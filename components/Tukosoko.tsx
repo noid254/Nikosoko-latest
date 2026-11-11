@@ -465,16 +465,17 @@ interface SellServicePageProps {
 
 const SELL_FIELD = 'w-full bg-gray-50 border border-gray-200 focus:border-brand-navy rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:bg-white transition-all';
 const SELL_CATEGORIES = [
-  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '\u{1F4DA}' },
-  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '\u{1F4FA}' },
-  { id: 'Key Cutter', label: 'Key Cutter', icon: '\u{1F511}' },
-  { id: 'Braiding', label: 'Hair Braiding', icon: '\u{1F487}' },
-  { id: 'Water Refill', label: 'Water Refill', icon: '\u{1F4A7}' },
+  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '\uD83D\uDCDA' },
+  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '\uD83D\uDCFA' },
+  { id: 'Key Cutter', label: 'Key Cutter', icon: '\uD83D\uDD11' },
+  { id: 'Braiding', label: 'Hair Braiding', icon: '\uD83D\uDC87' },
+  { id: 'Water Refill', label: 'Water Refill', icon: '\uD83D\uDCA7' },
   { id: 'Gas Refill', label: 'Gas Refill', icon: '\u26FD' },
   { id: 'Electrical', label: 'Electrical Work', icon: '\u26A1' },
-  { id: 'Plumbing', label: 'Plumbing', icon: '\u{1F6B0}' },
-  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '\u{1F45F}' },
-  { id: 'Other Service', label: 'Other Skill', icon: '\u{1F6E0}\uFE0F' },
+  { id: 'Plumbing', label: 'Plumbing', icon: '\uD83D\uDEB0' },
+  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '\uD83D\uDC5F' },
+  { id: 'Machine', label: 'Machine / Equipment', icon: '\u2699\uFE0F' },
+  { id: 'Other Service', label: 'Other Skill', icon: '\uD83D\uDEE0\uFE0F' },
 ];
 const SELL_UNITS = [
   { id: '/ hour', label: '/ hour' }, { id: '/ lesson', label: '/ lesson' }, { id: '/ session', label: '/ session' },
@@ -544,18 +545,20 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
 
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</label>
-          <select value={category} onChange={e => setCategory(e.target.value)} className={SELL_FIELD}>
+          <select value={category} onChange={e => { const c = e.target.value; setCategory(c); if (c === 'Machine') setRateUnit('/ hour'); }} className={SELL_FIELD}>
             {SELL_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Service name</label>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            {category === 'Machine' ? 'Machine / task name' : 'Service name'}
+          </label>
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="e.g. Pipe leak repair, Maths tuition, Key cutting"
+            placeholder={category === 'Machine' ? 'e.g. CNC milling, Photocopier, AC regas rig' : 'e.g. Pipe leak repair, Maths tuition, Key cutting'}
             className={SELL_FIELD}
             autoComplete="off"
           />
@@ -588,21 +591,25 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
             rows={3}
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="A short note about what you offer, where you operate, or who to call."
+            placeholder={category === 'Machine'
+              ? 'What does the machine do? Idle hours available, any conditions.'
+              : 'A short note about what you offer, where you operate, or who to call.'}
             className={`${SELL_FIELD} resize-none`}
           />
         </div>
 
-        {/* Machine services — coming soon */}
-        <div className="border border-dashed border-gray-200 rounded-xl p-4 flex items-start gap-3 bg-gray-50">
-          <span className="text-xl mt-0.5">\u2699\uFE0F</span>
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Machine services \u2014 coming soon</p>
-            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-              List idle CNC time, photocopiers, AC rigs and other equipment by the hour. Not integrated yet \u2014 check back soon.
-            </p>
+        {/* Machine hint */}
+        {category === 'Machine' && (
+          <div className="border border-gray-200 rounded-xl p-4 flex items-start gap-3 bg-gray-50">
+            <span className="text-xl mt-0.5">⚙️</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Listing idle machine time</p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                Set the rate per hour (or per job for fixed tasks). Add a photo of the machine. Clients book through your profile.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
