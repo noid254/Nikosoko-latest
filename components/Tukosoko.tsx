@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { CatalogueItem, ServiceProvider, CurrentPage } from '../types';
 import { getDisplayRating } from '../utils/trustEngine';
 
@@ -463,99 +463,23 @@ interface SellServicePageProps {
   onAuthClick: () => void;
 }
 
-const TITLE_PRESETS: Record<string, string[]> = {
-  'Tutoring': [
-    'Maths Lesson & KCSE Exam Prep',
-    'Physics & Chemistry Coaching',
-    'Primary Homework Help & Remedial',
-    'English Grammar & Spoken Practice'
-  ],
-  'TV Mounting': [
-    'TV Wall Mounting & Cable Concealing',
-    'Soundbar & Bracket Installation',
-    'Full Motion Mount Setup (32"-75")'
-  ],
-  'Key Cutter': [
-    'Master Key Duplicate & Cutting',
-    'Padlock & Door Key Duplication',
-    'Emergency Lockout Key Service'
-  ],
-  'Braiding': [
-    'Knotless Braids & Box Braids',
-    'Lines & Cornrows Hair Styling',
-    'Dreadlocks Maintenance & Wash'
-  ],
-  'Water Refill': [
-    '20L Purified Water Doorstep Refill',
-    'Bulk Mineral Water Supply',
-    'Dispenser Bottle Exchange'
-  ],
-  'Gas Refill': [
-    '6kg / 13kg Cooking Gas Cylinder Delivery',
-    'Doorstep Gas Hose & Regulator Inspection',
-    'Cylinder Swap & Connection'
-  ],
-  'Electrical': [
-    'House Wiring & Socket Fitting',
-    'Circuit Breaker & Fuse Repair',
-    'Solar & Inverter Installation'
-  ],
-  'Plumbing': [
-    'Pipe Leak Repair & Unclogging',
-    'Shower & Sink Fitting',
-    'Water Tank Installation & Maintenance'
-  ],
-  'Shoe Repair': [
-    'Shoe Sole Replacement & Stitching',
-    'Leather Boot Cleaning & Polish',
-    'Zip Replacement & Heel Repair'
-  ],
-  'Other Service': [
-    'General Handyman & Home Repairs',
-    'Doorstep Appliance Servicing',
-    'Custom Technical Consultation'
-  ]
-};
-
-const OFFER_PRESETS = [
-  'First trial lesson 50% off',
-  'Free travel within 3km radius',
-  '10% discount for repeat clients',
-  'Free inspection & quotation',
-  'Includes complimentary cleanup'
-];
-
-const DESCRIPTION_TEMPLATES: Record<string, string> = {
-  'Tutoring': 'One-on-one lessons at the student\'s pace, online or at home. Covers school topics, past papers and exam technique.',
-  'TV Mounting': 'Wall mounting for TVs from 32 to 75 inches: bracket fitting, levelling, hiding the cables, and a test of the connected devices.',
-  'Key Cutter': 'Key duplication for door locks, padlocks and cabinet locks, at your doorstep or at the shop.',
-  'Braiding': 'Braiding with care for your hair and edges. Bring your own extensions or ask me to get them in advance.',
-  'Water Refill': 'Drinking water delivered to your home or office.',
-  'Gas Refill': 'Cooking gas refill and delivery to your door.',
-  'Electrical': 'Electrical repairs, fault finding, light fittings and socket repairs.',
-  'Plumbing': 'Repairs for leaking pipes, blocked drains and taps, plus bathroom fittings.',
-  'Shoe Repair': 'Shoe repair: soles, stitching, heel taps, leather conditioning and cleaning.',
-  'Other Service': 'Handyman and home repair jobs. Message me the details of the job for a quote.'
-};
-
-const SELL_FIELD = 'w-full bg-gray-50 border-2 border-gray-200 focus:border-brand-navy rounded-2xl p-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:bg-white transition-all';
+const SELL_FIELD = 'w-full bg-gray-50 border border-gray-200 focus:border-brand-navy rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:bg-white transition-all';
 const SELL_CATEGORIES = [
-  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '📚' },
-  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '📺' },
-  { id: 'Key Cutter', label: 'Key Cutter', icon: '🔑' },
-  { id: 'Braiding', label: 'Hair Braiding', icon: '💇' },
-  { id: 'Water Refill', label: 'Water Refill', icon: '💧' },
-  { id: 'Gas Refill', label: 'Gas Refill', icon: '⛽' },
-  { id: 'Electrical', label: 'Electrical Work', icon: '⚡' },
-  { id: 'Plumbing', label: 'Plumbing', icon: '🚰' },
-  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '👟' },
-  { id: 'Other Service', label: 'Other Skill', icon: '🛠️' },
+  { id: 'Tutoring', label: 'Tutoring / Tuition', icon: '\u{1F4DA}' },
+  { id: 'TV Mounting', label: 'TV Wall Mount', icon: '\u{1F4FA}' },
+  { id: 'Key Cutter', label: 'Key Cutter', icon: '\u{1F511}' },
+  { id: 'Braiding', label: 'Hair Braiding', icon: '\u{1F487}' },
+  { id: 'Water Refill', label: 'Water Refill', icon: '\u{1F4A7}' },
+  { id: 'Gas Refill', label: 'Gas Refill', icon: '\u26FD' },
+  { id: 'Electrical', label: 'Electrical Work', icon: '\u26A1' },
+  { id: 'Plumbing', label: 'Plumbing', icon: '\u{1F6B0}' },
+  { id: 'Shoe Repair', label: 'Shoe Repair', icon: '\u{1F45F}' },
+  { id: 'Other Service', label: 'Other Skill', icon: '\u{1F6E0}\uFE0F' },
 ];
 const SELL_UNITS = [
-  { id: '/ hour', label: 'hour' }, { id: '/ lesson', label: 'lesson' }, { id: '/ session', label: 'session' },
-  { id: '/ refill', label: 'refill' }, { id: '/ job', label: 'job' }, { id: '/ day', label: 'day' }, { id: 'fixed', label: 'Fixed price' },
+  { id: '/ hour', label: '/ hour' }, { id: '/ lesson', label: '/ lesson' }, { id: '/ session', label: '/ session' },
+  { id: '/ refill', label: '/ refill' }, { id: '/ job', label: '/ job' }, { id: '/ day', label: '/ day' }, { id: 'fixed', label: 'Fixed price' },
 ];
-const SELL_DURATIONS = ['15 mins', '30 mins', '45 mins', '1 hour', '2 hours', '3 hours', 'Half day', 'Full day', '2 days', '1 week'];
 
 const SellServicePage: React.FC<SellServicePageProps> = ({
   currentUser,
@@ -563,473 +487,137 @@ const SellServicePage: React.FC<SellServicePageProps> = ({
   onSubmit,
   onAuthClick
 }) => {
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [category, setCategory] = useState('Tutoring');
+  const [category, setCategory] = useState('Other Service');
   const [title, setTitle] = useState('');
-  const [priceAmount, setPriceAmount] = useState('200');
-  const [rateUnit, setRateUnit] = useState('/ hour');
-  const [duration, setDuration] = useState('1 hour');
+  const [priceAmount, setPriceAmount] = useState('');
+  const [rateUnit, setRateUnit] = useState('/ job');
   const [description, setDescription] = useState('');
-  const [offerNote, setOfferNote] = useState('');
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [customTitle, setCustomTitle] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCategoryChange = (newCat: string) => {
-    setCategory(newCat);
-    setCustomTitle(false);
-    const defaultTitle = TITLE_PRESETS[newCat]?.[0] || 'Professional Service Listing';
-    setTitle(defaultTitle);
+  const handleSubmit = () => {
+    if (!currentUser) { onAuthClick(); return; }
+    if (!title.trim()) { alert('Give your service a name.'); return; }
+    if (!priceAmount || Number(priceAmount) <= 0) { alert('Enter a price.'); return; }
 
-    if (newCat === 'Tutoring') {
-      setPriceAmount('200');
-      setRateUnit('/ hour');
-      setDuration('1 hour');
-      setDescription(DESCRIPTION_TEMPLATES['Tutoring']);
-      setOfferNote(OFFER_PRESETS[0]);
-    } else if (newCat === 'TV Mounting') {
-      setPriceAmount('1500');
-      setRateUnit('fixed');
-      setDuration('45 mins');
-      setDescription(DESCRIPTION_TEMPLATES['TV Mounting']);
-      setOfferNote(OFFER_PRESETS[1]);
-    } else {
-      setPriceAmount('500');
-      setRateUnit('/ job');
-      setDuration('1 hour');
-      setDescription(DESCRIPTION_TEMPLATES[newCat] || DESCRIPTION_TEMPLATES['Other Service']);
-      setOfferNote(OFFER_PRESETS[3]);
-    }
-  };
-
-  useEffect(() => {
-    if (!title) {
-      handleCategoryChange('Tutoring');
-    }
-  }, []);
-
-  const compressImage = (file: File, maxWidth = 1000, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.onload = () => {
-          const scale = Math.min(1, maxWidth / img.width);
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('Canvas not supported')); return; }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
-      compressImage(file)
-        .then((dataUrl) => {
-          setUploadedImages(prev => [...prev, dataUrl]);
-        })
-        .catch((err) => {
-          console.error('Image compression failed:', err);
-          alert('Sorry, that photo could not be processed. Please try a different image.');
-        });
-    });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleRemoveImage = (indexToRemove: number) => {
-    setUploadedImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
-  };
-
-  const handleAddPresetImage = (presetUrl: string) => {
-    if (!uploadedImages.includes(presetUrl)) {
-      setUploadedImages(prev => [...prev, presetUrl]);
-    }
-  };
-
-  const handleFinalSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!currentUser) {
-      onAuthClick();
-      return;
-    }
-
-    if (!title.trim() || !priceAmount.trim()) {
-      alert("Please ensure Service Title and Price are provided.");
-      return;
-    }
-
-    const formattedPrice = rateUnit === 'fixed' 
+    const formattedPrice = rateUnit === 'fixed'
       ? `Ksh ${priceAmount}`
       : `Ksh ${priceAmount} ${rateUnit}`;
 
-    const defaultPresets = CATEGORY_PHOTO_PRESETS[category] || ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
-    const finalImages = uploadedImages.length > 0 ? uploadedImages : [defaultPresets[0]];
+    const defaultImage = CATEGORY_PHOTO_PRESETS[category]?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800';
 
     const newItem: CatalogueItem = {
       id: `cat_${Date.now()}`,
       providerId: currentUser.id,
       title: title.trim(),
-      category: category,
-      description: description.trim() || `${category} service offered by ${currentUser.name}.`,
+      category,
+      description: description.trim() || `${category} offered by ${currentUser.name}.`,
       price: formattedPrice,
-      imageUrls: finalImages,
+      imageUrls: [defaultImage],
       isVerified: currentUser.isVerified ?? true,
-      duration: duration || '1 hour',
-      discountInfo: offerNote.trim() || 'Direct Service Listing'
     };
 
     onSubmit(newItem);
   };
 
-  const currentPresets = CATEGORY_PHOTO_PRESETS[category] || ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800'];
-  const activeCoverImage = uploadedImages[0] || currentPresets[0];
-
-  const totalSteps = 2;
-
-  const nextStep = () => {
-    if (currentStep === 1 && !title.trim()) {
-      alert("Please choose or type a service name.");
-      return;
-    }
-    if (currentStep === 1 && (!priceAmount || Number(priceAmount) <= 0)) {
-      alert("Please enter a valid price amount.");
-      return;
-    }
-    if (currentStep < totalSteps) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    } else {
-      onBack();
-    }
-  };
-
   return (
-    <div className="bg-gray-50 min-h-screen font-sans pb-28 max-w-md mx-auto border-x border-gray-100 relative flex flex-col">
-      
-      {/* Sticky Top Header with Navigation & Progress Indicator */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40 shadow-2xs">
-        {/* Progress bar */}
-        <div className="w-full bg-gray-100 h-1.5 overflow-hidden">
-          <div 
-            className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full transition-all duration-300 ease-out" 
-            style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+    <div className="bg-white min-h-screen font-sans flex flex-col">
+
+      {/* Header */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-40 px-4 py-3 flex items-center gap-3">
+        <button type="button" onClick={onBack} className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
+          <BackIcon />
+        </button>
+        <h1 className="text-sm font-bold text-gray-900">List a service</h1>
+      </header>
+
+      {/* Auth notice */}
+      {!currentUser && (
+        <div className="mx-4 mt-4 bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center justify-between">
+          <p className="text-sm text-amber-900 font-medium">Sign in to publish</p>
+          <button type="button" onClick={onAuthClick} className="bg-brand-navy text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer">
+            Sign In
+          </button>
+        </div>
+      )}
+
+      {/* Form — one field per line */}
+      <div className="flex-1 px-4 pt-5 pb-32 space-y-4">
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</label>
+          <select value={category} onChange={e => setCategory(e.target.value)} className={SELL_FIELD}>
+            {SELL_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Service name</label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="e.g. Pipe leak repair, Maths tuition, Key cutting"
+            className={SELL_FIELD}
+            autoComplete="off"
           />
         </div>
 
-        <div className="px-3.5 py-2.5 flex items-center justify-between">
-          <button 
-            type="button"
-            onClick={prevStep}
-            className="p-2 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-1.5 text-xs font-black cursor-pointer"
-          >
-            <BackIcon />
-            <span>{currentStep === 1 ? 'Back' : 'Previous'}</span>
-          </button>
-
-          <div className="text-center">
-            <span className="text-[9.5px] font-black tracking-widest text-amber-600 uppercase">
-              Step {currentStep} of {totalSteps}
-            </span>
-            <h1 className="text-xs font-black text-brand-navy uppercase tracking-tight leading-none mt-0.5">
-              Sell a Service
-            </h1>
-          </div>
-
-          <div className="w-14 flex justify-end">
-            <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
-              {Math.round((currentStep / totalSteps) * 100)}%
-            </span>
-          </div>
-        </div>
-
-        {/* Step dots for quick jump */}
-        <div className="flex items-center justify-center gap-1.5 pb-2 border-t border-gray-50 pt-1.5 px-3">
-          {[1, 2].map((stepNum) => (
-            <button
-              key={stepNum}
-              type="button"
-              onClick={() => {
-                if (stepNum <= currentStep) setCurrentStep(stepNum);
-              }}
-              className={`h-2 rounded-full transition-all cursor-pointer ${
-                stepNum === currentStep 
-                  ? 'w-6 bg-brand-navy' 
-                  : stepNum < currentStep 
-                    ? 'w-2 bg-amber-400' 
-                    : 'w-2 bg-gray-200'
-              }`}
-              title={`Go to Step ${stepNum}`}
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Price (Ksh)</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={priceAmount}
+              onChange={e => setPriceAmount(e.target.value)}
+              placeholder="500"
+              className={SELL_FIELD}
             />
-          ))}
-        </div>
-      </header>
-
-      {/* Main Container - Single Input Focus Screen per Step */}
-      <main className="p-4 flex-1 flex flex-col justify-between space-y-4">
-
-        {/* User Skill Badge Header */}
-        {currentUser ? (
-          <div className="bg-white p-2.5 rounded-2xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-            <img 
-              src={currentUser.avatarUrl} 
-              alt={currentUser.name} 
-              className="w-9 h-9 rounded-full object-cover border-2 border-brand-navy shadow-2xs shrink-0" 
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xs text-gray-900 truncate">{currentUser.name}</span>
-                <span className="text-[8.5px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                  ✓ Verified Skill ID
-                </span>
-              </div>
-              <p className="text-[9.5px] text-gray-500 font-semibold truncate">{currentUser.service || 'Skill Provider'}</p>
-            </div>
           </div>
-        ) : (
-          <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-amber-900">Sign in to publish your skill</p>
-              <p className="text-[10px] text-amber-700">Connect with your Skill ID profile</p>
-            </div>
-            <button 
-              type="button" 
-              onClick={onAuthClick}
-              className="bg-brand-navy text-white text-xs font-black px-3 py-1.5 rounded-xl uppercase tracking-wider cursor-pointer"
-            >
-              Sign In
-            </button>
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Unit</label>
+            <select value={rateUnit} onChange={e => setRateUnit(e.target.value)} className={SELL_FIELD}>
+              {SELL_UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
+            </select>
           </div>
-        )}
-
-        {/* STEP 1: WHAT, PRICE AND TIME (all dropdowns) */}
-        {currentStep === 1 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Category</label>
-                <select value={category} onChange={e => handleCategoryChange(e.target.value)} className={SELL_FIELD}>
-                  {SELL_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Service</label>
-                <select
-                  value={customTitle ? '__custom' : title}
-                  onChange={e => {
-                    if (e.target.value === '__custom') { setCustomTitle(true); setTitle(''); }
-                    else { setCustomTitle(false); setTitle(e.target.value); }
-                  }}
-                  className={SELL_FIELD}
-                >
-                  {(TITLE_PRESETS[category] || TITLE_PRESETS['Other Service']).map(t => <option key={t} value={t}>{t}</option>)}
-                  <option value="__custom">Other: I will type it</option>
-                </select>
-                {customTitle && (
-                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Name your service" className={`${SELL_FIELD} mt-2`} />
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Price (Ksh)</label>
-                  <input type="number" inputMode="numeric" min="1" value={priceAmount} onChange={e => setPriceAmount(e.target.value)} placeholder="200" className={SELL_FIELD} />
-                </div>
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Per</label>
-                  <select value={rateUnit} onChange={e => setRateUnit(e.target.value)} className={SELL_FIELD}>
-                    {SELL_UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Takes about</label>
-                  <select value={duration} onChange={e => setDuration(e.target.value)} className={SELL_FIELD}>
-                    {(SELL_DURATIONS.includes(duration) ? SELL_DURATIONS : [duration, ...SELL_DURATIONS]).map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-800 mb-1.5">Offer</label>
-                  <select value={offerNote} onChange={e => setOfferNote(e.target.value)} className={SELL_FIELD}>
-                    <option value="">No offer</option>
-                    {(OFFER_PRESETS.includes(offerNote) || !offerNote ? OFFER_PRESETS : [offerNote, ...OFFER_PRESETS]).map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-900">Clients will see:</span>
-                <span className="text-sm font-black text-brand-navy bg-white px-3 py-1 rounded-xl border border-amber-300 shadow-2xs">
-                  {rateUnit === 'fixed' ? `Ksh ${priceAmount || 0}` : `Ksh ${priceAmount || 0} ${rateUnit}`}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: PHOTOS, SHORT DESCRIPTION, PREVIEW AND PUBLISH */}
-        {currentStep === 2 && (
-          <div className="space-y-4 animate-fade-in flex-1">
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-1.5">
-              <label className="block text-xs font-black uppercase tracking-wider text-gray-800">About this service <span className="text-gray-400 normal-case font-semibold">(optional, we filled it in)</span></label>
-              <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} className={`${SELL_FIELD} font-medium leading-relaxed resize-none`} />
-            </div>
-
-            {/* Photo Upload Card */}
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-800">
-                  Service Photos (From Gallery)
-                </label>
-                <span className="text-[9.5px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
-                  {uploadedImages.length} uploaded
-                </span>
-              </div>
-
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                accept="image/*" 
-                multiple 
-                onChange={handleGalleryUpload} 
-                className="hidden" 
-              />
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-300 hover:border-brand-navy p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer group"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-100 text-brand-navy flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                  🖼️
-                </div>
-                <p className="text-xs font-black text-gray-900">Upload Photo from Phone Gallery</p>
-              </button>
-
-              {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 pt-2">
-                  {uploadedImages.map((imgData, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
-                      <img src={imgData} alt={`Uploaded ${idx + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-md hover:bg-red-700 transition-colors cursor-pointer"
-                        title="Remove image"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Stock Photo Presets */}
-              <div className="pt-2 border-t border-gray-100 space-y-1.5">
-                <span className="text-[9px] font-extrabold uppercase text-gray-400">Or tap to add stock sample photo:</span>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {currentPresets.map((presetUrl, pIdx) => (
-                    <button
-                      type="button"
-                      key={pIdx}
-                      onClick={() => handleAddPresetImage(presetUrl)}
-                      className="relative w-16 h-14 rounded-xl overflow-hidden border border-gray-200 shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
-                    >
-                      <img src={presetUrl} alt="" className="w-full h-full object-cover" />
-                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5">
-                        + Add
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Live Marketplace Card Preview */}
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
-              <span className="text-xs font-black uppercase tracking-wider text-gray-800 block text-center">
-                Live Card Preview
-              </span>
-              
-              <div className="max-w-[240px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
-                <div className="relative h-32 bg-gray-100 overflow-hidden">
-                  <img src={activeCoverImage} alt="" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1.5 left-1.5 bg-white text-brand-navy font-black text-xs px-2 py-0.5 rounded-lg border border-gray-100">
-                    {rateUnit === 'fixed' ? `Ksh ${priceAmount}` : `Ksh ${priceAmount} ${rateUnit}`}
-                  </span>
-                </div>
-                <div className="p-3">
-                  <h3 className="font-extrabold text-gray-900 text-xs leading-tight truncate">
-                    {title || 'Service Title'}
-                  </h3>
-                  <p className="text-[9.5px] text-gray-500 line-clamp-2 mt-0.5 font-medium">
-                    {description || 'Service details...'}
-                  </p>
-                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold text-gray-600">
-                    <span>{currentUser?.name || 'Your Name'}</span>
-                    <span className="text-blue-600 font-black uppercase">Order ➔</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step Bottom Controls Footer */}
-        <div className="pt-3 border-t border-gray-200 bg-white sticky bottom-0 p-3 -mx-4 -mb-4 rounded-t-2xl shadow-lg flex items-center gap-2">
-          {currentStep > 1 && (
-            <button
-              type="button"
-              onClick={prevStep}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              ← Back
-            </button>
-          )}
-
-          {currentStep < totalSteps ? (
-            <button
-              type="button"
-              onClick={nextStep}
-              className="flex-2 bg-brand-navy hover:bg-black text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>Next Step</span>
-              <span>➔</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleFinalSubmit()}
-              className="flex-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>🚀 Publish Skill Live</span>
-            </button>
-          )}
         </div>
 
-      </main>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Description <span className="normal-case font-normal text-gray-400">(optional)</span></label>
+          <textarea
+            rows={3}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="A short note about what you offer, where you operate, or who to call."
+            className={`${SELL_FIELD} resize-none`}
+          />
+        </div>
+
+        {/* Machine services — coming soon */}
+        <div className="border border-dashed border-gray-200 rounded-xl p-4 flex items-start gap-3 bg-gray-50">
+          <span className="text-xl mt-0.5">\u2699\uFE0F</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-700">Machine services \u2014 coming soon</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+              List idle CNC time, photocopiers, AC rigs and other equipment by the hour. Not integrated yet \u2014 check back soon.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Sticky publish button */}
+      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 px-4 py-4">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!title.trim() || !priceAmount || Number(priceAmount) <= 0}
+          className="w-full bg-brand-navy text-white font-bold py-3.5 rounded-xl text-sm uppercase tracking-wide transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+        >
+          Publish
+        </button>
+      </div>
+
     </div>
   );
 };

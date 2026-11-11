@@ -50,8 +50,8 @@ const NewListing: React.FC<Props> = ({ premise, onClose, onDone }) => {
   // Free the picture previews when the screen closes.
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
-  const needed = Math.max(0, api.MIN_VACANCY_PHOTOS - shots.length);
-  const ready = title.trim().length > 0 && needed === 0 && !busy;
+  const needed = 0; // photos are optional — publish is gated on title only
+  const ready = title.trim().length > 0 && !busy;
 
   const addShot = async (blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -100,9 +100,9 @@ const NewListing: React.FC<Props> = ({ premise, onClose, onDone }) => {
 
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">1. Photos</h3>
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${needed === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-              {needed === 0 ? `${shots.length} ready` : `${shots.length} of ${api.MIN_VACANCY_PHOTOS}`}
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">1. Photos <span className="normal-case font-normal text-gray-400">(optional)</span></h3>
+            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-800">
+              {shots.length > 0 ? `${shots.length} added` : 'None yet'}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -204,10 +204,7 @@ const NewListing: React.FC<Props> = ({ premise, onClose, onDone }) => {
             {busy ? progress || 'Publishing…' : 'Publish vacancy'}
           </button>
           {!busy && !ready && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              {needed > 0 ? `Take ${needed} more photo${needed === 1 ? '' : 's'}` : 'Give it a name'}
-              {needed > 0 && title.trim().length === 0 ? ' and give it a name' : ''} to publish.
-            </p>
+            <p className="text-xs text-gray-500 text-center mt-2">Give it a name to publish.</p>
           )}
         </div>
       </div>
