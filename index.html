@@ -41,12 +41,12 @@
       #splash{position:fixed;inset:0;z-index:9999;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease}
       #splash.splash-hide{opacity:0;pointer-events:none}
       #splash .sp-box{--w:min(68vw,300px);position:relative;width:var(--w);display:flex;flex-direction:column;align-items:center;margin-top:calc(var(--w) * 0.12)}
-      #splash .sp-logo{width:100%;height:auto;display:block;animation:sp-in .4s ease-out both}
+      #splash .sp-logo{width:100%;height:auto;display:block;animation:sp-in .3s ease-out both}
       #splash .sp-fly{position:absolute;left:0;top:calc(var(--w) * -0.24);width:calc(var(--w) * 1.12);height:auto;overflow:visible}
       #splash .sp-trail{fill:none;stroke:#fff;stroke-opacity:.8;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:.1 6}
-      #splash .sp-reveal{fill:none;stroke:#fff;stroke-width:10;stroke-dasharray:100;stroke-dashoffset:100;animation:sp-draw .8s .35s ease-out forwards}
-      #splash .sp-plane{transform-box:fill-box;transform-origin:center;animation:sp-plane .8s .35s cubic-bezier(.3,.7,.4,1) both}
-      #splash .sp-tag{margin:calc(var(--w) * 0.07) 0 0;font-family:Poppins,system-ui,sans-serif;font-weight:300;font-size:calc(var(--w) * 0.058);letter-spacing:.03em;color:#d6d6d6;white-space:nowrap;animation:sp-up .5s .9s ease-out both}
+      #splash .sp-reveal{fill:none;stroke:#fff;stroke-width:10;stroke-dasharray:100;stroke-dashoffset:100;animation:sp-draw .6s .2s ease-out forwards}
+      #splash .sp-plane{transform-box:fill-box;transform-origin:center;animation:sp-plane .6s .2s cubic-bezier(.3,.7,.4,1) both}
+      #splash .sp-tag{margin:calc(var(--w) * 0.07) 0 0;font-family:Poppins,system-ui,sans-serif;font-weight:300;font-size:calc(var(--w) * 0.058);letter-spacing:.03em;color:#d6d6d6;white-space:nowrap;animation:sp-up .4s .6s ease-out both}
       @keyframes sp-in{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
       @keyframes sp-draw{to{stroke-dashoffset:0}}
       @keyframes sp-plane{0%{opacity:0;transform:translate(6px,86px) scale(.45) rotate(25deg)}35%{opacity:1;transform:translate(26px,48px) scale(.7) rotate(-10deg)}70%{transform:translate(12px,12px) scale(.9) rotate(10deg)}100%{opacity:1;transform:none}}
@@ -72,10 +72,13 @@
       </div>
     </div>
     <script>
-      // Never leave the splash up if the app fails to start: it steps aside after 15 seconds regardless.
+      // The splash stays at least 1.2 seconds from opening, so the plane and tagline always finish (about 1 second),
+      // and longer if the app is still loading. It never stays past 15 seconds, even if the app fails to start.
       window.hideSplash = function () {
         var s = document.getElementById('splash');
         if (!s || s.classList.contains('splash-hide')) return;
+        var wait = 1200 - (window.performance ? performance.now() : 1200);
+        if (wait > 0) { setTimeout(window.hideSplash, wait); return; }
         s.classList.add('splash-hide');
         setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 400);
       };
