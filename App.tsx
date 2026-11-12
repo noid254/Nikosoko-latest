@@ -141,7 +141,7 @@ function App() {
       tagline: "Kenya's Premier Marketplace for Trades Professionals & Services",
       appIconUrl: '/images/nikosoko-icon.jpg',
       faviconUrl: '/images/nikosoko-favicon.jpg',
-      heroBannerUrl: '/images/nikosoko-hero-banner-white.jpg',
+      heroBannerUrl: '/images/nikosoko-hero-ticket.jpg',
       primaryColor: '#F59E0B',
       supportPhone: '+254 723 119 356',
       supportEmail: 'support@nikosoko.com'
