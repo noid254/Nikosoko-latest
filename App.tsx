@@ -87,6 +87,10 @@ function App() {
   const [saccoModalProvider, setSaccoModalProvider] = useState<ServiceProvider | null>(null);
   // With lists saved from the last visit, show the page at once and refresh behind it.
   const [isLoading, setIsLoading] = useState(() => api.getCachedProviders().length === 0);
+  // Fade the splash (index.html) out once the first screen can show.
+  useEffect(() => {
+    if (!isLoading) (window as unknown as { hideSplash?: () => void }).hideSplash?.();
+  }, [isLoading]);
   const [pendingReviews, setPendingReviews] = useState<ServiceProvider[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isForcedReview, setIsForcedReview] = useState(false);
@@ -889,7 +893,8 @@ function App() {
   }, [providers]);
 
   const renderContent = () => {
-    if (isLoading) return <div className="flex items-center justify-center h-screen bg-brand-navy text-white font-bold animate-pulse italic uppercase tracking-tighter">NIKOSOKO...</div>;
+    // While the first data loads, the splash in index.html stays on top; this black page sits under it.
+    if (isLoading) return <div className="h-screen bg-black" />;
 
     // SUSPENDED USER BLOCK SCREEN
     if (currentUser && (currentUser.isSuspended || (currentUser.flagCount || 0) > 0)) {

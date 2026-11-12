@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nikosoko-pwa-v2';
+const CACHE_NAME = 'nikosoko-pwa-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -6,7 +6,8 @@ const STATIC_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/icon.svg',
-  '/apple-touch-icon.png'
+  '/apple-touch-icon.png',
+  '/splash-logo.png'
 ];
 
 // Installation: Cache core shell assets resiliently
