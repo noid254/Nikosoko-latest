@@ -56,6 +56,12 @@ const DocumentIcon = () => (
   </svg>
 );
 
+const BoxIcon = () => (
+  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -234,6 +240,26 @@ const SideMenu: React.FC<SideMenuProps> = ({
             </div>
             <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9.5px] font-semibold px-2 py-0.5 rounded-full">
               Calendar & M-Pesa
+            </span>
+          </button>
+
+          {/* Assets: what this person owns, from the Qaribu asset ledger (vehicles by plate, items by serial) */}
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate('my_assets');
+              onClose();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-neutral-800 hover:text-black hover:bg-neutral-100 active:bg-neutral-200 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 opacity-80">
+                <BoxIcon />
+              </span>
+              <span className="text-xs font-semibold leading-none">Assets</span>
+            </div>
+            <span className="bg-neutral-100 text-neutral-600 border border-neutral-200 text-[9.5px] font-semibold px-2 py-0.5 rounded-full">
+              Bikes, vans & tools
             </span>
           </button>
 

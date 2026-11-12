@@ -22,6 +22,7 @@ import Marketplace from './components/Marketplace';
 import { clearQaribuCache, prefetchQaribu } from './services/qaribuPrefetch';
 const VisitorsHub = lazy(() => import('./components/qaribu/VisitorsHub'));
 const DocumentsHub = lazy(() => import('./components/qaribu/documents/DocumentsHub'));
+const AssetsHub = lazy(() => import('./components/qaribu/assets/AssetsHub'));
 import ServiceCenters from './components/ServiceCenters';
 import SaccoDashboard from './components/SaccoDashboard';
 import SaccoModal from './components/SaccoModal';
@@ -932,7 +933,9 @@ function App() {
       case 'qaribu_gate':
         return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><VisitorsHub isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} /></Suspense>;
       case 'my_invoice':
-        return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><DocumentsHub start="received" isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} /></Suspense>;
+        return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><DocumentsHub start="received" isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} onOpenAssets={() => setCurrentPage('my_assets')} /></Suspense>;
+      case 'my_assets':
+        return <Suspense fallback={<p className="p-6 text-center text-gray-500">Loading…</p>}><AssetsHub isAuthenticated={isAuthenticated} onSignIn={() => setIsAuthModalOpen(true)} onBack={() => setCurrentPage('home')} /></Suspense>;
       case 'service_centers':
         return (
           <ServiceCenters
