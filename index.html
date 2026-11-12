@@ -72,12 +72,12 @@
       </div>
     </div>
     <script>
-      // The splash stays at least 1.2 seconds from opening, so the plane and tagline always finish (about 1 second),
+      // The splash stays at least 1.5 seconds from opening, so the plane and tagline always finish (about 1 second),
       // and longer if the app is still loading. It never stays past 15 seconds, even if the app fails to start.
       window.hideSplash = function () {
         var s = document.getElementById('splash');
         if (!s || s.classList.contains('splash-hide')) return;
-        var wait = 1200 - (window.performance ? performance.now() : 1200);
+        var wait = 1500 - (window.performance ? performance.now() : 1500);
         if (wait > 0) { setTimeout(window.hideSplash, wait); return; }
         s.classList.add('splash-hide');
         setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 400);
