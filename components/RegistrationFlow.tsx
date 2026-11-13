@@ -36,7 +36,10 @@ const RATE_TYPES = [
 const ORG_TYPES = [
   'Sacco or transport group',
   'School or training institution',
-  'Association or community group',
+  'Association or self-help group',
+  'Service centre or outlet',
+  'Premise (estate, building or gate)',
+  'Brand or company',
   'Business or company',
 ];
 
