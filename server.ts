@@ -251,6 +251,10 @@ async function initDatabase() {
   try { runSql('ALTER TABLE providers ADD COLUMN lastCheckInAt TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE providers ADD COLUMN lastCheckInLocation TEXT'); } catch (_) {}
 
+  // Passwords are not used to sign in anywhere (sign-in is an SMS code, and admin also needs an authenticator app).
+  // The old seed stored "admin" here in plain text; clear every stored password so none can ever be used.
+  try { runSql("UPDATE providers SET password = '' WHERE password IS NOT NULL AND password != ''"); } catch (e) { console.error('Could not clear stored passwords:', e); }
+
   // Organisations now need the admin's approval to issue codes and verify members. One that is already verified and
   // was not verified through someone else's code was verified by the admin, so it counts as approved.
   try {
@@ -285,7 +289,7 @@ async function initDatabase() {
       role: 'SuperAdmin',
       skills: JSON.stringify(['Master Electrician', 'Plumbing Inspection', 'Solar Installation', 'Quality Assurance']),
       hourlyRate: 'Ksh 2,500/hr',
-      password: 'admin',
+      password: '', // nobody signs in with a password: SMS code, plus an authenticator app for admin
       createdAt: new Date().toISOString()
     };
 
@@ -837,7 +841,7 @@ async function startServer() {
       // Badges, suspension and approvals are kept as stored: a user's own save cannot set or clear them.
       if (!isAdminAuth(a)) keepProtectedFields(p, parseRaw(prior), null);
       const skillsJson = JSON.stringify(p.skills || []);
-      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, rawData: _pNested, ...safeP } = p;
+      const { avatarUrl: _pAvatar, coverImageUrl: _pCover, rawData: _pNested, password: _pPassword, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
 
       runSql(
@@ -848,7 +852,7 @@ async function startServer() {
           id, p.name || '', p.phone || '', p.email || '', p.service || '', p.category || '',
           prior?.rating ?? 0, prior?.reviewsCount ?? 0, prior ? (prior.isVerified ? 1 : 0) : 0, p.location || '',
           p.bio || p.about || '', p.about || p.bio || '', p.avatarUrl || '', p.coverImageUrl || '', p.role || 'Provider',
-          skillsJson, p.hourlyRate || '', p.password || '', p.isOnline ? 1 : 0,
+          skillsJson, p.hourlyRate || '', '', p.isOnline ? 1 : 0,
           p.latitude || null, p.longitude || null, p.lastCheckInAt || null, p.lastCheckInLocation || null, rawDataJson, p.createdAt || new Date().toISOString()
         ]
       );
@@ -889,7 +893,7 @@ async function startServer() {
       const skillsJson = JSON.stringify(updated.skills || []);
       // rawData must never be stored inside itself: the database row carries it as a column, and spreading the row
       // into the profile used to wrap the old copy inside the new one on every save (the file grew past 700 MB).
-      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, rawData: _rdNested, ...safeForRawData } = updated;
+      const { avatarUrl: _rdAvatar, coverImageUrl: _rdCover, rawData: _rdNested, password: _rdPassword, ...safeForRawData } = updated;
       const rawDataJson = JSON.stringify(safeForRawData);
 
       runSql(
@@ -900,7 +904,7 @@ async function startServer() {
           id, updated.name || '', updated.phone || '', updated.email || '', updated.service || '', updated.category || '',
           updated.rating ?? 0, updated.reviewsCount ?? 0, updated.isVerified ? 1 : 0, updated.location || '',
           updated.bio || updated.about || '', updated.about || updated.bio || '', updated.avatarUrl || '', updated.coverImageUrl || '', updated.role || 'Provider',
-          skillsJson, updated.hourlyRate || '', updated.password || '', updated.isOnline ? 1 : 0,
+          skillsJson, updated.hourlyRate || '', '', updated.isOnline ? 1 : 0,
           updated.latitude || null, updated.longitude || null, updated.lastCheckInAt || null, updated.lastCheckInLocation || null,
           rawDataJson, updated.createdAt || new Date().toISOString()
         ]

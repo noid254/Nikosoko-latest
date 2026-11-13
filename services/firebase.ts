@@ -1,16 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import type { ServiceProvider } from '../types';
 
 // Initialize Firebase App
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore DB
-export const db = (firebaseConfig as any).firestoreDatabaseId
-  ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
-  : getFirestore(app);
+// Firestore is not used: profiles live in the server's own database, and Firestore rules deny all access.
 
 // Initialize Auth
 export const auth = getAuth(app);
@@ -91,49 +86,5 @@ export async function uploadImageToStorage(
     throw new Error(
       'Failed to upload image. Please try a smaller photo or check your connection.'
     );
-  }
-}
-
-export async function saveUserProfileToFirestore(
-  userId: string,
-  profileData: Partial<ServiceProvider>
-): Promise<void> {
-  if (!userId) return;
-  try {
-    const userRef = doc(db, 'users', userId);
-
-    const cleanData: Record<string, any> = {
-      updatedAt: new Date().toISOString()
-    };
-
-    Object.entries(profileData).forEach(([key, val]) => {
-      if (val === undefined) return;
-      // Never store data URLs
-      if (
-        typeof val === 'string' &&
-        val.startsWith('data:') &&
-        (key === 'avatarUrl' || key === 'coverImageUrl' || key === 'catalogueBannerUrl')
-      ) {
-        return;
-      }
-      cleanData[key] = val;
-    });
-
-    // Soft timeout so the UI never freezes
-    await withTimeout(setDoc(userRef, cleanData, { merge: true }), 3000, undefined);
-
-    if (profileData.phone) {
-      const cleanPhone = profileData.phone.replace(/\D/g, '');
-      if (cleanPhone) {
-        const phoneRef = doc(db, 'user_phones', cleanPhone);
-        await withTimeout(
-          setDoc(phoneRef, { userId, updatedAt: new Date().toISOString() }, { merge: true }),
-          2000,
-          undefined
-        );
-      }
-    }
-  } catch (error) {
-    console.error(`Error saving user profile to Firestore:`, error);
   }
 }

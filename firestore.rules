@@ -1,11 +1,10 @@
 rules_version = '2';
+// Nikosoko keeps all profiles in its own server database. The app no longer reads or writes Firestore,
+// so nobody (signed in or not) has any access here. Publish these rules in the Firebase console.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if true;
-    }
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

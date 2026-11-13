@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { ServiceProvider, Document, CurrentPage, Coordinates } from '../types';
 import { normalizeSkills, withProfessionTitles } from '../utils/skills';
-import { uploadImageToStorage, saveUserProfileToFirestore } from '../services/firebase';
+import { uploadImageToStorage } from '../services/firebase';
 import { resolveLocationCoordinates, recordLocationCheckIn, isValidKenyaCoords, matchSpecificEstate } from '../utils/geoLocations';
 import LocationPromptModal from './LocationPromptModal';
 import SkillDetailModal from './SkillDetailModal';
@@ -325,10 +325,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 selectedProfileButtons: editButtons
             };
 
-            // 3. Save directly into user document in Cloud Firestore (non-blocking)
-            saveUserProfileToFirestore(profileData.id, updatedProfile).catch(console.error);
-
-            // 4. Update application state
+            // 3. Save through the server (onUpdate); profiles are no longer copied to Firestore.
             onUpdate(updatedProfile);
             setIsEditing(false);
             setAvatarFile(null);
