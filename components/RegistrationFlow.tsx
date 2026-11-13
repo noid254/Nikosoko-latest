@@ -202,16 +202,12 @@ const RegistrationFlow: React.FC<Props> = ({ kind, currentUser, onSave, onClose,
       if (save) {
         patch = await buildPatch();
 
-        // A code from an organization or course verifies the person, but only if the server accepts it.
+        // A code from an organization or course sends a request to join it. The person is verified only when the
+        // organization approves them; the server sets the badge then, never this screen.
         if (kind === 'individual' && step === 3 && v.code.trim()) {
           const res = await redeemReferralCode(v.code.trim(), currentUser.id);
           if ('error' in res) { setError(res.error); setBusy(false); return; }
-          patch.isVerified = true;
-          patch.isSaccoVerified = true;
-          patch.referralCodeUsed = v.code.trim().toUpperCase();
-          patch.verifiedByOrgName = res.orgName;
-          patch.verifiedForCourse = res.courseTitle || undefined;
-          setNote(`Verified through ${res.orgName}${res.courseTitle ? ` (${res.courseTitle})` : ''}.`);
+          setNote(`Request sent to ${res.orgName}${res.courseTitle ? ` (${res.courseTitle})` : ''}. You get the Verified badge once they approve you.`);
         }
       }
       const next = Math.min(step + 1, total - 1);
@@ -254,6 +250,12 @@ const RegistrationFlow: React.FC<Props> = ({ kind, currentUser, onSave, onClose,
           <h1 className="mt-6 text-3xl font-bold tracking-tight">{kind === 'organization' ? 'Your organization is set up' : 'Your profile is saved'}</h1>
           <p className="mt-3 text-neutral-600">You can change anything later from your profile.</p>
 
+          {kind === 'organization' && !orgCode && (
+            <div className="mt-8 rounded-2xl bg-neutral-100 p-6 text-left">
+              <p className="text-sm font-semibold text-neutral-900">Your organization code is on its way</p>
+              <p className="text-sm text-neutral-600 mt-2">NikoSoko checks every organization before it can verify members. Once you are approved, your code appears in your dashboard.</p>
+            </div>
+          )}
           {kind === 'organization' && orgCode && (
             <div className="mt-8 rounded-2xl bg-black text-white p-6 text-left">
               <p className="text-sm text-white/70">Your organization code</p>

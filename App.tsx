@@ -449,7 +449,7 @@ function App() {
     gateAuth(() => setIsSideMenuOpen(true));
   };
 
-  // A user is verified through an organization only when the server accepts their code.
+  // A code sends a request to join the organization; the user is verified only when the organization approves.
   const applyReferralCode = async (user: ServiceProvider, code?: string) => {
     const clean = (code || '').trim();
     if (!clean) return;
@@ -458,17 +458,8 @@ function App() {
       alert(result.error);
       return;
     }
-    const verified: ServiceProvider = {
-      ...user,
-      isVerified: true,
-      isSaccoVerified: true,
-      referralCodeUsed: clean.toUpperCase(),
-      verifiedByOrgName: result.orgName,
-      verifiedForCourse: result.courseTitle || undefined,
-    };
-    setCurrentUser(prev => (prev && prev.id === user.id ? verified : prev));
-    setProviders(prev => prev.map(p => (p.id === user.id ? verified : p)));
-    alert(`You are now verified through ${result.orgName}${result.courseTitle ? ` (${result.courseTitle})` : ''}.`);
+    // The organization approves the request; the badge appears then, set by the server.
+    alert(`Request sent to ${result.orgName}${result.courseTitle ? ` (${result.courseTitle})` : ''}. You get the Verified badge once they approve you.`);
   };
 
   const handleLogin = (data: any, phone: string, nickname?: string, fullProfile?: Partial<ServiceProvider>) => {

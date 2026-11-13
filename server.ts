@@ -251,6 +251,18 @@ async function initDatabase() {
   try { runSql('ALTER TABLE providers ADD COLUMN lastCheckInAt TEXT'); } catch (_) {}
   try { runSql('ALTER TABLE providers ADD COLUMN lastCheckInLocation TEXT'); } catch (_) {}
 
+  // Organisations now need the admin's approval to issue codes and verify members. One that is already verified and
+  // was not verified through someone else's code was verified by the admin, so it counts as approved.
+  try {
+    for (const row of queryAll("SELECT id, rawData FROM providers WHERE isVerified = 1 AND rawData LIKE '%\"accountType\":\"organization\"%'")) {
+      let raw: any = {};
+      try { raw = JSON.parse(row.rawData || '{}') || {}; } catch (_) { continue; }
+      if (raw.accountType !== 'organization' || raw.orgApproved !== undefined || raw.referralCodeUsed) continue;
+      raw.orgApproved = true;
+      runSql('UPDATE providers SET rawData = ? WHERE id = ?', [JSON.stringify(raw), row.id]);
+    }
+  } catch (e) { console.error('Could not mark approved organisations:', e); }
+
   saveDb();
 
   // Seed the default super admin if the database is empty
@@ -409,6 +421,35 @@ async function startServer() {
     // Prefer the full profile over the stub created at first login.
     return rows.find((r: any) => !String(r.id).startsWith('pro-')) || rows[0] || null;
   };
+  // Every profile id that belongs to one phone number (a person can have the stub made at first sign-in and a full profile).
+  const idsForPhone = (phone9: string): string[] => {
+    if (!phone9 || phone9.length < 9) return [];
+    return queryAll("SELECT id FROM providers WHERE replace(replace(replace(phone, ' ', ''), '+', ''), '-', '') LIKE ?", [`%${phone9}`]).map((r: any) => String(r.id));
+  };
+  const parseRaw = (row: any): any => { try { return JSON.parse(row?.rawData || '{}') || {}; } catch { return {}; } };
+
+  // Trust and moderation fields. Only the signed-in admin sets them, or the server itself (an organisation approving a
+  // member). A user's own save can never write them, on any route.
+  const PROTECTED_PROFILE_FIELDS = [
+    'isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'flagCount', 'adminNotes',
+    'verifiedByOrgId', 'verifiedByOrgName', 'referralCodeUsed', 'isReferred', 'isSaccoVerified', 'saccoMember',
+    'verifiedForCourse', 'orgApproved'
+  ];
+  /** Puts back the stored value of every protected field (or removes it), whatever the request sent. */
+  const keepProtectedFields = (target: any, existingRaw: any, existingRow: any) => {
+    for (const k of PROTECTED_PROFILE_FIELDS) {
+      const stored = existingRow?.[k] ?? existingRaw?.[k];
+      if (stored === undefined) delete target[k];
+      else target[k] = stored;
+    }
+  };
+  // An organisation may issue codes and verify members only after the admin has approved it.
+  const orgIsApproved = (org: any) => {
+    if (!org) return false;
+    if (org.role === 'SuperAdmin') return true;
+    return parseRaw(org).orgApproved === true;
+  };
+
   const getTotp = (providerId: string) => queryOne('SELECT * FROM totp_secrets WHERE providerId = ?', [providerId]);
   const totpEnabled = (providerId: string) => Boolean(getTotp(providerId)?.enabled);
 
@@ -792,10 +833,12 @@ async function startServer() {
         if (taken && last9(taken.phone) !== a.phone) return res.status(403).json({ error: 'That profile belongs to someone else.' });
         if (p.role === 'SuperAdmin') p.role = 'Provider';
       }
+      const prior = queryOne('SELECT rating, reviewsCount, isVerified, rawData FROM providers WHERE id = ?', [id]);
+      // Badges, suspension and approvals are kept as stored: a user's own save cannot set or clear them.
+      if (!isAdminAuth(a)) keepProtectedFields(p, parseRaw(prior), null);
       const skillsJson = JSON.stringify(p.skills || []);
       const { avatarUrl: _pAvatar, coverImageUrl: _pCover, rawData: _pNested, ...safeP } = p;
       const rawDataJson = JSON.stringify(safeP);
-      const prior = queryOne('SELECT rating, reviewsCount, isVerified FROM providers WHERE id = ?', [id]);
 
       runSql(
         `INSERT OR REPLACE INTO providers (
@@ -838,9 +881,10 @@ async function startServer() {
       if (!isAdminAuth(a)) {
         updated.isVerified = existing?.isVerified ?? 0;
         updated.role = existing?.role ?? 'Provider';
-        for (const k of ['isSuspended', 'suspendedReason', 'suspendedBy', 'suspendedAt', 'flagCount', 'adminNotes', 'verifiedByOrgId', 'verifiedByOrgName', 'referralCodeUsed', 'isSaccoVerified', 'saccoMember', 'verifiedForCourse']) {
-          updated[k] = (existing as any)?.[k] ?? existingRaw[k];
-        }
+        keepProtectedFields(updated, existingRaw, existing);
+      } else if (updated.accountType === 'organization') {
+        // The admin approving (verifying) an organisation is what lets it issue codes and verify its members.
+        updated.orgApproved = Boolean(updated.isVerified);
       }
       const skillsJson = JSON.stringify(updated.skills || []);
       // rawData must never be stored inside itself: the database row carries it as a column, and spreading the row
@@ -893,9 +937,10 @@ async function startServer() {
   app.post('/api/referral-codes/ensure', requireAuth, (req, res) => {
     try {
       const { orgId, courses } = req.body || {};
-      const org = orgId ? queryOne('SELECT id, name FROM providers WHERE id = ?', [orgId]) : null;
+      const org = orgId ? queryOne('SELECT id, name, role, rawData FROM providers WHERE id = ?', [orgId]) : null;
       if (!org) return res.status(404).json({ error: 'Organization not found' });
       if (!ownsProfile((req as any).auth, org.id)) return res.status(403).json({ error: 'Only the organization can create its codes.' });
+      if (!orgIsApproved(org)) return res.status(403).json({ error: 'Your organisation needs approval from NikoSoko before it can issue codes. We will review it shortly.', needsApproval: true });
       const prefix = codePrefix(org.name);
       const now = new Date().toISOString();
       if (!queryOne("SELECT code FROM referral_codes WHERE orgId = ? AND kind = 'organization'", [orgId])) {
@@ -913,37 +958,11 @@ async function startServer() {
     }
   });
 
-  app.get('/api/referral-codes/org/:orgId', (req, res) => {
+  // An organisation's codes are its own: anyone holding one could ask to join under its name.
+  app.get('/api/referral-codes/org/:orgId', requireAuth, (req: any, res) => {
     try {
+      if (!ownsProfile(req.auth, String(req.params.orgId))) return res.status(403).json({ error: 'Only the organization can see its codes.' });
       res.json(listOrgCodes(req.params.orgId));
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/referral-codes/redeem', requireAuth, (req, res) => {
-    try {
-      const code = String(req.body?.code || '').trim().toUpperCase();
-      const userId = String(req.body?.userId || '');
-      if (!code || !userId) return res.status(400).json({ error: 'A code and user are required' });
-      if (!ownsProfile((req as any).auth, userId)) return res.status(403).json({ error: 'You can only use a code for your own account.' });
-      const ref = queryOne('SELECT * FROM referral_codes WHERE code = ?', [code]);
-      if (!ref) return res.status(404).json({ error: 'That code does not exist. Check it with your organization.' });
-      if (ref.orgId === userId) return res.status(400).json({ error: 'An organization cannot use its own code.' });
-      const user = queryOne('SELECT * FROM providers WHERE id = ?', [userId]);
-      if (!user) return res.status(404).json({ error: 'User not found' });
-      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [ref.orgId]);
-      if (!org) return res.status(404).json({ error: 'Organization not found' });
-      if (queryOne('SELECT userId FROM referral_redemptions WHERE userId = ?', [userId])) {
-        return res.status(409).json({ error: 'This account is already verified through an organization.' });
-      }
-      runSql('INSERT INTO referral_redemptions (userId, code, orgId, createdAt) VALUES (?, ?, ?, ?)', [userId, code, ref.orgId, new Date().toISOString()]);
-      let raw: any = {};
-      try { raw = JSON.parse(user.rawData || '{}'); } catch (_) {}
-      raw = { ...raw, referralCodeUsed: code, isReferred: true, isSaccoVerified: true, verifiedByOrgId: org.id, verifiedByOrgName: org.name, verifiedForCourse: ref.label || undefined,
-              saccoMember: { saccoId: org.id, saccoName: org.name, saccoCode: code, status: 'Confirmed', requestedAt: new Date().toISOString(), confirmedAt: new Date().toISOString() } };
-      runSql('UPDATE providers SET isVerified = 1, rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
-      res.json({ success: true, orgId: org.id, orgName: org.name, courseTitle: ref.label || null, kind: ref.kind });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -961,7 +980,9 @@ async function startServer() {
     else runSql('UPDATE providers SET rawData = ? WHERE id = ?', [JSON.stringify(raw), userId]);
   };
 
-  app.post('/api/referral-codes/request', requireAuth, (req: any, res) => {
+  // Asking to join an organisation with its code. The older "redeem" route used to verify at once, without the
+  // organisation's say; it now does exactly this too, so every verification waits for the organisation to approve.
+  const requestToJoin = (req: any, res: any) => {
     try {
       const code = String(req.body?.code || '').trim().toUpperCase();
       const userId = String(req.body?.userId || '');
@@ -970,8 +991,8 @@ async function startServer() {
       const ref = queryOne('SELECT * FROM referral_codes WHERE code = ?', [code]);
       if (!ref) return res.status(404).json({ error: 'That code does not exist. Check it with your organization.' });
       if (ref.orgId === userId) return res.status(400).json({ error: 'An organization cannot use its own code.' });
-      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [ref.orgId]);
-      if (!org || !queryOne('SELECT id FROM providers WHERE id = ?', [userId])) return res.status(404).json({ error: 'That code could not be used.' });
+      const org = queryOne('SELECT id, name, role, rawData FROM providers WHERE id = ?', [ref.orgId]);
+      if (!org || !orgIsApproved(org) || !queryOne('SELECT id FROM providers WHERE id = ?', [userId])) return res.status(404).json({ error: 'That code could not be used.' });
       const existing = queryOne('SELECT status FROM referral_redemptions WHERE userId = ?', [userId]);
       if (existing && (existing.status || 'approved') === 'approved') return res.status(409).json({ error: 'You are already verified through an organization.' });
       if (existing && existing.status === 'pending') return res.status(409).json({ error: 'Your request is already waiting for the organization to verify you.' });
@@ -983,7 +1004,9 @@ async function startServer() {
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
-  });
+  };
+  app.post('/api/referral-codes/request', requireAuth, requestToJoin);
+  app.post('/api/referral-codes/redeem', requireAuth, requestToJoin);
 
   // Where the member's request stands: none, pending, approved or rejected.
   app.get('/api/referral-codes/mine/:userId', requireAuth, (req: any, res) => {
@@ -1020,7 +1043,8 @@ async function startServer() {
       const r = queryOne("SELECT * FROM referral_redemptions WHERE userId = ? AND status = 'pending'", [userId]);
       if (!r) return res.status(404).json({ error: 'There is no request waiting from that member.' });
       if (!ownsProfile(req.auth, r.orgId)) return res.status(403).json({ error: 'Only the organization can decide this request.' });
-      const org = queryOne('SELECT id, name FROM providers WHERE id = ?', [r.orgId]);
+      const org = queryOne('SELECT id, name, role, rawData FROM providers WHERE id = ?', [r.orgId]);
+      if (decision === 'approve' && !orgIsApproved(org)) return res.status(403).json({ error: 'Your organisation needs approval from NikoSoko before it can verify members.' });
       const label = queryOne('SELECT label FROM referral_codes WHERE code = ?', [r.code])?.label;
       const now = new Date().toISOString();
       if (decision === 'approve') {
@@ -1199,9 +1223,13 @@ async function startServer() {
   });
 
   // Messages Endpoints
-  app.get('/api/messages', requireAuth, (req, res) => {
+  // Each person sees only the messages they sent or received (on any of their profiles).
+  app.get('/api/messages', requireAuth, (req: any, res) => {
     try {
-      const rows = queryAll('SELECT * FROM messages ORDER BY timestamp ASC');
+      const ids = idsForPhone(req.auth.phone);
+      if (!ids.includes(req.auth.sub)) ids.push(req.auth.sub);
+      const marks = ids.map(() => '?').join(',');
+      const rows = queryAll(`SELECT * FROM messages WHERE senderId IN (${marks}) OR recipientId IN (${marks}) ORDER BY timestamp ASC`, [...ids, ...ids]);
       res.json(rows);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -1213,10 +1241,14 @@ async function startServer() {
       const m = req.body;
       const id = m.id || `msg-${Date.now()}`;
       if (!ownsProfile((req as any).auth, String(m.senderId))) return res.status(403).json({ error: 'You can only send messages as yourself.' });
+      if (queryOne('SELECT id FROM messages WHERE id = ?', [String(id)])) return res.status(409).json({ error: 'That message already exists.' });
+      // Names come from the profiles, so nobody can send a message that looks as if it came from someone else.
+      const senderName = queryOne('SELECT name FROM providers WHERE id = ?', [String(m.senderId)])?.name || m.senderName || '';
+      const recipientName = queryOne('SELECT name FROM providers WHERE id = ?', [String(m.recipientId)])?.name || m.recipientName || '';
       runSql(
         `INSERT INTO messages (id, senderId, recipientId, senderName, recipientName, text, timestamp, isRead)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, m.senderId, m.recipientId, m.senderName, m.recipientName, m.text, m.timestamp || new Date().toISOString(), m.isRead ? 1 : 0]
+        [id, m.senderId, m.recipientId, senderName, recipientName, String(m.text ?? '').slice(0, 5000), new Date().toISOString(), 0]
       );
       res.json({ success: true, id });
     } catch (e: any) {
@@ -1439,7 +1471,19 @@ async function startServer() {
   });
 
   // --- Bookings API Endpoints ---
-  app.get('/api/bookings', requireAuth, (req, res) => {
+  // Who the signed-in person is on a booking: its client, its provider, the admin, or nobody.
+  const bookingRole = (a: TokenPayload, bk: any): 'admin' | 'provider' | 'client' | null => {
+    if (!bk) return null;
+    if (isAdminAuth(a)) return 'admin';
+    const ids = idsForPhone(a.phone);
+    if (!ids.includes(a.sub)) ids.push(a.sub);
+    if (bk.providerId && ids.includes(String(bk.providerId))) return 'provider';
+    if (bk.clientId && ids.includes(String(bk.clientId))) return 'client';
+    if (!bk.clientId && last9(bk.clientPhone) === a.phone) return 'client';
+    return null;
+  };
+
+  app.get('/api/bookings', requireAuth, (req: any, res) => {
     try {
       const { userId, providerId, status } = req.query;
       let sql = 'SELECT * FROM bookings WHERE 1=1';
@@ -1460,7 +1504,8 @@ async function startServer() {
 
       sql += ' ORDER BY date ASC, time ASC';
 
-      const rows = queryAll(sql, params);
+      // Only bookings the person is part of: clients' names, phones and addresses are nobody else's business.
+      const rows = queryAll(sql, params).filter(r => bookingRole(req.auth, r) !== null);
       const formatted = rows.map(r => ({
         ...r,
         isCalendarSynced: Boolean(r.isCalendarSynced),
@@ -1477,11 +1522,21 @@ async function startServer() {
 
   registerQaribuBridge({ app, requireAuth });
 
-  app.post('/api/bookings', requireAuth, (req, res) => {
+  app.post('/api/bookings', requireAuth, (req: any, res) => {
     try {
-      const b = req.body;
+      const b = req.body || {};
       const id = b.id || `book-${Date.now()}`;
       const now = new Date().toISOString();
+      const a: TokenPayload = req.auth;
+      const already = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
+      if (already && !bookingRole(a, already)) return res.status(403).json({ error: 'That booking belongs to someone else.' });
+      if (!isAdminAuth(a)) {
+        // A booking is made by the signed-in person, for themselves.
+        if (!b.clientId || !ownsProfile(a, String(b.clientId))) b.clientId = a.sub;
+        if (b.providerId && ownsProfile(a, String(b.providerId)) && String(b.providerId) === String(b.clientId)) {
+          return res.status(400).json({ error: 'You cannot book yourself.' });
+        }
+      }
 
       runSql(
         `INSERT OR REPLACE INTO bookings (
@@ -1519,8 +1574,16 @@ async function startServer() {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
       if (!existing) return res.status(404).json({ error: 'Booking not found' });
+      const role = bookingRole((req as any).auth, existing);
+      if (!role) return res.status(404).json({ error: 'Booking not found' });
 
-      const b = { ...existing, ...req.body, updatedAt: new Date().toISOString() };
+      // The client and the provider can move a booking along or reschedule it. Who it is between, the fees and
+      // the payment are not theirs to change; only the admin (or the payment confirmation) can.
+      const BOOKING_EDITABLE = ['status', 'date', 'time', 'location', 'notes', 'googleCalendarEventId', 'googleCalendarHtmlLink', 'isCalendarSynced'];
+      const body = req.body || {};
+      const changes: any = {};
+      for (const k of Object.keys(body)) if (role === 'admin' || BOOKING_EDITABLE.includes(k)) changes[k] = body[k];
+      const b = { ...existing, ...changes, updatedAt: new Date().toISOString() };
 
       runSql(
         `UPDATE bookings SET 
@@ -1559,8 +1622,12 @@ async function startServer() {
       const id = req.params.id;
       const existing = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);
       if (!existing) return res.status(404).json({ error: 'Booking not found' });
+      const role = bookingRole((req as any).auth, existing);
+      if (!role) return res.status(404).json({ error: 'Booking not found' });
 
-      const { reason, cancelledBy } = req.body;
+      const { reason } = req.body || {};
+      // Who cancelled is known from the sign-in, not taken from the request.
+      const cancelledBy = role === 'admin' ? 'admin' : role;
       const now = new Date().toISOString();
 
       runSql(
@@ -1571,7 +1638,7 @@ async function startServer() {
           cancelledAt = ?,
           updatedAt = ?
          WHERE id = ?`,
-        [reason || 'Cancelled by user', cancelledBy || 'client', now, now, id]
+        [String(reason || 'Cancelled by user').slice(0, 500), cancelledBy, now, now, id]
       );
 
       const updated = queryOne('SELECT * FROM bookings WHERE id = ?', [id]);

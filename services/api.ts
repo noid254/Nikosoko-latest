@@ -400,9 +400,10 @@ export const ensureReferralCodes = async (orgId: string, courses: { id: string; 
     } catch { return []; }
 };
 
+// Sends a request to join the organization behind the code. Verification follows only when the organization approves.
 export const redeemReferralCode = async (
     code: string, userId: string
-): Promise<{ orgId: string; orgName: string; courseTitle: string | null } | { error: string }> => {
+): Promise<{ status: 'pending'; orgId: string; orgName: string; courseTitle: string | null } | { error: string }> => {
     try {
         const res = await fetch('/api/referral-codes/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, userId }) });
         const data = await res.json().catch(() => null);

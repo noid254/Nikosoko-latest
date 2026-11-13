@@ -535,7 +535,7 @@ const SaccoDashboard: React.FC<SaccoDashboardProps> = ({
               <div className="flex items-center justify-between gap-3 bg-white/10 rounded-2xl px-4 py-3">
                 <div>
                   <p className="text-[11px] text-white/60">Organization code</p>
-                  <p className="font-mono font-black text-xl tracking-widest text-emerald-400">{orgCode?.code || 'Generating…'}</p>
+                  <p className="font-mono font-black text-xl tracking-widest text-emerald-400">{orgCode?.code || ((currentSaccoOrg as any)?.orgApproved ? 'Generating…' : 'Awaiting approval')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-white/70">{orgCode?.redeemed || 0} verified</span>
