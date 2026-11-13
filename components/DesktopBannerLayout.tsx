@@ -11,7 +11,7 @@ interface DesktopBannerLayoutProps {
 }
 
 const DESKTOP_BREAKPOINT = '(min-width: 1024px)';
-const LOGO_DARK = 'https://i.imgur.com/xHseJe9.jpeg'; // white wordmark on black
+const LOGO_DARK = '/nikosoko-logo-white.png'; // paper plane logo, white on transparent
 
 // Palette: black and white, with one green reserved for things that matter (verification, codes).
 const GREEN = '#22C27A';
@@ -64,7 +64,7 @@ const Button: React.FC<{ onClick?: () => void; href?: string; variant?: 'solid' 
 const Nav: React.FC<PageProps> = ({ currentUser, onOpenOrgSignUp, onOpenLogin }) => (
   <header className="sticky top-0 z-30 bg-black/85 backdrop-blur border-b border-white/10">
     <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
-      <a href="#top" className="flex items-center"><img src={LOGO_DARK} alt="NikoSoko" className="h-7 w-auto" /></a>
+      <a href="#top" className="flex items-center"><img src={LOGO_DARK} alt="NikoSoko" className="h-10 w-auto" /></a>
       <nav className="flex items-center gap-8 text-[15px] text-white/70" aria-label="Sections">
         <a href="#who" className="hover:text-white transition">Who it is for</a>
         <a href="#organizations" className="hover:text-white transition">Courses and codes</a>
@@ -442,7 +442,7 @@ const Closing: React.FC<PageProps> = ({ onOpenOrgSignUp, onOpenLogin }) => (
 const Footer: React.FC = () => (
   <footer className="bg-black text-white/50 border-t border-white/10">
     <div className="max-w-[1200px] mx-auto px-8 py-10 flex items-center justify-between text-sm">
-      <img src={LOGO_DARK} alt="NikoSoko" className="h-6 w-auto opacity-80" />
+      <img src={LOGO_DARK} alt="NikoSoko" className="h-10 w-auto opacity-90" />
       <p>&copy; NikoSoko, Kenya &middot; nikosoko.com</p>
     </div>
   </footer>
