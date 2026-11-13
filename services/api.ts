@@ -2,7 +2,6 @@ import type { ServiceProvider, CatalogueItem, Document, InboxMessage, LocationCh
 import { mockProviders, SUPER_ADMIN_PROVIDER, mockCatalogueItems, mockDocuments, mockInboxMessages } from './mockData';
 import { USE_PLATFORM } from './backend';
 import * as platform from './platform';
-import { saveUserProfileToFirestore } from './firebase';
 
 // --- Database Configuration (LocalStorage & SQLite Mirror) ---
 const DB_KEYS = {
@@ -484,10 +483,8 @@ export const updateProvider = async (updatedProvider: ServiceProvider): Promise<
         // Fallback
     }
 
+    // Profiles are no longer copied to Firestore: the server is the only store.
     const safe = stripPrivate(updatedProvider);
-    if (safe.id) {
-        await saveUserProfileToFirestore(safe.id, safe).catch(() => {});
-    }
 
     const providers = getTable<ServiceProvider>(DB_KEYS.PROVIDERS);
     const index = providers.findIndex(p => p.id === safe.id);
